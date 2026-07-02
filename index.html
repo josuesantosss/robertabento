@@ -1,40 +1,32 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vendas Cosméticos</title>
+  <title>💄 Sistema de Vendas - Cosméticos</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <nav>
-      <button data-page="home">🏠 Home</button>
-      <button data-page="cadastro">➕ Cadastrar Produto</button>
-      <button data-page="consulta">🔍 Consultar Estoque</button>
-      <button data-page="vendas">💰 Registrar Venda</button>
-    </nav>
+    <div class="header-container">
+      <h1>💄 Sistema de Vendas</h1>
+      <nav>
+        <button data-page="home" class="nav-btn active">🏠 Home</button>
+        <button data-page="cadastro" class="nav-btn">➕ Cadastrar</button>
+        <button data-page="consulta" class="nav-btn">🔍 Estoque</button>
+        <button data-page="vendas" class="nav-btn">💰 Vendas</button>
+      </nav>
+    </div>
   </header>
 
   <main id="app">
-    <!-- As seções serão carregadas aqui via JS -->
+    <!-- O conteúdo será carregado aqui via JavaScript -->
   </main>
 
+  <footer>
+    <p>Sistema de Vendas de Cosméticos &copy; 2026</p>
+  </footer>
+
   <script src="script.js"></script>
-  
-  <!-- Carrega os produtos no dropdown ao iniciar a página de consulta -->
-  <script>
-    // Sobrescreve o renderPage para carregar o dropdown quando for a página de consulta
-    const renderPageOriginal = renderPage;
-    renderPage = function(page) {
-      renderPageOriginal(page);
-      if (page === 'consulta') {
-        // Aguarda um pequeno delay para o DOM ser renderizado
-        setTimeout(() => {
-          carregarProdutosNoDropdown();
-        }, 100);
-      }
-    };
-  </script>
 </body>
 </html>
