@@ -144,7 +144,7 @@ function renderPage(page) {
 function renderHome() {
   return `
     <section>
-      <h2>🏠 Bem-vindo ao Sistema de Vendas</h2>
+      <h2>🏠 Bem-vindo ao Sistema de Vendas2</h2>
       <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
         Gerencie seus produtos e vendas de cosméticos de forma simples e eficiente.
       </p>
