@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/SEU_ID/exec'; // Substitua
+const API_URL = 'https://script.google.com/macros/s/AKfycbxg8pD4An5xvuWXilHDp4jyhdC_gvP0WGTE62YNz_jwyocO4Bn9GKQpQc6QM-W9WUeTAw/exec'; // Substitua
 
 // Navegação
 document.querySelectorAll('[data-page]').forEach(btn => {
