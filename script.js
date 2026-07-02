@@ -420,4 +420,103 @@ function renderVendas() {
         <div class="form-group">
           <label for="produtoIdVenda">Produto</label>
           <select id="produtoIdVenda" required>
-            <option value="">Se
+            <option value="">Selecione um produto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="qtdVenda">Quantidade</label>
+          <input type="number" id="qtdVenda" placeholder="Quantidade" required>
+        </div>
+        <div class="form-group">
+          <label for="cliente">Cliente (opcional)</label>
+          <input type="text" id="cliente" placeholder="Nome do cliente">
+        </div>
+        <button type="submit" class="btn-submit">✅ Registrar Venda</button>
+      </form>
+      <div id="msgVenda"></div>
+    </section>
+  `;
+}
+
+async function carregarProdutosParaVenda() {
+  try {
+    const result = await callAPI('listarProdutos');
+    const produtos = result.produtos || [];
+    const select = document.getElementById('produtoIdVenda');
+    
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Selecione um produto</option>';
+    
+    if (produtos.length === 0) {
+      select.innerHTML += '<option value="">Nenhum produto disponível</option>';
+      return;
+    }
+    
+    produtos.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.nome} - R$ ${p.preco.toFixed(2)} (Estoque: ${p.quantidade})`;
+      select.appendChild(opt);
+    });
+    
+  } catch (error) {
+    console.error('Erro ao carregar produtos:', error);
+  }
+}
+
+async function registrarVenda(e) {
+  e.preventDefault();
+  
+  const produtoId = document.getElementById('produtoIdVenda').value;
+  const quantidade = parseInt(document.getElementById('qtdVenda').value);
+  const cliente = document.getElementById('cliente').value.trim();
+  
+  if (!produtoId || !quantidade || quantidade <= 0) {
+    mostrarMensagem('msgVenda', '⚠️ Selecione um produto e informe a quantidade.', 'error');
+    return;
+  }
+  
+  try {
+    const result = await callAPI('registrarVenda', { produtoId, quantidade, cliente });
+    
+    if (result.success) {
+      mostrarMensagem('msgVenda', '✅ Venda registrada com sucesso!', 'success');
+      document.getElementById('formVenda').reset();
+      carregarProdutosParaVenda();
+    } else {
+      mostrarMensagem('msgVenda', `❌ ${result.error || 'Erro ao registrar venda.'}`, 'error');
+    }
+  } catch (error) {
+    mostrarMensagem('msgVenda', '❌ Erro de comunicação com o servidor.', 'error');
+  }
+}
+
+// ============================================
+// FUNÇÕES UTILITÁRIAS
+// ============================================
+function mostrarMensagem(elementId, mensagem, tipo) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  const classes = {
+    success: 'msg-success',
+    error: 'msg-error',
+    info: 'msg-info'
+  };
+  
+  element.className = classes[tipo] || 'msg-info';
+  element.innerHTML = mensagem;
+  
+  // Auto-esconde após 5 segundos
+  clearTimeout(element._timeout);
+  element._timeout = setTimeout(() => {
+    element.innerHTML = '';
+    element.className = '';
+  }, 5000);
+}
+
+// ============================================
+// INICIAR APLICAÇÃO
+// ============================================
+navegarPara('home');
