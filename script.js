@@ -26,10 +26,13 @@ function navegarPara(page) {
 }
 
 // ============================================
-// FUNÇÃO PARA CHAMAR A API
+// FUNÇÃO PARA CHAMAR A API (CORRIGIDA)
 // ============================================
 async function callAPI(action, data = null) {
   const url = `${API_URL}?action=${action}`;
+  
+  console.log(`📤 Chamando API: ${action}`);
+  console.log(`📤 URL: ${url}`);
   
   const options = {
     method: data ? 'POST' : 'GET',
@@ -40,21 +43,28 @@ async function callAPI(action, data = null) {
   
   if (data) {
     options.body = JSON.stringify(data);
+    console.log('📤 Dados enviados:', data);
   }
   
   try {
     const response = await fetch(url, options);
+    console.log(`📥 Status: ${response.status}`);
+    
+    // Tenta ler a resposta como texto primeiro
+    const text = await response.text();
+    console.log('📥 Resposta bruta:', text);
     
     // Tenta parsear como JSON
     try {
-      const result = await response.json();
+      const result = JSON.parse(text);
+      console.log('📥 Resposta parseada:', result);
       return result;
     } catch(e) {
-      // Se não for JSON, retorna sucesso
-      return { success: true, message: 'Operação realizada com sucesso' };
+      console.error('❌ Erro ao parsear JSON:', e);
+      return { success: false, error: 'Resposta inválida do servidor' };
     }
   } catch (error) {
-    console.error('Erro na API:', error);
+    console.error('❌ Erro na requisição:', error);
     return { success: false, error: 'Erro de comunicação com o servidor' };
   }
 }
@@ -126,7 +136,17 @@ function renderHome() {
 async function carregarResumo() {
   try {
     const result = await callAPI('listarProdutos');
-    const produtos = result.produtos || [];
+    console.log('📊 Resultado do resumo:', result);
+    
+    // Extrai produtos de diferentes formatos de resposta
+    let produtos = [];
+    if (result.produtos && Array.isArray(result.produtos)) {
+      produtos = result.produtos;
+    } else if (Array.isArray(result)) {
+      produtos = result;
+    } else {
+      console.warn('Formato de resposta não reconhecido:', result);
+    }
     
     // Total de produtos
     document.getElementById('totalProdutos').textContent = produtos.length;
@@ -134,12 +154,11 @@ async function carregarResumo() {
     // Valor total em estoque
     let valorTotal = 0;
     produtos.forEach(p => {
-      valorTotal += p.preco * p.quantidade;
+      valorTotal += (p.preco || 0) * (p.quantidade || 0);
     });
     document.getElementById('valorTotal').textContent = `R$ ${valorTotal.toFixed(2)}`;
     
-    // Total de vendas (seria melhor ter uma API específica)
-    // Por enquanto, mostramos um número estimado
+    // Total de vendas
     document.getElementById('totalVendas').textContent = produtos.length > 0 ? '📊' : '0';
     
   } catch (error) {
@@ -188,6 +207,7 @@ async function cadastrarProduto(e) {
   
   try {
     const result = await callAPI('cadastrarProduto', { nome, preco, quantidade });
+    console.log('📝 Resultado cadastro:', result);
     
     if (result.success) {
       mostrarMensagem('msgCadastro', '✅ Produto cadastrado com sucesso!', 'success');
@@ -201,7 +221,7 @@ async function cadastrarProduto(e) {
 }
 
 // ============================================
-// PÁGINA CONSULTA
+// PÁGINA CONSULTA (CORRIGIDA)
 // ============================================
 function renderConsulta() {
   return `
@@ -233,7 +253,30 @@ async function carregarProdutosNoDropdown() {
   
   try {
     const result = await callAPI('listarProdutos');
-    const produtos = result.produtos || [];
+    console.log('📦 Resultado listarProdutos:', result);
+    
+    // EXTRAI PRODUTOS DE DIFERENTES FORMATOS
+    let produtos = [];
+    
+    // Tenta diferentes estruturas de resposta
+    if (result.produtos && Array.isArray(result.produtos)) {
+      // Formato: { success: true, produtos: [...] }
+      produtos = result.produtos;
+    } else if (Array.isArray(result)) {
+      // Formato: [...] (array direto)
+      produtos = result;
+    } else if (result.data && Array.isArray(result.data)) {
+      // Formato: { data: [...] }
+      produtos = result.data;
+    } else {
+      console.error('❌ Formato de resposta não reconhecido:', result);
+      select.innerHTML += '<option value="">Erro: formato de resposta inválido</option>';
+      document.getElementById('listaTodosProdutos').innerHTML = 
+        `<p style="color: red;">❌ Erro: Formato de resposta inválido. Verifique o console.</p>`;
+      return;
+    }
+    
+    console.log(`✅ ${produtos.length} produtos encontrados`);
     
     if (produtos.length === 0) {
       select.innerHTML += '<option value="">Nenhum produto cadastrado</option>';
@@ -241,13 +284,15 @@ async function carregarProdutosNoDropdown() {
       return;
     }
     
+    // Adiciona produtos ao dropdown
     produtos.forEach(produto => {
       const option = document.createElement('option');
       option.value = produto.id;
-      option.textContent = `${produto.nome} (Estoque: ${produto.quantidade})`;
+      option.textContent = `${produto.nome} (Estoque: ${produto.quantidade || 0})`;
       select.appendChild(option);
     });
     
+    // Adiciona evento de mudança
     select.addEventListener('change', function() {
       if (this.value) {
         exibirDetalhesProduto(this.value);
@@ -256,12 +301,14 @@ async function carregarProdutosNoDropdown() {
       }
     });
     
+    // Exibe todos os produtos
     exibirTodosProdutos(produtos);
     
   } catch (error) {
-    console.error('Erro ao carregar produtos:', error);
+    console.error('❌ Erro ao carregar produtos:', error);
     select.innerHTML += '<option value="">Erro ao carregar</option>';
-    document.getElementById('listaTodosProdutos').innerHTML = '<p style="color: red;">❌ Erro ao carregar produtos.</p>';
+    document.getElementById('listaTodosProdutos').innerHTML = 
+      `<p style="color: red;">❌ Erro ao carregar produtos: ${error.message}</p>`;
   }
 }
 
@@ -293,7 +340,15 @@ function exibirDetalhesProduto(id) {
 async function buscarPrecoProduto(id, nome, quantidade) {
   try {
     const result = await callAPI('listarProdutos');
-    const produtos = result.produtos || [];
+    
+    // Extrai produtos
+    let produtos = [];
+    if (result.produtos && Array.isArray(result.produtos)) {
+      produtos = result.produtos;
+    } else if (Array.isArray(result)) {
+      produtos = result;
+    }
+    
     const produto = produtos.find(p => p.id == id);
     
     if (!produto) {
@@ -301,10 +356,13 @@ async function buscarPrecoProduto(id, nome, quantidade) {
       return;
     }
     
-    const status = produto.quantidade > 10 ? '✅ Em estoque' : 
-                   produto.quantidade > 0 ? '⚠️ Baixo estoque' : '❌ Esgotado';
-    const corStatus = produto.quantidade > 10 ? '#4CAF50' : 
-                      produto.quantidade > 0 ? '#FF9800' : '#f44336';
+    const qtd = produto.quantidade || 0;
+    const preco = produto.preco || 0;
+    
+    const status = qtd > 10 ? '✅ Em estoque' : 
+                   qtd > 0 ? '⚠️ Baixo estoque' : '❌ Esgotado';
+    const corStatus = qtd > 10 ? '#4CAF50' : 
+                      qtd > 0 ? '#FF9800' : '#f44336';
     
     const html = `
       <div class="detalhes-container">
@@ -324,10 +382,10 @@ async function buscarPrecoProduto(id, nome, quantidade) {
             <tr>
               <td><strong>#${produto.id}</strong></td>
               <td><strong>${produto.nome}</strong></td>
-              <td>${produto.quantidade}</td>
-              <td>R$ ${produto.preco.toFixed(2)}</td>
-              <td><strong>R$ ${(produto.preco * produto.quantidade).toFixed(2)}</strong></td>
-              <td><span class="status-badge" style="background: ${corStatus}; color: white;">${status}</span></td>
+              <td>${qtd}</td>
+              <td>R$ ${preco.toFixed(2)}</td>
+              <td><strong>R$ ${(preco * qtd).toFixed(2)}</strong></td>
+              <td><span class="status-badge" style="background: ${corStatus}; color: white; padding: 4px 12px; border-radius: 20px;">${status}</span></td>
             </tr>
           </tbody>
         </table>
@@ -337,7 +395,7 @@ async function buscarPrecoProduto(id, nome, quantidade) {
     document.getElementById('detalhesProduto').innerHTML = html;
     
   } catch (error) {
-    console.error('Erro:', error);
+    console.error('Erro ao buscar preço:', error);
     document.getElementById('detalhesProduto').innerHTML = '<p style="color: red;">❌ Erro ao carregar detalhes.</p>';
   }
 }
@@ -366,18 +424,21 @@ function exibirTodosProdutos(produtos) {
   `;
   
   produtos.forEach((p, index) => {
-    const status = p.quantidade > 10 ? 'Em estoque' : 
-                   p.quantidade > 0 ? 'Baixo estoque' : 'Esgotado';
-    const corStatus = p.quantidade > 10 ? 'status-green' : 
-                      p.quantidade > 0 ? 'status-yellow' : 'status-red';
+    const qtd = p.quantidade || 0;
+    const preco = p.preco || 0;
+    
+    const status = qtd > 10 ? 'Em estoque' : 
+                   qtd > 0 ? 'Baixo estoque' : 'Esgotado';
+    const corStatus = qtd > 10 ? 'status-green' : 
+                      qtd > 0 ? 'status-yellow' : 'status-red';
     
     html += `
-      <tr onclick="selecionarProduto(${p.id})">
+      <tr onclick="selecionarProduto(${p.id})" style="cursor: pointer;">
         <td>#${p.id}</td>
         <td><strong>${p.nome}</strong></td>
-        <td>${p.quantidade}</td>
-        <td>R$ ${p.preco.toFixed(2)}</td>
-        <td>R$ ${(p.preco * p.quantidade).toFixed(2)}</td>
+        <td>${qtd}</td>
+        <td>R$ ${preco.toFixed(2)}</td>
+        <td>R$ ${(preco * qtd).toFixed(2)}</td>
         <td><span class="status-badge ${corStatus}">${status}</span></td>
       </tr>
     `;
@@ -441,9 +502,17 @@ function renderVendas() {
 async function carregarProdutosParaVenda() {
   try {
     const result = await callAPI('listarProdutos');
-    const produtos = result.produtos || [];
-    const select = document.getElementById('produtoIdVenda');
+    console.log('📦 Produtos para venda:', result);
     
+    // Extrai produtos
+    let produtos = [];
+    if (result.produtos && Array.isArray(result.produtos)) {
+      produtos = result.produtos;
+    } else if (Array.isArray(result)) {
+      produtos = result;
+    }
+    
+    const select = document.getElementById('produtoIdVenda');
     if (!select) return;
     
     select.innerHTML = '<option value="">Selecione um produto</option>';
@@ -456,12 +525,12 @@ async function carregarProdutosParaVenda() {
     produtos.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = `${p.nome} - R$ ${p.preco.toFixed(2)} (Estoque: ${p.quantidade})`;
+      opt.textContent = `${p.nome} - R$ ${(p.preco || 0).toFixed(2)} (Estoque: ${p.quantidade || 0})`;
       select.appendChild(opt);
     });
     
   } catch (error) {
-    console.error('Erro ao carregar produtos:', error);
+    console.error('Erro ao carregar produtos para venda:', error);
   }
 }
 
@@ -479,6 +548,7 @@ async function registrarVenda(e) {
   
   try {
     const result = await callAPI('registrarVenda', { produtoId, quantidade, cliente });
+    console.log('💰 Resultado venda:', result);
     
     if (result.success) {
       mostrarMensagem('msgVenda', '✅ Venda registrada com sucesso!', 'success');
