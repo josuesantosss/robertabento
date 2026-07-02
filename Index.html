@@ -456,7 +456,6 @@
     // ============================================
     // CONFIGURAÇÃO DA API
     // ============================================
-    // ⚠️ SUBSTITUA SEU_ID_AQUI PELA URL DO SEU WEB APP
     const API_URL = 'https://script.google.com/macros/s/AKfycby2eVGkl74Hjocrt0IEXN6hQbvAr6lynEpNZb4zqj386jdkggc2_uRbUrgGukac6gqlSg/exec';
 
     // ============================================
@@ -481,7 +480,7 @@
     }
 
     // ============================================
-    // FUNÇÃO PARA CHAMAR A API (CORRIGIDA)
+    // FUNÇÃO PARA CHAMAR A API
     // ============================================
     async function callAPI(action, data = null) {
       const url = `${API_URL}?action=${action}`;
@@ -505,20 +504,16 @@
         const response = await fetch(url, options);
         console.log(`📥 Status: ${response.status}`);
         
-        // Verifica se a resposta é JSON
         const contentType = response.headers.get('content-type');
-        console.log(`📥 Content-Type: ${contentType}`);
         
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();
           console.log('📥 Resposta JSON:', result);
           return result;
         } else {
-          // Se não for JSON, tenta ler como texto
           const text = await response.text();
-          console.log('📥 Resposta texto (primeiros 200 caracteres):', text.substring(0, 200));
+          console.log('📥 Resposta texto:', text.substring(0, 200));
           
-          // Se a resposta começa com <!DOCTYPE, é HTML (erro)
           if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
             console.error('❌ A API retornou HTML em vez de JSON');
             return { 
@@ -527,7 +522,6 @@
             };
           }
           
-          // Tenta parsear o texto como JSON
           try {
             const result = JSON.parse(text);
             console.log('📥 Resposta parseada como JSON:', result);
@@ -547,6 +541,27 @@
           error: 'Erro de comunicação: ' + error.message 
         };
       }
+    }
+
+    // ============================================
+    // FUNÇÃO PARA MOSTRAR MENSAGENS
+    // ============================================
+    function mostrarMensagem(elementId, mensagem, tipo = 'info') {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      
+      const classes = {
+        success: 'msg-success',
+        error: 'msg-error',
+        info: 'msg-info'
+      };
+      
+      element.className = classes[tipo] || 'msg-info';
+      element.textContent = mensagem;
+      element.style.display = 'block';
+      
+      // Scroll para a mensagem
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     // ============================================
@@ -572,7 +587,9 @@
           break;
         case 'vendas':
           app.innerHTML = renderVendas();
-          carregarProdutosParaVenda();
+          setTimeout(() => {
+            carregarProdutosParaVenda();
+          }, 100);
           document.getElementById('formVenda').addEventListener('submit', registrarVenda);
           break;
         default:
@@ -768,7 +785,6 @@
           select.appendChild(option);
         });
         
-        // Remove event listeners antigos e adiciona um novo
         select.removeEventListener('change', handleSelectChange);
         select.addEventListener('change', handleSelectChange);
         
@@ -951,9 +967,159 @@
     }
 
     // ============================================
-    // PÁGINA VENDAS
+    // PÁGINA VENDAS - CORRIGIDA
     // ============================================
     function renderVendas() {
       return `
         <section>
-          <h2>💰 Registrar Venda</h2
+          <h2>💰 Registrar Venda</h2>
+          <form id="formVenda">
+            <div class="form-group">
+              <label for="produtoVenda">Selecione o Produto</label>
+              <select id="produtoVenda" required>
+                <option value="">-- Escolha um produto --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="quantidadeVenda">Quantidade</label>
+              <input type="number" id="quantidadeVenda" placeholder="1" min="1" required>
+            </div>
+            <div class="form-group">
+              <label for="cliente">Nome do Cliente</label>
+              <input type="text" id="cliente" placeholder="Ex: Maria Silva">
+            </div>
+            <button type="submit" class="btn-submit">✅ Registrar Venda</button>
+          </form>
+          <div id="msgVenda"></div>
+          
+          <div style="margin-top: 40px;">
+            <h3>📋 Histórico de Vendas</h3>
+            <div class="table-container" id="historicoVendas">
+              <p>Carregando histórico...</p>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    // ============================================
+    // FUNÇÕES DE VENDAS
+    // ============================================
+    async function carregarProdutosParaVenda() {
+      const select = document.getElementById('produtoVenda');
+      if (!select) return;
+      
+      select.innerHTML = '<option value="">-- Escolha um produto --</option>';
+      
+      try {
+        const result = await callAPI('listarProdutos');
+        console.log('📦 Produtos para venda:', result);
+        
+        if (!result.success) {
+          select.innerHTML += '<option value="">Erro ao carregar produtos</option>';
+          return;
+        }
+        
+        let produtos = [];
+        if (result.produtos && Array.isArray(result.produtos)) {
+          produtos = result.produtos;
+        }
+        
+        if (produtos.length === 0) {
+          select.innerHTML += '<option value="">Nenhum produto disponível</option>';
+          return;
+        }
+        
+        produtos.forEach(produto => {
+          const option = document.createElement('option');
+          option.value = produto.id;
+          option.textContent = `${produto.nome} (Estoque: ${produto.quantidade || 0}) - R$ ${(produto.preco || 0).toFixed(2)}`;
+          option.dataset.quantidade = produto.quantidade || 0;
+          option.dataset.preco = produto.preco || 0;
+          select.appendChild(option);
+        });
+        
+        // Carregar histórico de vendas
+        carregarHistoricoVendas();
+        
+      } catch (error) {
+        console.error('❌ Erro ao carregar produtos para venda:', error);
+        select.innerHTML += '<option value="">Erro ao carregar</option>';
+      }
+    }
+
+    async function carregarHistoricoVendas() {
+      const div = document.getElementById('historicoVendas');
+      
+      try {
+        // Por enquanto, vamos apenas mostrar uma mensagem
+        // Você pode expandir para mostrar o histórico real
+        div.innerHTML = `
+          <p style="color: #666;">📊 Histórico de vendas será exibido aqui em breve.</p>
+          <p style="color: #999; font-size: 14px;">Após registrar uma venda, ela aparecerá nesta lista.</p>
+        `;
+      } catch (error) {
+        div.innerHTML = `<p style="color: red;">❌ Erro ao carregar histórico: ${error.message}</p>`;
+      }
+    }
+
+    async function registrarVenda(e) {
+      e.preventDefault();
+      
+      const select = document.getElementById('produtoVenda');
+      const produtoId = select.value;
+      const quantidade = parseInt(document.getElementById('quantidadeVenda').value);
+      const cliente = document.getElementById('cliente').value.trim();
+      
+      if (!produtoId) {
+        mostrarMensagem('msgVenda', 'Selecione um produto.', 'error');
+        return;
+      }
+      
+      if (!quantidade || quantidade < 1) {
+        mostrarMensagem('msgVenda', 'Informe uma quantidade válida.', 'error');
+        return;
+      }
+      
+      // Verificar estoque disponível
+      const option = select.options[select.selectedIndex];
+      const estoqueDisponivel = parseInt(option.dataset.quantidade) || 0;
+      
+      if (quantidade > estoqueDisponivel) {
+        mostrarMensagem('msgVenda', `❌ Estoque insuficiente. Disponível: ${estoqueDisponivel}`, 'error');
+        return;
+      }
+      
+      try {
+        const result = await callAPI('registrarVenda', { 
+          produtoId, 
+          quantidade, 
+          cliente: cliente || 'Não informado' 
+        });
+        
+        console.log('📝 Resultado venda:', result);
+        
+        if (result.success) {
+          mostrarMensagem('msgVenda', `✅ Venda registrada com sucesso! Total: R$ ${result.venda.total.toFixed(2)}`, 'success');
+          document.getElementById('formVenda').reset();
+          
+          // Recarregar produtos disponíveis
+          carregarProdutosParaVenda();
+        } else {
+          mostrarMensagem('msgVenda', `❌ ${result.error || 'Erro ao registrar venda.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao registrar venda:', error);
+        mostrarMensagem('msgVenda', '❌ Erro de comunicação com o servidor.', 'error');
+      }
+    }
+
+    // ============================================
+    // INICIALIZAÇÃO
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+      renderPage('home');
+    });
+  </script>
+</body>
+</html>
