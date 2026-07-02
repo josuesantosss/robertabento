@@ -23,9 +23,6 @@
       flex-direction: column;
     }
 
-    /* ============================================
-       HEADER E NAVEGAÇÃO
-       ============================================ */
     header {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -80,9 +77,6 @@
       color: #764ba2;
     }
 
-    /* ============================================
-       CONTEÚDO PRINCIPAL
-       ============================================ */
     main {
       flex: 1;
       max-width: 1200px;
@@ -118,9 +112,6 @@
       padding-bottom: 10px;
     }
 
-    /* ============================================
-       HOME
-       ============================================ */
     .home-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -151,13 +142,6 @@
     .home-card p {
       color: #666;
       font-size: 14px;
-    }
-
-    /* ============================================
-       FORMULÁRIOS
-       ============================================ */
-    form {
-      max-width: 500px;
     }
 
     .form-group {
@@ -205,13 +189,6 @@
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
 
-    .btn-submit:active {
-      transform: translateY(0);
-    }
-
-    /* ============================================
-       TABELAS
-       ============================================ */
     .table-container {
       overflow-x: auto;
       margin-top: 20px;
@@ -246,10 +223,6 @@
       cursor: pointer;
     }
 
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-
     .status-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -273,9 +246,6 @@
       color: #c62828;
     }
 
-    /* ============================================
-       MENSAGENS DE FEEDBACK
-       ============================================ */
     .msg-success {
       background: #e8f5e9;
       color: #2e7d32;
@@ -303,9 +273,6 @@
       border-left: 4px solid #2196f3;
     }
 
-    /* ============================================
-       DETALHES DO PRODUTO
-       ============================================ */
     .detalhes-container {
       background: #f8f9ff;
       padding: 20px;
@@ -320,9 +287,6 @@
       margin-bottom: 15px;
     }
 
-    /* ============================================
-       FILTRO E BUSCA
-       ============================================ */
     .filtro-container {
       display: flex;
       gap: 15px;
@@ -356,9 +320,6 @@
       transform: translateY(-2px);
     }
 
-    /* ============================================
-       FOOTER
-       ============================================ */
     footer {
       background: #2c2c2c;
       color: #999;
@@ -367,9 +328,6 @@
       margin-top: 30px;
     }
 
-    /* ============================================
-       RESPONSIVIDADE
-       ============================================ */
     @media (max-width: 768px) {
       .header-container {
         flex-direction: column;
@@ -457,6 +415,61 @@
     // CONFIGURAÇÃO DA API
     // ============================================
     const API_URL = 'https://script.google.com/macros/s/AKfycby2eVGkl74Hjocrt0IEXN6hQbvAr6lynEpNZb4zqj386jdkggc2_uRbUrgGukac6gqlSg/exec';
+    
+    // 🔥 PROXY CORS (SOLUÇÃO DEFINITIVA)
+    const CORS_PROXY = 'https://corsproxy.io/?';
+
+    // ============================================
+    // FUNÇÃO PARA CHAMAR A API COM PROXY
+    // ============================================
+    async function callAPI(action, data = null) {
+      let url;
+      const options = {
+        method: data ? 'POST' : 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      };
+      
+      if (data) {
+        // Para POST, envia via proxy
+        url = `${CORS_PROXY}${API_URL}?action=${action}`;
+        options.body = JSON.stringify(data);
+      } else {
+        // Para GET, usa proxy
+        url = `${CORS_PROXY}${API_URL}?action=${action}`;
+      }
+      
+      console.log(`📤 Chamando API via proxy: ${action}`);
+      console.log(`📤 URL: ${url}`);
+      
+      try {
+        const response = await fetch(url, options);
+        console.log(`📥 Status: ${response.status}`);
+        
+        // Tenta parsear como JSON
+        const text = await response.text();
+        console.log('📥 Resposta texto:', text.substring(0, 200));
+        
+        try {
+          const result = JSON.parse(text);
+          console.log('📥 Resposta JSON:', result);
+          return result;
+        } catch (e) {
+          console.error('❌ Erro ao parsear JSON:', e);
+          return { 
+            success: false, 
+            error: 'Resposta inválida do servidor' 
+          };
+        }
+      } catch (error) {
+        console.error('❌ Erro na API:', error);
+        return { 
+          success: false, 
+          error: 'Erro de comunicação: ' + error.message 
+        };
+      }
+    }
 
     // ============================================
     // NAVEGAÇÃO
@@ -480,70 +493,6 @@
     }
 
     // ============================================
-    // FUNÇÃO PARA CHAMAR A API
-    // ============================================
-    async function callAPI(action, data = null) {
-      const url = `${API_URL}?action=${action}`;
-      
-      console.log(`📤 Chamando API: ${action}`);
-      console.log(`📤 URL: ${url}`);
-      
-      const options = {
-        method: data ? 'POST' : 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      };
-      
-      if (data) {
-        options.body = JSON.stringify(data);
-        console.log('📤 Dados:', data);
-      }
-      
-      try {
-        const response = await fetch(url, options);
-        console.log(`📥 Status: ${response.status}`);
-        
-        const contentType = response.headers.get('content-type');
-        
-        if (contentType && contentType.includes('application/json')) {
-          const result = await response.json();
-          console.log('📥 Resposta JSON:', result);
-          return result;
-        } else {
-          const text = await response.text();
-          console.log('📥 Resposta texto:', text.substring(0, 200));
-          
-          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-            console.error('❌ A API retornou HTML em vez de JSON');
-            return { 
-              success: false, 
-              error: 'A API retornou HTML. Verifique se a URL do Web App está correta e se o script foi implantado.' 
-            };
-          }
-          
-          try {
-            const result = JSON.parse(text);
-            console.log('📥 Resposta parseada como JSON:', result);
-            return result;
-          } catch(e) {
-            console.error('❌ Erro ao parsear JSON:', e);
-            return { 
-              success: false, 
-              error: 'Resposta inválida do servidor' 
-            };
-          }
-        }
-      } catch (error) {
-        console.error('❌ Erro na API:', error);
-        return { 
-          success: false, 
-          error: 'Erro de comunicação: ' + error.message 
-        };
-      }
-    }
-
-    // ============================================
     // FUNÇÃO PARA MOSTRAR MENSAGENS
     // ============================================
     function mostrarMensagem(elementId, mensagem, tipo = 'info') {
@@ -559,8 +508,6 @@
       element.className = classes[tipo] || 'msg-info';
       element.textContent = mensagem;
       element.style.display = 'block';
-      
-      // Scroll para a mensagem
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
@@ -637,6 +584,9 @@
         
         if (!result.success) {
           console.error('❌ Erro ao carregar resumo:', result.error);
+          document.getElementById('totalProdutos').textContent = '⚠️';
+          document.getElementById('totalVendas').textContent = '⚠️';
+          document.getElementById('valorTotal').textContent = '⚠️';
           return;
         }
         
@@ -652,7 +602,6 @@
           valorTotal += (p.preco || 0) * (p.quantidade || 0);
         });
         document.getElementById('valorTotal').textContent = `R$ ${valorTotal.toFixed(2)}`;
-        
         document.getElementById('totalVendas').textContent = produtos.length > 0 ? '📊' : '0';
         
       } catch (error) {
@@ -961,13 +910,12 @@
         select.value = id;
         const event = new Event('change');
         select.dispatchEvent(event);
-        
         document.getElementById('detalhesProduto').scrollIntoView({ behavior: 'smooth' });
       }
     }
 
     // ============================================
-    // PÁGINA VENDAS - CORRIGIDA
+    // PÁGINA VENDAS
     // ============================================
     function renderVendas() {
       return `
@@ -1039,7 +987,6 @@
           select.appendChild(option);
         });
         
-        // Carregar histórico de vendas
         carregarHistoricoVendas();
         
       } catch (error) {
@@ -1050,17 +997,10 @@
 
     async function carregarHistoricoVendas() {
       const div = document.getElementById('historicoVendas');
-      
-      try {
-        // Por enquanto, vamos apenas mostrar uma mensagem
-        // Você pode expandir para mostrar o histórico real
-        div.innerHTML = `
-          <p style="color: #666;">📊 Histórico de vendas será exibido aqui em breve.</p>
-          <p style="color: #999; font-size: 14px;">Após registrar uma venda, ela aparecerá nesta lista.</p>
-        `;
-      } catch (error) {
-        div.innerHTML = `<p style="color: red;">❌ Erro ao carregar histórico: ${error.message}</p>`;
-      }
+      div.innerHTML = `
+        <p style="color: #666;">📊 Histórico de vendas será exibido aqui em breve.</p>
+        <p style="color: #999; font-size: 14px;">Após registrar uma venda, ela aparecerá nesta lista.</p>
+      `;
     }
 
     async function registrarVenda(e) {
@@ -1081,7 +1021,6 @@
         return;
       }
       
-      // Verificar estoque disponível
       const option = select.options[select.selectedIndex];
       const estoqueDisponivel = parseInt(option.dataset.quantidade) || 0;
       
@@ -1102,8 +1041,6 @@
         if (result.success) {
           mostrarMensagem('msgVenda', `✅ Venda registrada com sucesso! Total: R$ ${result.venda.total.toFixed(2)}`, 'success');
           document.getElementById('formVenda').reset();
-          
-          // Recarregar produtos disponíveis
           carregarProdutosParaVenda();
         } else {
           mostrarMensagem('msgVenda', `❌ ${result.error || 'Erro ao registrar venda.'}`, 'error');
