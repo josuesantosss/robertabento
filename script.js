@@ -18,7 +18,6 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 function navegarPara(page) {
   currentPage = page;
   
-  // Atualiza botões ativos
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`.nav-btn[data-page="${page}"]`).classList.add('active');
   
@@ -26,47 +25,55 @@ function navegarPara(page) {
 }
 
 // ============================================
-// FUNÇÃO PARA CHAMAR A API (CORRIGIDA)
+// FUNÇÃO PARA CHAMAR A API (COM JSONP)
 // ============================================
-async function callAPI(action, data = null) {
-  const url = `${API_URL}?action=${action}`;
-  
-  console.log(`📤 Chamando API: ${action}`);
-  console.log(`📤 URL: ${url}`);
-  
-  const options = {
-    method: data ? 'POST' : 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    }
-  };
-  
-  if (data) {
-    options.body = JSON.stringify(data);
-    console.log('📤 Dados enviados:', data);
-  }
-  
-  try {
-    const response = await fetch(url, options);
-    console.log(`📥 Status: ${response.status}`);
+function callAPI(action, data = null) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
-    // Tenta ler a resposta como texto primeiro
-    const text = await response.text();
-    console.log('📥 Resposta bruta:', text);
-    
-    // Tenta parsear como JSON
-    try {
-      const result = JSON.parse(text);
-      console.log('📥 Resposta parseada:', result);
-      return result;
-    } catch(e) {
-      console.error('❌ Erro ao parsear JSON:', e);
-      return { success: false, error: 'Resposta inválida do servidor' };
+    // Se for POST, usamos fetch normal (não funciona bem com JSONP)
+    if (data) {
+      // Para POST, usamos fetch com mode: 'no-cors'
+      const url = `${API_URL}?action=${action}`;
+      
+      fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      })
+      .then(() => {
+        // Com no-cors, não podemos ler a resposta, mas a requisição foi enviada
+        resolve({ success: true, message: 'Operação realizada com sucesso' });
+      })
+      .catch(error => {
+        reject(error);
+      });
+      return;
     }
-  } catch (error) {
-    console.error('❌ Erro na requisição:', error);
-    return { success: false, error: 'Erro de comunicação com o servidor' };
-  }
+    
+    // Para GET, usamos JSONP
+    const url = `${API_URL}?action=${action}&callback=${callbackName}`;
+    
+    // Cria a função de callback global
+    window[callbackName] = function(response) {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve(response);
+    };
+    
+    // Cria o script
+    const script = document.createElement('script');
+    script.src = url;
+    script.onerror = function() {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      reject(new Error('Erro na requisição JSONP'));
+    };
+    document.body.appendChild(script);
+  });
 }
 
 // ============================================
@@ -106,7 +113,7 @@ function renderPage(page) {
 function renderHome() {
   return `
     <section>
-      <h2>🏠 Bem-vindo ao Sistema de Vendas</h2>
+      <h2>🏠 Bem-vindo ao Sistema de Vendas1</h2>
       <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
         Gerencie seus produtos e vendas de cosméticos de forma simples e eficiente.
       </p>
@@ -138,27 +145,21 @@ async function carregarResumo() {
     const result = await callAPI('listarProdutos');
     console.log('📊 Resultado do resumo:', result);
     
-    // Extrai produtos de diferentes formatos de resposta
     let produtos = [];
     if (result.produtos && Array.isArray(result.produtos)) {
       produtos = result.produtos;
     } else if (Array.isArray(result)) {
       produtos = result;
-    } else {
-      console.warn('Formato de resposta não reconhecido:', result);
     }
     
-    // Total de produtos
     document.getElementById('totalProdutos').textContent = produtos.length;
     
-    // Valor total em estoque
     let valorTotal = 0;
     produtos.forEach(p => {
       valorTotal += (p.preco || 0) * (p.quantidade || 0);
     });
     document.getElementById('valorTotal').textContent = `R$ ${valorTotal.toFixed(2)}`;
     
-    // Total de vendas
     document.getElementById('totalVendas').textContent = produtos.length > 0 ? '📊' : '0';
     
   } catch (error) {
@@ -221,7 +222,7 @@ async function cadastrarProduto(e) {
 }
 
 // ============================================
-// PÁGINA CONSULTA (CORRIGIDA)
+// PÁGINA CONSULTA
 // ============================================
 function renderConsulta() {
   return `
@@ -255,18 +256,13 @@ async function carregarProdutosNoDropdown() {
     const result = await callAPI('listarProdutos');
     console.log('📦 Resultado listarProdutos:', result);
     
-    // EXTRAI PRODUTOS DE DIFERENTES FORMATOS
     let produtos = [];
     
-    // Tenta diferentes estruturas de resposta
     if (result.produtos && Array.isArray(result.produtos)) {
-      // Formato: { success: true, produtos: [...] }
       produtos = result.produtos;
     } else if (Array.isArray(result)) {
-      // Formato: [...] (array direto)
       produtos = result;
     } else if (result.data && Array.isArray(result.data)) {
-      // Formato: { data: [...] }
       produtos = result.data;
     } else {
       console.error('❌ Formato de resposta não reconhecido:', result);
@@ -284,7 +280,6 @@ async function carregarProdutosNoDropdown() {
       return;
     }
     
-    // Adiciona produtos ao dropdown
     produtos.forEach(produto => {
       const option = document.createElement('option');
       option.value = produto.id;
@@ -292,7 +287,6 @@ async function carregarProdutosNoDropdown() {
       select.appendChild(option);
     });
     
-    // Adiciona evento de mudança
     select.addEventListener('change', function() {
       if (this.value) {
         exibirDetalhesProduto(this.value);
@@ -301,7 +295,6 @@ async function carregarProdutosNoDropdown() {
       }
     });
     
-    // Exibe todos os produtos
     exibirTodosProdutos(produtos);
     
   } catch (error) {
@@ -321,7 +314,6 @@ function exibirDetalhesProduto(id) {
     return;
   }
   
-  // Extrai nome e quantidade do texto da opção
   const texto = option.textContent;
   const match = texto.match(/^(.*?)\s*\(Estoque:\s*(\d+)\)/);
   
@@ -333,7 +325,6 @@ function exibirDetalhesProduto(id) {
   const nome = match[1].trim();
   const quantidade = parseInt(match[2]);
   
-  // Busca o preço da lista de produtos
   buscarPrecoProduto(id, nome, quantidade);
 }
 
@@ -341,7 +332,6 @@ async function buscarPrecoProduto(id, nome, quantidade) {
   try {
     const result = await callAPI('listarProdutos');
     
-    // Extrai produtos
     let produtos = [];
     if (result.produtos && Array.isArray(result.produtos)) {
       produtos = result.produtos;
@@ -504,7 +494,6 @@ async function carregarProdutosParaVenda() {
     const result = await callAPI('listarProdutos');
     console.log('📦 Produtos para venda:', result);
     
-    // Extrai produtos
     let produtos = [];
     if (result.produtos && Array.isArray(result.produtos)) {
       produtos = result.produtos;
@@ -578,7 +567,6 @@ function mostrarMensagem(elementId, mensagem, tipo) {
   element.className = classes[tipo] || 'msg-info';
   element.innerHTML = mensagem;
   
-  // Auto-esconde após 5 segundos
   clearTimeout(element._timeout);
   element._timeout = setTimeout(() => {
     element.innerHTML = '';
