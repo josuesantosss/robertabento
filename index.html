@@ -412,16 +412,13 @@
 
   <script>
     // ============================================
-    // CONFIGURAÇÃO DA API
+    // CONFIGURAÇÃO DA API - PROXY CORRIGIDO
     // ============================================
     const API_URL = 'https://script.google.com/macros/s/AKfycby2eVGkl74Hjocrt0IEXN6hQbvAr6lynEpNZb4zqj386jdkggc2_uRbUrgGukac6gqlSg/exec';
     
-    // 🔥 PROXY CORS (SOLUÇÃO DEFINITIVA)
-    const CORS_PROXY = 'https://corsproxy.io/?';
+    // 🔥 USANDO CORS-ANYWHERE (SEM LIMITE DE 1MB)
+    const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
-    // ============================================
-    // FUNÇÃO PARA CHAMAR A API COM PROXY
-    // ============================================
     async function callAPI(action, data = null) {
       let url;
       const options = {
@@ -432,24 +429,41 @@
       };
       
       if (data) {
-        // Para POST, envia via proxy
         url = `${CORS_PROXY}${API_URL}?action=${action}`;
         options.body = JSON.stringify(data);
       } else {
-        // Para GET, usa proxy
+        // Para GET, usa allorigins (mais rápido)
+        try {
+          const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + '?action=' + action)}`;
+          console.log(`📤 Chamando via allorigins: ${action}`);
+          
+          const response = await fetch(allOriginsUrl);
+          const text = await response.text();
+          
+          try {
+            const result = JSON.parse(text);
+            console.log('📥 Resultado allorigins:', result);
+            return result;
+          } catch (e) {
+            console.log('⚠️ allorigins falhou, tentando cors-anywhere...');
+          }
+        } catch (error) {
+          console.log('⚠️ allorigins erro, tentando cors-anywhere...');
+        }
+        
+        // Fallback para cors-anywhere
         url = `${CORS_PROXY}${API_URL}?action=${action}`;
       }
       
-      console.log(`📤 Chamando API via proxy: ${action}`);
+      console.log(`📤 Chamando API: ${action}`);
       console.log(`📤 URL: ${url}`);
       
       try {
         const response = await fetch(url, options);
         console.log(`📥 Status: ${response.status}`);
         
-        // Tenta parsear como JSON
         const text = await response.text();
-        console.log('📥 Resposta texto:', text.substring(0, 200));
+        console.log('📥 Resposta texto (primeiros 200 chars):', text.substring(0, 200));
         
         try {
           const result = JSON.parse(text);
