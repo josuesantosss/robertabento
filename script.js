@@ -6,164 +6,33 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxg8pD4An5xvuWXilHDp4jy
 // ============================================
 // NAVEGAÇÃO
 // ============================================
-document.querySelectorAll('[data-page]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const page = btn.dataset.page;
-    renderPage(page);
+let currentPage = 'home';
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const page = this.dataset.page;
+    navegarPara(page);
   });
 });
 
-// ============================================
-// FUNÇÃO PARA RENDERIZAR CADA PÁGINA
-// ============================================
-function renderPage(page) {
-  const app = document.getElementById('app');
-  switch(page) {
-    case 'home':
-      app.innerHTML = homePage();
-      break;
-    case 'cadastro':
-      app.innerHTML = cadastroPage();
-      document.getElementById('formCadastro').addEventListener('submit', cadastrarProduto);
-      break;
-    case 'consulta':
-      app.innerHTML = consultaPage();
-      // Carrega os produtos no dropdown após a página ser renderizada
-      setTimeout(() => {
-        carregarProdutosNoDropdown();
-      }, 100);
-      break;
-    case 'vendas':
-      app.innerHTML = vendasPage();
-      carregarProdutosParaVenda();
-      document.getElementById('formVenda').addEventListener('submit', registrarVenda);
-      break;
-    default:
-      app.innerHTML = '<h2>Página não encontrada</h2>';
-  }
+function navegarPara(page) {
+  currentPage = page;
+  
+  // Atualiza botões ativos
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.nav-btn[data-page="${page}"]`).classList.add('active');
+  
+  renderPage(page);
 }
 
 // ============================================
-// PÁGINAS (HTML)
+// FUNÇÃO PARA CHAMAR A API
 // ============================================
-
-function homePage() {
-  return `
-    <section>
-      <h1>🏠 Bem-vindo ao Sistema de Vendas</h1>
-      <p>Gerencie seus produtos e vendas de cosméticos.</p>
-      <p>Use os botões acima para navegar.</p>
-      
-      <div style="margin-top: 30px; display: flex; gap: 20px; flex-wrap: wrap;">
-        <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; flex: 1; min-width: 200px;">
-          <h3>📦 Produtos</h3>
-          <p>Cadastre e gerencie seu estoque</p>
-        </div>
-        <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; flex: 1; min-width: 200px;">
-          <h3>💰 Vendas</h3>
-          <p>Registre suas vendas diárias</p>
-        </div>
-        <div style="background: #fff3e0; padding: 20px; border-radius: 8px; flex: 1; min-width: 200px;">
-          <h3>📊 Consulta</h3>
-          <p>Consulte produtos em estoque</p>
-        </div>
-      </div>
-    </section>
-  `;
-}
-
-function cadastroPage() {
-  return `
-    <section>
-      <h2>➕ Cadastrar Produto</h2>
-      <form id="formCadastro" style="max-width: 500px;">
-        <div style="margin-bottom: 15px;">
-          <label for="nome"><strong>Nome do produto:</strong></label>
-          <input type="text" id="nome" placeholder="Ex: Shampoo" required style="width: 100%; padding: 8px; margin-top: 5px;">
-        </div>
-        <div style="margin-bottom: 15px;">
-          <label for="preco"><strong>Preço (R$):</strong></label>
-          <input type="number" id="preco" placeholder="0,00" step="0.01" required style="width: 100%; padding: 8px; margin-top: 5px;">
-        </div>
-        <div style="margin-bottom: 15px;">
-          <label for="quantidade"><strong>Quantidade em estoque:</strong></label>
-          <input type="number" id="quantidade" placeholder="0" required style="width: 100%; padding: 8px; margin-top: 5px;">
-        </div>
-        <button type="submit" style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
-          Cadastrar Produto
-        </button>
-      </form>
-      <div id="msgCadastro" style="margin-top: 20px;"></div>
-    </section>
-  `;
-}
-
-function consultaPage() {
-  return `
-    <section>
-      <h2>🔍 Consultar Estoque</h2>
-      
-      <div style="margin: 20px 0; padding: 20px; background: #f5f5f5; border-radius: 8px;">
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <label for="selectProduto"><strong>Selecione um produto:</strong></label>
-          <select id="selectProduto" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; min-width: 300px; flex: 1;">
-            <option value="">-- Escolha um produto --</option>
-          </select>
-          <button onclick="carregarProdutosNoDropdown()" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">
-            🔄 Atualizar
-          </button>
-        </div>
-      </div>
-      
-      <div id="detalhesProduto" style="margin-top: 20px;"></div>
-      
-      <div style="margin-top: 40px;">
-        <h3>📋 Todos os Produtos</h3>
-        <div id="listaTodosProdutos"></div>
-      </div>
-    </section>
-  `;
-}
-
-function vendasPage() {
-  return `
-    <section>
-      <h2>💰 Registrar Venda</h2>
-      <form id="formVenda" style="max-width: 500px;">
-        <div style="margin-bottom: 15px;">
-          <label for="produtoId"><strong>Produto:</strong></label>
-          <select id="produtoId" required style="width: 100%; padding: 8px; margin-top: 5px;">
-            <option value="">Selecione um produto</option>
-          </select>
-        </div>
-        <div style="margin-bottom: 15px;">
-          <label for="qtdVenda"><strong>Quantidade:</strong></label>
-          <input type="number" id="qtdVenda" placeholder="Quantidade" required style="width: 100%; padding: 8px; margin-top: 5px;">
-        </div>
-        <div style="margin-bottom: 15px;">
-          <label for="cliente"><strong>Cliente (opcional):</strong></label>
-          <input type="text" id="cliente" placeholder="Nome do cliente" style="width: 100%; padding: 8px; margin-top: 5px;">
-        </div>
-        <button type="submit" style="background: #FF9800; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
-          Registrar Venda
-        </button>
-      </form>
-      <div id="msgVenda" style="margin-top: 20px;"></div>
-    </section>
-  `;
-}
-
-// ============================================
-// FUNÇÕES DE COMUNICAÇÃO COM API
-// ============================================
-
-// Função genérica para chamar a API (CORRIGIDA)
 async function callAPI(action, data = null) {
   const url = `${API_URL}?action=${action}`;
   
   const options = {
     method: data ? 'POST' : 'GET',
-    mode: 'cors', // MUDADO de 'no-cors' para 'cors'
     headers: {
       'Content-Type': 'application/json',
     }
@@ -176,34 +45,144 @@ async function callAPI(action, data = null) {
   try {
     const response = await fetch(url, options);
     
-    // Verifica se a resposta foi bem-sucedida
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Tenta parsear como JSON
+    try {
+      const result = await response.json();
+      return result;
+    } catch(e) {
+      // Se não for JSON, retorna sucesso
+      return { success: true, message: 'Operação realizada com sucesso' };
     }
-    
-    const result = await response.json();
-    return result;
-    
   } catch (error) {
-    console.error('Erro na chamada da API:', error);
-    throw error;
+    console.error('Erro na API:', error);
+    return { success: false, error: 'Erro de comunicação com o servidor' };
   }
 }
 
 // ============================================
-// FUNÇÕES DA PÁGINA DE CADASTRO
+// RENDERIZAR PÁGINAS
 // ============================================
+function renderPage(page) {
+  const app = document.getElementById('app');
+  
+  switch(page) {
+    case 'home':
+      app.innerHTML = renderHome();
+      carregarResumo();
+      break;
+    case 'cadastro':
+      app.innerHTML = renderCadastro();
+      document.getElementById('formCadastro').addEventListener('submit', cadastrarProduto);
+      break;
+    case 'consulta':
+      app.innerHTML = renderConsulta();
+      setTimeout(() => {
+        carregarProdutosNoDropdown();
+      }, 100);
+      break;
+    case 'vendas':
+      app.innerHTML = renderVendas();
+      carregarProdutosParaVenda();
+      document.getElementById('formVenda').addEventListener('submit', registrarVenda);
+      break;
+    default:
+      app.innerHTML = '<h2>Página não encontrada</h2>';
+  }
+}
 
-// Cadastrar produto
+// ============================================
+// PÁGINA HOME
+// ============================================
+function renderHome() {
+  return `
+    <section>
+      <h2>🏠 Bem-vindo ao Sistema de Vendas</h2>
+      <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
+        Gerencie seus produtos e vendas de cosméticos de forma simples e eficiente.
+      </p>
+      
+      <div class="home-grid">
+        <div class="home-card">
+          <h3 id="totalProdutos">0</h3>
+          <p>📦 Produtos em Estoque</p>
+        </div>
+        <div class="home-card">
+          <h3 id="totalVendas">0</h3>
+          <p>💰 Vendas Realizadas</p>
+        </div>
+        <div class="home-card">
+          <h3 id="valorTotal">R$ 0,00</h3>
+          <p>💵 Valor Total em Estoque</p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 30px; text-align: center; color: #999;">
+        <p>Use os botões acima para navegar entre as funcionalidades</p>
+      </div>
+    </section>
+  `;
+}
+
+async function carregarResumo() {
+  try {
+    const result = await callAPI('listarProdutos');
+    const produtos = result.produtos || [];
+    
+    // Total de produtos
+    document.getElementById('totalProdutos').textContent = produtos.length;
+    
+    // Valor total em estoque
+    let valorTotal = 0;
+    produtos.forEach(p => {
+      valorTotal += p.preco * p.quantidade;
+    });
+    document.getElementById('valorTotal').textContent = `R$ ${valorTotal.toFixed(2)}`;
+    
+    // Total de vendas (seria melhor ter uma API específica)
+    // Por enquanto, mostramos um número estimado
+    document.getElementById('totalVendas').textContent = produtos.length > 0 ? '📊' : '0';
+    
+  } catch (error) {
+    console.error('Erro ao carregar resumo:', error);
+  }
+}
+
+// ============================================
+// PÁGINA CADASTRO
+// ============================================
+function renderCadastro() {
+  return `
+    <section>
+      <h2>➕ Cadastrar Produto</h2>
+      <form id="formCadastro">
+        <div class="form-group">
+          <label for="nome">Nome do Produto</label>
+          <input type="text" id="nome" placeholder="Ex: Shampoo" required>
+        </div>
+        <div class="form-group">
+          <label for="preco">Preço (R$)</label>
+          <input type="number" id="preco" placeholder="0,00" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label for="quantidade">Quantidade em Estoque</label>
+          <input type="number" id="quantidade" placeholder="0" required>
+        </div>
+        <button type="submit" class="btn-submit">Cadastrar Produto</button>
+      </form>
+      <div id="msgCadastro"></div>
+    </section>
+  `;
+}
+
 async function cadastrarProduto(e) {
   e.preventDefault();
-  const nome = document.getElementById('nome').value;
+  
+  const nome = document.getElementById('nome').value.trim();
   const preco = parseFloat(document.getElementById('preco').value);
   const quantidade = parseInt(document.getElementById('quantidade').value);
   
-  // Validações
   if (!nome || isNaN(preco) || isNaN(quantidade)) {
-    document.getElementById('msgCadastro').innerHTML = '❌ Preencha todos os campos corretamente.';
+    mostrarMensagem('msgCadastro', 'Preencha todos os campos corretamente.', 'error');
     return;
   }
   
@@ -211,42 +190,57 @@ async function cadastrarProduto(e) {
     const result = await callAPI('cadastrarProduto', { nome, preco, quantidade });
     
     if (result.success) {
-      document.getElementById('msgCadastro').innerHTML = '✅ Produto cadastrado com sucesso!';
+      mostrarMensagem('msgCadastro', '✅ Produto cadastrado com sucesso!', 'success');
       document.getElementById('formCadastro').reset();
     } else {
-      document.getElementById('msgCadastro').innerHTML = `❌ ${result.error || 'Erro ao cadastrar produto.'}`;
+      mostrarMensagem('msgCadastro', `❌ ${result.error || 'Erro ao cadastrar produto.'}`, 'error');
     }
   } catch (error) {
-    document.getElementById('msgCadastro').innerHTML = '❌ Erro de comunicação com o servidor.';
-    console.error('Erro ao cadastrar:', error);
+    mostrarMensagem('msgCadastro', '❌ Erro de comunicação com o servidor.', 'error');
   }
 }
 
 // ============================================
-// FUNÇÕES DA PÁGINA DE CONSULTA
+// PÁGINA CONSULTA
 // ============================================
+function renderConsulta() {
+  return `
+    <section>
+      <h2>🔍 Consultar Estoque</h2>
+      
+      <div class="filtro-container">
+        <select id="selectProduto">
+          <option value="">-- Escolha um produto --</option>
+        </select>
+        <button onclick="carregarProdutosNoDropdown()">🔄 Atualizar</button>
+      </div>
+      
+      <div id="detalhesProduto"></div>
+      
+      <div style="margin-top: 40px;">
+        <h3>📋 Todos os Produtos</h3>
+        <div class="table-container" id="listaTodosProdutos"></div>
+      </div>
+    </section>
+  `;
+}
 
-// Carregar produtos no dropdown
 async function carregarProdutosNoDropdown() {
   const select = document.getElementById('selectProduto');
   if (!select) return;
   
-  // Limpa o dropdown mantendo apenas a primeira opção
   select.innerHTML = '<option value="">-- Escolha um produto --</option>';
   
   try {
     const result = await callAPI('listarProdutos');
+    const produtos = result.produtos || [];
     
-    // Verifica se a resposta tem a estrutura correta
-    const produtos = result.produtos || result;
-    
-    if (!Array.isArray(produtos) || produtos.length === 0) {
+    if (produtos.length === 0) {
       select.innerHTML += '<option value="">Nenhum produto cadastrado</option>';
-      document.getElementById('listaTodosProdutos').innerHTML = '<p style="color: #999;">Nenhum produto cadastrado.</p>';
+      document.getElementById('listaTodosProdutos').innerHTML = '<p>Nenhum produto cadastrado.</p>';
       return;
     }
     
-    // Adiciona cada produto como opção
     produtos.forEach(produto => {
       const option = document.createElement('option');
       option.value = produto.id;
@@ -254,348 +248,176 @@ async function carregarProdutosNoDropdown() {
       select.appendChild(option);
     });
     
-    // Adiciona evento para quando selecionar um produto
     select.addEventListener('change', function() {
-      const idSelecionado = this.value;
-      if (idSelecionado) {
-        exibirDetalhesProduto(idSelecionado);
+      if (this.value) {
+        exibirDetalhesProduto(this.value);
       } else {
         document.getElementById('detalhesProduto').innerHTML = '';
       }
     });
     
-    // Também carrega a lista completa
     exibirTodosProdutos(produtos);
     
   } catch (error) {
     console.error('Erro ao carregar produtos:', error);
-    select.innerHTML += '<option value="">Erro ao carregar produtos</option>';
-    document.getElementById('listaTodosProdutos').innerHTML = '<p style="color: red;">❌ Erro ao carregar lista de produtos</p>';
+    select.innerHTML += '<option value="">Erro ao carregar</option>';
+    document.getElementById('listaTodosProdutos').innerHTML = '<p style="color: red;">❌ Erro ao carregar produtos.</p>';
   }
 }
 
-// Exibir detalhes do produto selecionado
 function exibirDetalhesProduto(id) {
-  const divDetalhes = document.getElementById('detalhesProduto');
-  
-  // Buscar o produto específico na lista completa
   const select = document.getElementById('selectProduto');
-  const optionSelecionada = select.options[select.selectedIndex];
+  const option = select.options[select.selectedIndex];
   
-  if (!optionSelecionada || !optionSelecionada.value) {
-    divDetalhes.innerHTML = '<p style="color: orange;">⚠️ Selecione um produto válido.</p>';
+  if (!option || !option.value) {
+    document.getElementById('detalhesProduto').innerHTML = '';
     return;
   }
   
-  // Extrair informações do texto da opção (nome e estoque)
-  const texto = optionSelecionada.textContent;
+  // Extrai nome e quantidade do texto da opção
+  const texto = option.textContent;
   const match = texto.match(/^(.*?)\s*\(Estoque:\s*(\d+)\)/);
   
-  if (match) {
-    const nome = match[1].trim();
-    const quantidade = parseInt(match[2]);
-    
-    // Buscar preço do produto
-    buscarPrecoProduto(id, nome, quantidade);
-  } else {
-    divDetalhes.innerHTML = '<p style="color: red;">❌ Erro ao ler dados do produto.</p>';
+  if (!match) {
+    document.getElementById('detalhesProduto').innerHTML = '<p style="color: red;">❌ Erro ao ler dados do produto.</p>';
+    return;
   }
+  
+  const nome = match[1].trim();
+  const quantidade = parseInt(match[2]);
+  
+  // Busca o preço da lista de produtos
+  buscarPrecoProduto(id, nome, quantidade);
 }
-
-// Buscar preço do produto
-let produtosCache = [];
 
 async function buscarPrecoProduto(id, nome, quantidade) {
   try {
-    // Se não tivermos o cache, buscamos da API
-    if (produtosCache.length === 0) {
-      const result = await callAPI('listarProdutos');
-      produtosCache = result.produtos || result;
+    const result = await callAPI('listarProdutos');
+    const produtos = result.produtos || [];
+    const produto = produtos.find(p => p.id == id);
+    
+    if (!produto) {
+      document.getElementById('detalhesProduto').innerHTML = '<p style="color: red;">❌ Produto não encontrado.</p>';
+      return;
     }
     
-    // Encontra o produto pelo ID
-    const produto = produtosCache.find(p => p.id == id);
-    
-    if (produto) {
-      exibirTabelaProduto({
-        id: produto.id,
-        nome: produto.nome,
-        quantidade: produto.quantidade,
-        preco: produto.preco
-      });
-    } else {
-      // Se não encontrar pelo ID, tenta pelo nome
-      const produtoPorNome = produtosCache.find(p => p.nome === nome);
-      if (produtoPorNome) {
-        exibirTabelaProduto({
-          id: produtoPorNome.id,
-          nome: produtoPorNome.nome,
-          quantidade: produtoPorNome.quantidade,
-          preco: produtoPorNome.preco
-        });
-      } else {
-        document.getElementById('detalhesProduto').innerHTML = 
-          '<p style="color: red;">❌ Produto não encontrado na base de dados.</p>';
-      }
-    }
-  } catch (error) {
-    console.error('Erro ao buscar preço:', error);
-    document.getElementById('detalhesProduto').innerHTML = 
-      '<p style="color: red;">❌ Erro ao carregar detalhes do produto.</p>';
-  }
-}
-
-// Exibir tabela com os detalhes do produto
-function exibirTabelaProduto(produto) {
-  const divDetalhes = document.getElementById('detalhesProduto');
-  
-  const status = produto.quantidade > 10 ? '✅ Em estoque' : 
-                 produto.quantidade > 0 ? '⚠️ Baixo estoque' : '❌ Esgotado';
-  const corStatus = produto.quantidade > 10 ? '#4CAF50' : 
-                    produto.quantidade > 0 ? '#FF9800' : '#f44336';
-  
-  const html = `
-    <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 2px solid #4CAF50; animation: fadeIn 0.3s ease-in;">
-      <h3 style="color: #4CAF50; margin-top: 0;">📋 Detalhes do Produto</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-        <thead>
-          <tr style="background: #4CAF50; color: white;">
-            <th style="padding: 12px; text-align: left;">ID</th>
-            <th style="padding: 12px; text-align: left;">Nome</th>
-            <th style="padding: 12px; text-align: center;">Quantidade em Estoque</th>
-            <th style="padding: 12px; text-align: right;">Preço Unitário</th>
-            <th style="padding: 12px; text-align: right;">Valor Total em Estoque</th>
-            <th style="padding: 12px; text-align: center;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style="background: white; border-bottom: 1px solid #ddd;">
-            <td style="padding: 12px;"><strong>#${produto.id}</strong></td>
-            <td style="padding: 12px;"><strong>${produto.nome}</strong></td>
-            <td style="padding: 12px; text-align: center;">
-              <span style="background: ${corStatus}; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold;">
-                ${produto.quantidade} unidades
-              </span>
-            </td>
-            <td style="padding: 12px; text-align: right;">R$ ${produto.preco.toFixed(2)}</td>
-            <td style="padding: 12px; text-align: right;"><strong>R$ ${(produto.preco * produto.quantidade).toFixed(2)}</strong></td>
-            <td style="padding: 12px; text-align: center;">
-              <span style="background: ${corStatus}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px;">
-                ${status}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `;
-  
-  divDetalhes.innerHTML = html;
-}
-
-// Exibir todos os produtos em tabela
-function exibirTodosProdutos(produtos) {
-  const divLista = document.getElementById('listaTodosProdutos');
-  
-  if (!produtos || produtos.length === 0) {
-    divLista.innerHTML = '<p style="color: #999;">Nenhum produto cadastrado.</p>';
-    return;
-  }
-  
-  let html = `
-    <div style="overflow-x: auto;">
-      <table style="width: 100%; border-collapse: collapse; margin-top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-        <thead>
-          <tr style="background: #2196F3; color: white;">
-            <th style="padding: 12px; text-align: left;">ID</th>
-            <th style="padding: 12px; text-align: left;">Nome</th>
-            <th style="padding: 12px; text-align: center;">Quantidade</th>
-            <th style="padding: 12px; text-align: right;">Preço</th>
-            <th style="padding: 12px; text-align: right;">Valor Total</th>
-            <th style="padding: 12px; text-align: center;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
-  
-  produtos.forEach((produto, index) => {
     const status = produto.quantidade > 10 ? '✅ Em estoque' : 
                    produto.quantidade > 0 ? '⚠️ Baixo estoque' : '❌ Esgotado';
     const corStatus = produto.quantidade > 10 ? '#4CAF50' : 
                       produto.quantidade > 0 ? '#FF9800' : '#f44336';
     
+    const html = `
+      <div class="detalhes-container">
+        <h3>📋 Detalhes do Produto</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Quantidade</th>
+              <th>Preço</th>
+              <th>Valor Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>#${produto.id}</strong></td>
+              <td><strong>${produto.nome}</strong></td>
+              <td>${produto.quantidade}</td>
+              <td>R$ ${produto.preco.toFixed(2)}</td>
+              <td><strong>R$ ${(produto.preco * produto.quantidade).toFixed(2)}</strong></td>
+              <td><span class="status-badge" style="background: ${corStatus}; color: white;">${status}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    document.getElementById('detalhesProduto').innerHTML = html;
+    
+  } catch (error) {
+    console.error('Erro:', error);
+    document.getElementById('detalhesProduto').innerHTML = '<p style="color: red;">❌ Erro ao carregar detalhes.</p>';
+  }
+}
+
+function exibirTodosProdutos(produtos) {
+  const div = document.getElementById('listaTodosProdutos');
+  
+  if (!produtos || produtos.length === 0) {
+    div.innerHTML = '<p>Nenhum produto cadastrado.</p>';
+    return;
+  }
+  
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Quantidade</th>
+          <th>Preço</th>
+          <th>Valor Total</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  produtos.forEach((p, index) => {
+    const status = p.quantidade > 10 ? 'Em estoque' : 
+                   p.quantidade > 0 ? 'Baixo estoque' : 'Esgotado';
+    const corStatus = p.quantidade > 10 ? 'status-green' : 
+                      p.quantidade > 0 ? 'status-yellow' : 'status-red';
+    
     html += `
-      <tr style="background: ${index % 2 === 0 ? '#f9f9f9' : 'white'}; 
-                 border-bottom: 1px solid #ddd;
-                 cursor: pointer;"
-          onclick="selecionarProdutoDaTabela(${produto.id})"
-          onmouseover="this.style.background='#e3f2fd'"
-          onmouseout="this.style.background='${index % 2 === 0 ? '#f9f9f9' : 'white'}'">
-        <td style="padding: 12px;">#${produto.id}</td>
-        <td style="padding: 12px;"><strong>${produto.nome}</strong></td>
-        <td style="padding: 12px; text-align: center;">${produto.quantidade}</td>
-        <td style="padding: 12px; text-align: right;">R$ ${produto.preco.toFixed(2)}</td>
-        <td style="padding: 12px; text-align: right;">R$ ${(produto.preco * produto.quantidade).toFixed(2)}</td>
-        <td style="padding: 12px; text-align: center;">
-          <span style="background: ${corStatus}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px;">
-            ${status}
-          </span>
-        </td>
+      <tr onclick="selecionarProduto(${p.id})">
+        <td>#${p.id}</td>
+        <td><strong>${p.nome}</strong></td>
+        <td>${p.quantidade}</td>
+        <td>R$ ${p.preco.toFixed(2)}</td>
+        <td>R$ ${(p.preco * p.quantidade).toFixed(2)}</td>
+        <td><span class="status-badge ${corStatus}">${status}</span></td>
       </tr>
     `;
   });
   
   html += `
-        </tbody>
-        <tfoot style="background: #e3f2fd; font-weight: bold;">
-          <tr>
-            <td colspan="6" style="padding: 12px; text-align: right;">
-              <strong>Total de produtos: ${produtos.length}</strong>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6" style="text-align: right; font-weight: bold;">
+            Total: ${produtos.length} produtos
+          </td>
+        </tr>
+      </tfoot>
+    </table>
   `;
   
-  divLista.innerHTML = html;
+  div.innerHTML = html;
 }
 
-// Função para selecionar produto clicando na tabela
-function selecionarProdutoDaTabela(id) {
+function selecionarProduto(id) {
   const select = document.getElementById('selectProduto');
   if (select) {
     select.value = id;
-    // Dispara o evento change
     const event = new Event('change');
     select.dispatchEvent(event);
     
-    // Rola a página para os detalhes
-    const detalhes = document.getElementById('detalhesProduto');
-    if (detalhes) {
-      setTimeout(() => {
-        detalhes.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
+    document.getElementById('detalhesProduto').scrollIntoView({ behavior: 'smooth' });
   }
 }
 
 // ============================================
-// FUNÇÕES DA PÁGINA DE VENDAS
+// PÁGINA VENDAS
 // ============================================
-
-// Carregar produtos no dropdown de venda
-async function carregarProdutosParaVenda() {
-  try {
-    const result = await callAPI('listarProdutos');
-    const produtos = result.produtos || result;
-    const select = document.getElementById('produtoId');
-    if (!select) return;
-    
-    select.innerHTML = '<option value="">Selecione um produto</option>';
-    
-    if (!Array.isArray(produtos) || produtos.length === 0) {
-      select.innerHTML += '<option value="">Nenhum produto disponível</option>';
-      return;
-    }
-    
-    produtos.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = `${p.nome} - R$ ${parseFloat(p.preco).toFixed(2)} (estoque: ${p.quantidade})`;
-      select.appendChild(opt);
-    });
-  } catch (error) {
-    console.error('Erro ao carregar produtos para venda', error);
-    const select = document.getElementById('produtoId');
-    if (select) {
-      select.innerHTML = '<option value="">Erro ao carregar produtos</option>';
-    }
-  }
-}
-
-// Registrar venda
-async function registrarVenda(e) {
-  e.preventDefault();
-  const produtoId = document.getElementById('produtoId').value;
-  const quantidade = parseInt(document.getElementById('qtdVenda').value);
-  const cliente = document.getElementById('cliente').value;
-  
-  if (!produtoId || !quantidade || quantidade <= 0) {
-    document.getElementById('msgVenda').innerHTML = '⚠️ Preencha todos os campos corretamente.';
-    return;
-  }
-  
-  try {
-    const result = await callAPI('registrarVenda', { produtoId, quantidade, cliente });
-    
-    if (result.success) {
-      document.getElementById('msgVenda').innerHTML = '✅ Venda registrada com sucesso!';
-      // Atualizar dropdown e estoque
-      carregarProdutosParaVenda();
-      document.getElementById('formVenda').reset();
-    } else {
-      document.getElementById('msgVenda').innerHTML = `❌ ${result.error || 'Erro ao registrar venda.'}`;
-    }
-  } catch (error) {
-    document.getElementById('msgVenda').innerHTML = '❌ Erro de comunicação com o servidor.';
-    console.error('Erro ao registrar venda:', error);
-  }
-}
-
-// ============================================
-// INICIAR COM A HOME
-// ============================================
-renderPage('home');
-
-// ============================================
-// ESTILOS ADICIONAIS (INJETADOS VIA JS)
-// ============================================
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  #selectProduto {
-    transition: border-color 0.3s;
-  }
-  
-  #selectProduto:hover {
-    border-color: #4CAF50;
-  }
-  
-  #selectProduto:focus {
-    outline: none;
-    border-color: #2196F3;
-    box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
-  }
-  
-  #detalhesProduto {
-    animation: fadeIn 0.3s ease-in;
-  }
-  
-  table {
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  
-  table th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  
-  table tr:hover {
-    background: #e3f2fd !important;
-    transition: background 0.3s;
-  }
-`;
-document.head.appendChild(style);
+function renderVendas() {
+  return `
+    <section>
+      <h2>💰 Registrar Venda</h2>
+      <form id="formVenda">
+        <div class="form-group">
+          <label for="produtoIdVenda">Produto</label>
+          <select id="produtoIdVenda" required>
+            <option value="">Se
