@@ -1,88 +1,1076 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💄 Sistema de Cosméticos</title>
-    <style>
-        :root { --primary: #764ba2; --secondary: #667eea; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
-        header { background: linear-gradient(135deg, var(--secondary), var(--primary)); color: white; padding: 20px; text-align: center; }
-        nav { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
-        button { cursor: pointer; padding: 8px 16px; border: none; border-radius: 20px; background: rgba(255,255,255,0.2); color: white; }
-        button.active { background: white; color: var(--primary); font-weight: bold; }
-        main { max-width: 800px; margin: 20px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; }
-        .btn-action { background: var(--primary); color: white; width: 100%; padding: 12px; border-radius: 6px; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💄 Sistema de Vendas - Cosméticos</title>
+  <style>
+    /* ============================================
+       RESET E ESTILOS GERAIS
+       ============================================ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 0;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    header h1 {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+    }
+
+    .nav-btn.active {
+      background: white;
+      color: #764ba2;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      width: 100%;
+    }
+
+    section {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      animation: fadeIn 0.4s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    section h2 {
+      color: #764ba2;
+      margin-bottom: 25px;
+      font-size: 28px;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .home-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .home-card {
+      background: #f8f9ff;
+      padding: 25px;
+      border-radius: 10px;
+      text-align: center;
+      transition: transform 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .home-card:hover {
+      transform: translateY(-5px);
+      border-color: #667eea;
+    }
+
+    .home-card h3 {
+      font-size: 32px;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .home-card p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #555;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    thead {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    th {
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    tr:hover {
+      background: #f8f9ff;
+      cursor: pointer;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-green {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .status-yellow {
+      background: #fff3e0;
+      color: #e65100;
+    }
+
+    .status-red {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .msg-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border-left: 4px solid #4caf50;
+    }
+
+    .msg-error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border-left: 4px solid #f44336;
+    }
+
+    .msg-info {
+      background: #e3f2fd;
+      color: #0d47a1;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border-left: 4px solid #2196f3;
+    }
+
+    .detalhes-container {
+      background: #f8f9ff;
+      padding: 20px;
+      border-radius: 10px;
+      border: 2px solid #667eea;
+      margin: 20px 0;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    .detalhes-container h3 {
+      color: #667eea;
+      margin-bottom: 15px;
+    }
+
+    .filtro-container {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    .filtro-container select {
+      flex: 1;
+      min-width: 250px;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .filtro-container button {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .filtro-container button:hover {
+      background: #764ba2;
+      transform: translateY(-2px);
+    }
+
+    footer {
+      background: #2c2c2c;
+      color: #999;
+      text-align: center;
+      padding: 20px;
+      margin-top: 30px;
+    }
+
+    @media (max-width: 768px) {
+      .header-container {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+      
+      nav {
+        justify-content: center;
+      }
+      
+      .nav-btn {
+        padding: 8px 14px;
+        font-size: 12px;
+      }
+      
+      section {
+        padding: 20px 15px;
+      }
+      
+      section h2 {
+        font-size: 22px;
+      }
+      
+      .home-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      
+      .filtro-container {
+        flex-direction: column;
+      }
+      
+      .filtro-container select {
+        min-width: 100%;
+      }
+      
+      table {
+        font-size: 13px;
+      }
+      
+      th, td {
+        padding: 8px 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .home-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      header h1 {
+        font-size: 18px;
+      }
+      
+      .nav-btn {
+        font-size: 11px;
+        padding: 6px 12px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <div class="header-container">
+      <h1>💄 Sistema de Vendas</h1>
+      <nav>
+        <button class="nav-btn active" data-page="home">🏠 Home</button>
+        <button class="nav-btn" data-page="cadastro">➕ Cadastrar</button>
+        <button class="nav-btn" data-page="consulta">🔍 Estoque</button>
+        <button class="nav-btn" data-page="vendas">💰 Vendas</button>
+      </nav>
+    </div>
+  </header>
 
-<header>
-    <h1>💄 Sistema de Vendas</h1>
-    <nav id="nav">
-        <button onclick="render('home')" class="active">Home</button>
-        <button onclick="render('cadastro')">Cadastrar</button>
-        <button onclick="render('consulta')">Estoque</button>
-    </nav>
-</header>
+  <main id="app">
+    <!-- O conteúdo será carregado aqui via JavaScript -->
+  </main>
 
-<main id="app"></main>
+  <footer>
+    <p>Sistema de Vendas de Cosméticos &copy; 2026</p>
+  </footer>
 
-<script>
-    const API_URL = 'SUA_URL_DO_GOOGLE_SCRIPT_AQUI';
+  <script>
+    // ============================================
+    // CONFIGURAÇÃO DA API - PROXY CORRIGIDO
+    // ============================================
+    const API_URL = 'https://script.google.com/macros/s/AKfycby2eVGkl74Hjocrt0IEXN6hQbvAr6lynEpNZb4zqj386jdkggc2_uRbUrgGukac6gqlSg/exec';
+    
+    // 🔥 USANDO CORS-ANYWHERE (SEM LIMITE DE 1MB)
+    const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
-    // Função central de comunicação
     async function callAPI(action, data = null) {
-        const options = {
-            method: data ? 'POST' : 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            body: data ? JSON.stringify(data) : null
-        };
-        const response = await fetch(`${API_URL}?action=${action}`, options);
-        return await response.json();
-    }
-
-    // Gerenciador de Páginas
-    function render(page) {
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-        const app = document.getElementById('app');
-
-        if (page === 'home') app.innerHTML = `<h2>Dashboard</h2><p>Bem-vindo ao sistema.</p>`;
-        
-        if (page === 'cadastro') app.innerHTML = `
-            <h2>Cadastrar Produto</h2>
-            <form onsubmit="handleCadastro(event)">
-                <div class="form-group"><input type="text" id="nome" placeholder="Nome" required></div>
-                <div class="form-group"><input type="number" id="preco" placeholder="Preço" step="0.01" required></div>
-                <div class="form-group"><input type="number" id="qtd" placeholder="Quantidade" required></div>
-                <button type="submit" class="btn-action">Salvar</button>
-            </form>`;
-
-        if (page === 'consulta') {
-            app.innerHTML = `<h2>Estoque</h2><div id="lista">Carregando...</div>`;
-            carregarProdutos();
+      let url;
+      const options = {
+        method: data ? 'POST' : 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         }
+      };
+      
+      if (data) {
+        url = `${CORS_PROXY}${API_URL}?action=${action}`;
+        options.body = JSON.stringify(data);
+      } else {
+        // Para GET, usa allorigins (mais rápido)
+        try {
+          const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + '?action=' + action)}`;
+          console.log(`📤 Chamando via allorigins: ${action}`);
+          
+          const response = await fetch(allOriginsUrl);
+          const text = await response.text();
+          
+          try {
+            const result = JSON.parse(text);
+            console.log('📥 Resultado allorigins:', result);
+            return result;
+          } catch (e) {
+            console.log('⚠️ allorigins falhou, tentando cors-anywhere...');
+          }
+        } catch (error) {
+          console.log('⚠️ allorigins erro, tentando cors-anywhere...');
+        }
+        
+        // Fallback para cors-anywhere
+        url = `${CORS_PROXY}${API_URL}?action=${action}`;
+      }
+      
+      console.log(`📤 Chamando API: ${action}`);
+      console.log(`📤 URL: ${url}`);
+      
+      try {
+        const response = await fetch(url, options);
+        console.log(`📥 Status: ${response.status}`);
+        
+        const text = await response.text();
+        console.log('📥 Resposta texto (primeiros 200 chars):', text.substring(0, 200));
+        
+        try {
+          const result = JSON.parse(text);
+          console.log('📥 Resposta JSON:', result);
+          return result;
+        } catch (e) {
+          console.error('❌ Erro ao parsear JSON:', e);
+          return { 
+            success: false, 
+            error: 'Resposta inválida do servidor' 
+          };
+        }
+      } catch (error) {
+        console.error('❌ Erro na API:', error);
+        return { 
+          success: false, 
+          error: 'Erro de comunicação: ' + error.message 
+        };
+      }
     }
 
-    async function handleCadastro(e) {
-        e.preventDefault();
-        const data = { nome: document.getElementById('nome').value, preco: document.getElementById('preco').value, quantidade: document.getElementById('qtd').value };
-        const res = await callAPI('cadastrarProduto', data);
-        alert(res.success ? "Sucesso!" : "Erro!");
+    // ============================================
+    // NAVEGAÇÃO
+    // ============================================
+    let currentPage = 'home';
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const page = this.dataset.page;
+        navegarPara(page);
+      });
+    });
+
+    function navegarPara(page) {
+      currentPage = page;
+      
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.nav-btn[data-page="${page}"]`).classList.add('active');
+      
+      renderPage(page);
     }
 
-    async function carregarProdutos() {
-        const res = await callAPI('listarProdutos');
-        if(!res.produtos) return document.getElementById('lista').innerHTML = "Nenhum produto.";
-        let html = `<table><tr><th>Nome</th><th>Preço</th><th>Qtd</th></tr>`;
-        res.produtos.forEach(p => html += `<tr><td>${p.nome}</td><td>R$ ${p.preco}</td><td>${p.quantidade}</td></tr>`);
-        document.getElementById('lista').innerHTML = html + `</table>`;
+    // ============================================
+    // FUNÇÃO PARA MOSTRAR MENSAGENS
+    // ============================================
+    function mostrarMensagem(elementId, mensagem, tipo = 'info') {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      
+      const classes = {
+        success: 'msg-success',
+        error: 'msg-error',
+        info: 'msg-info'
+      };
+      
+      element.className = classes[tipo] || 'msg-info';
+      element.textContent = mensagem;
+      element.style.display = 'block';
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-</script>
+
+    // ============================================
+    // RENDERIZAR PÁGINAS
+    // ============================================
+    function renderPage(page) {
+      const app = document.getElementById('app');
+      
+      switch(page) {
+        case 'home':
+          app.innerHTML = renderHome();
+          carregarResumo();
+          break;
+        case 'cadastro':
+          app.innerHTML = renderCadastro();
+          document.getElementById('formCadastro').addEventListener('submit', cadastrarProduto);
+          break;
+        case 'consulta':
+          app.innerHTML = renderConsulta();
+          setTimeout(() => {
+            carregarProdutosNoDropdown();
+          }, 100);
+          break;
+        case 'vendas':
+          app.innerHTML = renderVendas();
+          setTimeout(() => {
+            carregarProdutosParaVenda();
+          }, 100);
+          document.getElementById('formVenda').addEventListener('submit', registrarVenda);
+          break;
+        default:
+          app.innerHTML = '<h2>Página não encontrada</h2>';
+      }
+    }
+
+    // ============================================
+    // PÁGINA HOME
+    // ============================================
+    function renderHome() {
+      return `
+        <section>
+          <h2>🏠 Bem-vindo ao Sistema de Vendas</h2>
+          <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
+            Gerencie seus produtos e vendas de cosméticos de forma simples e eficiente.
+          </p>
+          
+          <div class="home-grid">
+            <div class="home-card">
+              <h3 id="totalProdutos">0</h3>
+              <p>📦 Produtos em Estoque</p>
+            </div>
+            <div class="home-card">
+              <h3 id="totalVendas">0</h3>
+              <p>💰 Vendas Realizadas</p>
+            </div>
+            <div class="home-card">
+              <h3 id="valorTotal">R$ 0,00</h3>
+              <p>💵 Valor Total em Estoque</p>
+            </div>
+          </div>
+          
+          <div style="margin-top: 30px; text-align: center; color: #999;">
+            <p>Use os botões acima para navegar entre as funcionalidades</p>
+          </div>
+        </section>
+      `;
+    }
+
+    async function carregarResumo() {
+      try {
+        const result = await callAPI('listarProdutos');
+        console.log('📊 Resultado do resumo:', result);
+        
+        if (!result.success) {
+          console.error('❌ Erro ao carregar resumo:', result.error);
+          document.getElementById('totalProdutos').textContent = '⚠️';
+          document.getElementById('totalVendas').textContent = '⚠️';
+          document.getElementById('valorTotal').textContent = '⚠️';
+          return;
+        }
+        
+        let produtos = [];
+        if (result.produtos && Array.isArray(result.produtos)) {
+          produtos = result.produtos;
+        }
+        
+        document.getElementById('totalProdutos').textContent = produtos.length;
+        
+        let valorTotal = 0;
+        produtos.forEach(p => {
+          valorTotal += (p.preco || 0) * (p.quantidade || 0);
+        });
+        document.getElementById('valorTotal').textContent = `R$ ${valorTotal.toFixed(2)}`;
+        document.getElementById('totalVendas').textContent = produtos.length > 0 ? '📊' : '0';
+        
+      } catch (error) {
+        console.error('Erro ao carregar resumo:', error);
+      }
+    }
+
+    // ============================================
+    // PÁGINA CADASTRO
+    // ============================================
+    function renderCadastro() {
+      return `
+        <section>
+          <h2>➕ Cadastrar Produto</h2>
+          <form id="formCadastro">
+            <div class="form-group">
+              <label for="nome">Nome do Produto</label>
+              <input type="text" id="nome" placeholder="Ex: Shampoo" required>
+            </div>
+            <div class="form-group">
+              <label for="preco">Preço (R$)</label>
+              <input type="number" id="preco" placeholder="0,00" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="quantidade">Quantidade em Estoque</label>
+              <input type="number" id="quantidade" placeholder="0" required>
+            </div>
+            <button type="submit" class="btn-submit">Cadastrar Produto</button>
+          </form>
+          <div id="msgCadastro"></div>
+        </section>
+      `;
+    }
+
+    async function cadastrarProduto(e) {
+      e.preventDefault();
+      
+      const nome = document.getElementById('nome').value.trim();
+      const preco = parseFloat(document.getElementById('preco').value);
+      const quantidade = parseInt(document.getElementById('quantidade').value);
+      
+      if (!nome || isNaN(preco) || isNaN(quantidade)) {
+        mostrarMensagem('msgCadastro', 'Preencha todos os campos corretamente.', 'error');
+        return;
+      }
+      
+      try {
+        const result = await callAPI('cadastrarProduto', { nome, preco, quantidade });
+        console.log('📝 Resultado cadastro:', result);
+        
+        if (result.success) {
+          mostrarMensagem('msgCadastro', '✅ Produto cadastrado com sucesso!', 'success');
+          document.getElementById('formCadastro').reset();
+        } else {
+          mostrarMensagem('msgCadastro', `❌ ${result.error || 'Erro ao cadastrar produto.'}`, 'error');
+        }
+      } catch (error) {
+        mostrarMensagem('msgCadastro', '❌ Erro de comunicação com o servidor.', 'error');
+      }
+    }
+
+    // ============================================
+    // PÁGINA CONSULTA
+    // ============================================
+    function renderConsulta() {
+      return `
+        <section>
+          <h2>🔍 Consultar Estoque</h2>
+          
+          <div class="filtro-container">
+            <select id="selectProduto">
+              <option value="">-- Escolha um produto --</option>
+            </select>
+            <button onclick="carregarProdutosNoDropdown()">🔄 Atualizar</button>
+          </div>
+          
+          <div id="detalhesProduto"></div>
+          
+          <div style="margin-top: 40px;">
+            <h3>📋 Todos os Produtos</h3>
+            <div class="table-container" id="listaTodosProdutos"></div>
+          </div>
+        </section>
+      `;
+    }
+
+    async function carregarProdutosNoDropdown() {
+      const select = document.getElementById('selectProduto');
+      if (!select) return;
+      
+      select.innerHTML = '<option value="">-- Escolha um produto --</option>';
+      
+      try {
+        const result = await callAPI('listarProdutos');
+        console.log('📦 Resultado listarProdutos:', result);
+        
+        if (!result.success) {
+          console.error('❌ Erro ao listar produtos:', result.error);
+          select.innerHTML += '<option value="">Erro ao carregar produtos</option>';
+          document.getElementById('listaTodosProdutos').innerHTML = 
+            `<p style="color: red;">❌ ${result.error || 'Erro ao carregar produtos'}</p>`;
+          return;
+        }
+        
+        let produtos = [];
+        if (result.produtos && Array.isArray(result.produtos)) {
+          produtos = result.produtos;
+        } else if (Array.isArray(result)) {
+          produtos = result;
+        } else {
+          console.error('❌ Formato de resposta não reconhecido:', result);
+          select.innerHTML += '<option value="">Erro: formato de resposta inválido</option>';
+          document.getElementById('listaTodosProdutos').innerHTML = 
+            `<p style="color: red;">❌ Erro: Formato de resposta inválido. Verifique o console.</p>`;
+          return;
+        }
+        
+        console.log(`✅ ${produtos.length} produtos encontrados`);
+        
+        if (produtos.length === 0) {
+          select.innerHTML += '<option value="">Nenhum produto cadastrado</option>';
+          document.getElementById('listaTodosProdutos').innerHTML = '<p>Nenhum produto cadastrado.</p>';
+          return;
+        }
+        
+        produtos.forEach(produto => {
+          const option = document.createElement('option');
+          option.value = produto.id;
+          option.textContent = `${produto.nome} (Estoque: ${produto.quantidade || 0})`;
+          select.appendChild(option);
+        });
+        
+        select.removeEventListener('change', handleSelectChange);
+        select.addEventListener('change', handleSelectChange);
+        
+        exibirTodosProdutos(produtos);
+        
+      } catch (error) {
+        console.error('❌ Erro ao carregar produtos:', error);
+        select.innerHTML += '<option value="">Erro ao carregar</option>';
+        document.getElementById('listaTodosProdutos').innerHTML = 
+          `<p style="color: red;">❌ Erro ao carregar produtos: ${error.message}</p>`;
+      }
+    }
+
+    function handleSelectChange() {
+      const select = document.getElementById('selectProduto');
+      if (select.value) {
+        exibirDetalhesProduto(select.value);
+      } else {
+        document.getElementById('detalhesProduto').innerHTML = '';
+      }
+    }
+
+    function exibirDetalhesProduto(id) {
+      const select = document.getElementById('selectProduto');
+      const option = select.options[select.selectedIndex];
+      
+      if (!option || !option.value) {
+        document.getElementById('detalhesProduto').innerHTML = '';
+        return;
+      }
+      
+      const texto = option.textContent;
+      const match = texto.match(/^(.*?)\s*\(Estoque:\s*(\d+)\)/);
+      
+      if (!match) {
+        document.getElementById('detalhesProduto').innerHTML = '<p style="color: red;">❌ Erro ao ler dados do produto.</p>';
+        return;
+      }
+      
+      const nome = match[1].trim();
+      const quantidade = parseInt(match[2]);
+      
+      buscarPrecoProduto(id, nome, quantidade);
+    }
+
+    async function buscarPrecoProduto(id, nome, quantidade) {
+      try {
+        const result = await callAPI('listarProdutos');
+        
+        if (!result.success) {
+          document.getElementById('detalhesProduto').innerHTML = 
+            `<p style="color: red;">❌ ${result.error || 'Erro ao buscar produto'}</p>`;
+          return;
+        }
+        
+        let produtos = [];
+        if (result.produtos && Array.isArray(result.produtos)) {
+          produtos = result.produtos;
+        }
+        
+        const produto = produtos.find(p => p.id == id);
+        
+        if (!produto) {
+          document.getElementById('detalhesProduto').innerHTML = '<p style="color: red;">❌ Produto não encontrado.</p>';
+          return;
+        }
+        
+        const qtd = produto.quantidade || 0;
+        const preco = produto.preco || 0;
+        
+        const status = qtd > 10 ? '✅ Em estoque' : 
+                       qtd > 0 ? '⚠️ Baixo estoque' : '❌ Esgotado';
+        const corStatus = qtd > 10 ? '#4CAF50' : 
+                          qtd > 0 ? '#FF9800' : '#f44336';
+        
+        const html = `
+          <div class="detalhes-container">
+            <h3>📋 Detalhes do Produto</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nome</th>
+                  <th>Quantidade</th>
+                  <th>Preço</th>
+                  <th>Valor Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>#${produto.id}</strong></td>
+                  <td><strong>${produto.nome}</strong></td>
+                  <td>${qtd}</td>
+                  <td>R$ ${preco.toFixed(2)}</td>
+                  <td><strong>R$ ${(preco * qtd).toFixed(2)}</strong></td>
+                  <td><span class="status-badge" style="background: ${corStatus}; color: white; padding: 4px 12px; border-radius: 20px;">${status}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+        
+        document.getElementById('detalhesProduto').innerHTML = html;
+        
+      } catch (error) {
+        console.error('Erro ao buscar preço:', error);
+        document.getElementById('detalhesProduto').innerHTML = '<p style="color: red;">❌ Erro ao carregar detalhes.</p>';
+      }
+    }
+
+    function exibirTodosProdutos(produtos) {
+      const div = document.getElementById('listaTodosProdutos');
+      
+      if (!produtos || produtos.length === 0) {
+        div.innerHTML = '<p>Nenhum produto cadastrado.</p>';
+        return;
+      }
+      
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Quantidade</th>
+              <th>Preço</th>
+              <th>Valor Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      produtos.forEach((p, index) => {
+        const qtd = p.quantidade || 0;
+        const preco = p.preco || 0;
+        
+        const status = qtd > 10 ? 'Em estoque' : 
+                       qtd > 0 ? 'Baixo estoque' : 'Esgotado';
+        const corStatus = qtd > 10 ? 'status-green' : 
+                          qtd > 0 ? 'status-yellow' : 'status-red';
+        
+        html += `
+          <tr onclick="selecionarProduto(${p.id})" style="cursor: pointer;">
+            <td>#${p.id}</td>
+            <td><strong>${p.nome}</strong></td>
+            <td>${qtd}</td>
+            <td>R$ ${preco.toFixed(2)}</td>
+            <td>R$ ${(preco * qtd).toFixed(2)}</td>
+            <td><span class="status-badge ${corStatus}">${status}</span></td>
+          </tr>
+        `;
+      });
+      
+      html += `
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="6" style="text-align: right; font-weight: bold;">
+                Total: ${produtos.length} produtos
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      `;
+      
+      div.innerHTML = html;
+    }
+
+    function selecionarProduto(id) {
+      const select = document.getElementById('selectProduto');
+      if (select) {
+        select.value = id;
+        const event = new Event('change');
+        select.dispatchEvent(event);
+        document.getElementById('detalhesProduto').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // ============================================
+    // PÁGINA VENDAS
+    // ============================================
+    function renderVendas() {
+      return `
+        <section>
+          <h2>💰 Registrar Venda</h2>
+          <form id="formVenda">
+            <div class="form-group">
+              <label for="produtoVenda">Selecione o Produto</label>
+              <select id="produtoVenda" required>
+                <option value="">-- Escolha um produto --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="quantidadeVenda">Quantidade</label>
+              <input type="number" id="quantidadeVenda" placeholder="1" min="1" required>
+            </div>
+            <div class="form-group">
+              <label for="cliente">Nome do Cliente</label>
+              <input type="text" id="cliente" placeholder="Ex: Maria Silva">
+            </div>
+            <button type="submit" class="btn-submit">✅ Registrar Venda</button>
+          </form>
+          <div id="msgVenda"></div>
+          
+          <div style="margin-top: 40px;">
+            <h3>📋 Histórico de Vendas</h3>
+            <div class="table-container" id="historicoVendas">
+              <p>Carregando histórico...</p>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    // ============================================
+    // FUNÇÕES DE VENDAS
+    // ============================================
+    async function carregarProdutosParaVenda() {
+      const select = document.getElementById('produtoVenda');
+      if (!select) return;
+      
+      select.innerHTML = '<option value="">-- Escolha um produto --</option>';
+      
+      try {
+        const result = await callAPI('listarProdutos');
+        console.log('📦 Produtos para venda:', result);
+        
+        if (!result.success) {
+          select.innerHTML += '<option value="">Erro ao carregar produtos</option>';
+          return;
+        }
+        
+        let produtos = [];
+        if (result.produtos && Array.isArray(result.produtos)) {
+          produtos = result.produtos;
+        }
+        
+        if (produtos.length === 0) {
+          select.innerHTML += '<option value="">Nenhum produto disponível</option>';
+          return;
+        }
+        
+        produtos.forEach(produto => {
+          const option = document.createElement('option');
+          option.value = produto.id;
+          option.textContent = `${produto.nome} (Estoque: ${produto.quantidade || 0}) - R$ ${(produto.preco || 0).toFixed(2)}`;
+          option.dataset.quantidade = produto.quantidade || 0;
+          option.dataset.preco = produto.preco || 0;
+          select.appendChild(option);
+        });
+        
+        carregarHistoricoVendas();
+        
+      } catch (error) {
+        console.error('❌ Erro ao carregar produtos para venda:', error);
+        select.innerHTML += '<option value="">Erro ao carregar</option>';
+      }
+    }
+
+    async function carregarHistoricoVendas() {
+      const div = document.getElementById('historicoVendas');
+      div.innerHTML = `
+        <p style="color: #666;">📊 Histórico de vendas será exibido aqui em breve.</p>
+        <p style="color: #999; font-size: 14px;">Após registrar uma venda, ela aparecerá nesta lista.</p>
+      `;
+    }
+
+    async function registrarVenda(e) {
+      e.preventDefault();
+      
+      const select = document.getElementById('produtoVenda');
+      const produtoId = select.value;
+      const quantidade = parseInt(document.getElementById('quantidadeVenda').value);
+      const cliente = document.getElementById('cliente').value.trim();
+      
+      if (!produtoId) {
+        mostrarMensagem('msgVenda', 'Selecione um produto.', 'error');
+        return;
+      }
+      
+      if (!quantidade || quantidade < 1) {
+        mostrarMensagem('msgVenda', 'Informe uma quantidade válida.', 'error');
+        return;
+      }
+      
+      const option = select.options[select.selectedIndex];
+      const estoqueDisponivel = parseInt(option.dataset.quantidade) || 0;
+      
+      if (quantidade > estoqueDisponivel) {
+        mostrarMensagem('msgVenda', `❌ Estoque insuficiente. Disponível: ${estoqueDisponivel}`, 'error');
+        return;
+      }
+      
+      try {
+        const result = await callAPI('registrarVenda', { 
+          produtoId, 
+          quantidade, 
+          cliente: cliente || 'Não informado' 
+        });
+        
+        console.log('📝 Resultado venda:', result);
+        
+        if (result.success) {
+          mostrarMensagem('msgVenda', `✅ Venda registrada com sucesso! Total: R$ ${result.venda.total.toFixed(2)}`, 'success');
+          document.getElementById('formVenda').reset();
+          carregarProdutosParaVenda();
+        } else {
+          mostrarMensagem('msgVenda', `❌ ${result.error || 'Erro ao registrar venda.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao registrar venda:', error);
+        mostrarMensagem('msgVenda', '❌ Erro de comunicação com o servidor.', 'error');
+      }
+    }
+
+    // ============================================
+    // INICIALIZAÇÃO
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+      renderPage('home');
+    });
+  </script>
 </body>
 </html>
