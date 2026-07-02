@@ -456,7 +456,8 @@
     // ============================================
     // CONFIGURAÇÃO DA API
     // ============================================
-    const API_URL = window.location.href.split('?')[0];
+    // ⚠️ SUBSTITUA SEU_ID_AQUI PELA URL DO SEU WEB APP
+    const API_URL = 'https://script.google.com/macros/s/AKfycby2eVGkl74Hjocrt0IEXN6hQbvAr6lynEpNZb4zqj386jdkggc2_uRbUrgGukac6gqlSg/exec';
 
     // ============================================
     // NAVEGAÇÃO
@@ -480,10 +481,13 @@
     }
 
     // ============================================
-    // FUNÇÃO PARA CHAMAR A API
+    // FUNÇÃO PARA CHAMAR A API (CORRIGIDA)
     // ============================================
     async function callAPI(action, data = null) {
       const url = `${API_URL}?action=${action}`;
+      
+      console.log(`📤 Chamando API: ${action}`);
+      console.log(`📤 URL: ${url}`);
       
       const options = {
         method: data ? 'POST' : 'GET',
@@ -494,15 +498,54 @@
       
       if (data) {
         options.body = JSON.stringify(data);
+        console.log('📤 Dados:', data);
       }
       
       try {
         const response = await fetch(url, options);
-        const result = await response.json();
-        return result;
+        console.log(`📥 Status: ${response.status}`);
+        
+        // Verifica se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        console.log(`📥 Content-Type: ${contentType}`);
+        
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          console.log('📥 Resposta JSON:', result);
+          return result;
+        } else {
+          // Se não for JSON, tenta ler como texto
+          const text = await response.text();
+          console.log('📥 Resposta texto (primeiros 200 caracteres):', text.substring(0, 200));
+          
+          // Se a resposta começa com <!DOCTYPE, é HTML (erro)
+          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+            console.error('❌ A API retornou HTML em vez de JSON');
+            return { 
+              success: false, 
+              error: 'A API retornou HTML. Verifique se a URL do Web App está correta e se o script foi implantado.' 
+            };
+          }
+          
+          // Tenta parsear o texto como JSON
+          try {
+            const result = JSON.parse(text);
+            console.log('📥 Resposta parseada como JSON:', result);
+            return result;
+          } catch(e) {
+            console.error('❌ Erro ao parsear JSON:', e);
+            return { 
+              success: false, 
+              error: 'Resposta inválida do servidor' 
+            };
+          }
+        }
       } catch (error) {
         console.error('❌ Erro na API:', error);
-        return { success: false, error: 'Erro de comunicação' };
+        return { 
+          success: false, 
+          error: 'Erro de comunicação: ' + error.message 
+        };
       }
     }
 
@@ -574,6 +617,11 @@
       try {
         const result = await callAPI('listarProdutos');
         console.log('📊 Resultado do resumo:', result);
+        
+        if (!result.success) {
+          console.error('❌ Erro ao carregar resumo:', result.error);
+          return;
+        }
         
         let produtos = [];
         if (result.produtos && Array.isArray(result.produtos)) {
@@ -684,6 +732,14 @@
         const result = await callAPI('listarProdutos');
         console.log('📦 Resultado listarProdutos:', result);
         
+        if (!result.success) {
+          console.error('❌ Erro ao listar produtos:', result.error);
+          select.innerHTML += '<option value="">Erro ao carregar produtos</option>';
+          document.getElementById('listaTodosProdutos').innerHTML = 
+            `<p style="color: red;">❌ ${result.error || 'Erro ao carregar produtos'}</p>`;
+          return;
+        }
+        
         let produtos = [];
         if (result.produtos && Array.isArray(result.produtos)) {
           produtos = result.produtos;
@@ -712,13 +768,9 @@
           select.appendChild(option);
         });
         
-        select.addEventListener('change', function() {
-          if (this.value) {
-            exibirDetalhesProduto(this.value);
-          } else {
-            document.getElementById('detalhesProduto').innerHTML = '';
-          }
-        });
+        // Remove event listeners antigos e adiciona um novo
+        select.removeEventListener('change', handleSelectChange);
+        select.addEventListener('change', handleSelectChange);
         
         exibirTodosProdutos(produtos);
         
@@ -727,6 +779,15 @@
         select.innerHTML += '<option value="">Erro ao carregar</option>';
         document.getElementById('listaTodosProdutos').innerHTML = 
           `<p style="color: red;">❌ Erro ao carregar produtos: ${error.message}</p>`;
+      }
+    }
+
+    function handleSelectChange() {
+      const select = document.getElementById('selectProduto');
+      if (select.value) {
+        exibirDetalhesProduto(select.value);
+      } else {
+        document.getElementById('detalhesProduto').innerHTML = '';
       }
     }
 
@@ -756,6 +817,12 @@
     async function buscarPrecoProduto(id, nome, quantidade) {
       try {
         const result = await callAPI('listarProdutos');
+        
+        if (!result.success) {
+          document.getElementById('detalhesProduto').innerHTML = 
+            `<p style="color: red;">❌ ${result.error || 'Erro ao buscar produto'}</p>`;
+          return;
+        }
         
         let produtos = [];
         if (result.produtos && Array.isArray(result.produtos)) {
@@ -889,116 +956,4 @@
     function renderVendas() {
       return `
         <section>
-          <h2>💰 Registrar Venda</h2>
-          <form id="formVenda">
-            <div class="form-group">
-              <label for="produtoIdVenda">Produto</label>
-              <select id="produtoIdVenda" required>
-                <option value="">Selecione um produto</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="qtdVenda">Quantidade</label>
-              <input type="number" id="qtdVenda" placeholder="Quantidade" required>
-            </div>
-            <div class="form-group">
-              <label for="cliente">Cliente (opcional)</label>
-              <input type="text" id="cliente" placeholder="Nome do cliente">
-            </div>
-            <button type="submit" class="btn-submit">✅ Registrar Venda</button>
-          </form>
-          <div id="msgVenda"></div>
-        </section>
-      `;
-    }
-
-    async function carregarProdutosParaVenda() {
-      try {
-        const result = await callAPI('listarProdutos');
-        console.log('📦 Produtos para venda:', result);
-        
-        let produtos = [];
-        if (result.produtos && Array.isArray(result.produtos)) {
-          produtos = result.produtos;
-        }
-        
-        const select = document.getElementById('produtoIdVenda');
-        if (!select) return;
-        
-        select.innerHTML = '<option value="">Selecione um produto</option>';
-        
-        if (produtos.length === 0) {
-          select.innerHTML += '<option value="">Nenhum produto disponível</option>';
-          return;
-        }
-        
-        produtos.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.textContent = `${p.nome} - R$ ${(p.preco || 0).toFixed(2)} (Estoque: ${p.quantidade || 0})`;
-          select.appendChild(opt);
-        });
-        
-      } catch (error) {
-        console.error('Erro ao carregar produtos para venda:', error);
-      }
-    }
-
-    async function registrarVenda(e) {
-      e.preventDefault();
-      
-      const produtoId = document.getElementById('produtoIdVenda').value;
-      const quantidade = parseInt(document.getElementById('qtdVenda').value);
-      const cliente = document.getElementById('cliente').value.trim();
-      
-      if (!produtoId || !quantidade || quantidade <= 0) {
-        mostrarMensagem('msgVenda', '⚠️ Selecione um produto e informe a quantidade.', 'error');
-        return;
-      }
-      
-      try {
-        const result = await callAPI('registrarVenda', { produtoId, quantidade, cliente });
-        console.log('💰 Resultado venda:', result);
-        
-        if (result.success) {
-          mostrarMensagem('msgVenda', '✅ Venda registrada com sucesso!', 'success');
-          document.getElementById('formVenda').reset();
-          carregarProdutosParaVenda();
-        } else {
-          mostrarMensagem('msgVenda', `❌ ${result.error || 'Erro ao registrar venda.'}`, 'error');
-        }
-      } catch (error) {
-        mostrarMensagem('msgVenda', '❌ Erro de comunicação com o servidor.', 'error');
-      }
-    }
-
-    // ============================================
-    // FUNÇÕES UTILITÁRIAS
-    // ============================================
-    function mostrarMensagem(elementId, mensagem, tipo) {
-      const element = document.getElementById(elementId);
-      if (!element) return;
-      
-      const classes = {
-        success: 'msg-success',
-        error: 'msg-error',
-        info: 'msg-info'
-      };
-      
-      element.className = classes[tipo] || 'msg-info';
-      element.innerHTML = mensagem;
-      
-      clearTimeout(element._timeout);
-      element._timeout = setTimeout(() => {
-        element.innerHTML = '';
-        element.className = '';
-      }, 5000);
-    }
-
-    // ============================================
-    // INICIAR APLICAÇÃO
-    // ============================================
-    navegarPara('home');
-  </script>
-</body>
-</html>
+          <h2>💰 Registrar Venda</h2
