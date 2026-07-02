@@ -9,10 +9,10 @@
 <body>
   <header>
     <nav>
-      <button data-page="home">Home</button>
-      <button data-page="cadastro">Cadastrar Produto</button>
-      <button data-page="consulta">Consultar Estoque</button>
-      <button data-page="vendas">Registrar Venda</button>
+      <button data-page="home">🏠 Home</button>
+      <button data-page="cadastro">➕ Cadastrar Produto</button>
+      <button data-page="consulta">🔍 Consultar Estoque</button>
+      <button data-page="vendas">💰 Registrar Venda</button>
     </nav>
   </header>
 
@@ -21,5 +21,20 @@
   </main>
 
   <script src="script.js"></script>
+  
+  <!-- Carrega os produtos no dropdown ao iniciar a página de consulta -->
+  <script>
+    // Sobrescreve o renderPage para carregar o dropdown quando for a página de consulta
+    const renderPageOriginal = renderPage;
+    renderPage = function(page) {
+      renderPageOriginal(page);
+      if (page === 'consulta') {
+        // Aguarda um pequeno delay para o DOM ser renderizado
+        setTimeout(() => {
+          carregarProdutosNoDropdown();
+        }, 100);
+      }
+    };
+  </script>
 </body>
 </html>
