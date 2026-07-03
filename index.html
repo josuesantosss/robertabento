@@ -412,15 +412,13 @@
 
   <script>
     // ============================================
-    // CONFIGURAÇÃO DA API - PROXY CORRIGIDO
+    // CONFIGURAÇÃO DA API
     // ============================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycby2eVGkl74Hjocrt0IEXN6hQbvAr6lynEpNZb4zqj386jdkggc2_uRbUrgGukac6gqlSg/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzWrSiJmWEuT0MJm2MZczxqbqcHAOvCcUJud-0Ke59Ag3V1TjAsSIvF7zh5b9cBtMNRrw/exec';
     
-    // 🔥 USANDO CORS-ANYWHERE (SEM LIMITE DE 1MB)
-    const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
-
+    // Função callAPI corrigida - sem proxies CORS
     async function callAPI(action, data = null) {
-      let url;
+      const url = `${API_URL}?action=${action}`;
       const options = {
         method: data ? 'POST' : 'GET',
         headers: {
@@ -429,55 +427,30 @@
       };
       
       if (data) {
-        url = `${CORS_PROXY}${API_URL}?action=${action}`;
         options.body = JSON.stringify(data);
-      } else {
-        // Para GET, usa allorigins (mais rápido)
-        try {
-          const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_URL + '?action=' + action)}`;
-          console.log(`📤 Chamando via allorigins: ${action}`);
-          
-          const response = await fetch(allOriginsUrl);
-          const text = await response.text();
-          
-          try {
-            const result = JSON.parse(text);
-            console.log('📥 Resultado allorigins:', result);
-            return result;
-          } catch (e) {
-            console.log('⚠️ allorigins falhou, tentando cors-anywhere...');
-          }
-        } catch (error) {
-          console.log('⚠️ allorigins erro, tentando cors-anywhere...');
-        }
-        
-        // Fallback para cors-anywhere
-        url = `${CORS_PROXY}${API_URL}?action=${action}`;
       }
       
-      console.log(`📤 Chamando API: ${action}`);
-      console.log(`📤 URL: ${url}`);
+      console.log(`📤 Chamando API: ${action}`, data || '');
       
       try {
         const response = await fetch(url, options);
         console.log(`📥 Status: ${response.status}`);
         
-        const text = await response.text();
-        console.log('📥 Resposta texto (primeiros 200 chars):', text.substring(0, 200));
-        
-        try {
-          const result = JSON.parse(text);
-          console.log('📥 Resposta JSON:', result);
-          return result;
-        } catch (e) {
-          console.error('❌ Erro ao parsear JSON:', e);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Resposta de erro:', errorText);
           return { 
             success: false, 
-            error: 'Resposta inválida do servidor' 
+            error: `Erro HTTP ${response.status}` 
           };
         }
+        
+        const result = await response.json();
+        console.log('📥 Resultado:', result);
+        return result;
+        
       } catch (error) {
-        console.error('❌ Erro na API:', error);
+        console.error('❌ Erro de rede:', error);
         return { 
           success: false, 
           error: 'Erro de comunicação: ' + error.message 
