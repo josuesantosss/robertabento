@@ -15,7 +15,6 @@ const url = `${API_URL}?action=${action}`;
 
 try {
 
-```
 const options = {
   method: data ? 'POST' : 'GET'
 };
@@ -30,18 +29,18 @@ const response = await fetch(url, options);
 const result = await response.json();
 
 return result;
-```
+
 
 } catch (error) {
 
-```
+
 console.error(error);
 
 return {
   success: false,
   error: error.message
 };
-```
+
 
 }
 }
@@ -56,7 +55,7 @@ renderHome();
 
 document.querySelectorAll('.nav-btn').forEach(btn => {
 
-```
+
 btn.addEventListener('click', () => {
 
   document
@@ -84,7 +83,7 @@ btn.addEventListener('click', () => {
   }
 
 });
-```
+
 
 });
 
@@ -106,7 +105,7 @@ let valorTotal = 0;
 
 if (result.success) {
 
-```
+
 totalProdutos = result.produtos.length;
 
 result.produtos.forEach(produto => {
@@ -116,13 +115,13 @@ result.produtos.forEach(produto => {
     Number(produto.quantidade || 0);
 
 });
-```
+
 
 }
 
 app.innerHTML = `
 
-```
+
 <section>
 
   <h2>🏠 Dashboard</h2>
@@ -137,7 +136,7 @@ app.innerHTML = `
   </p>
 
 </section>
-```
+
 
 `;
 }
@@ -152,7 +151,7 @@ const app = document.getElementById('app');
 
 app.innerHTML = `
 
-```
+
 <section>
 
   <h2>➕ Cadastrar Produto</h2>
@@ -202,7 +201,7 @@ app.innerHTML = `
   <div id="msg"></div>
 
 </section>
-```
+
 
 `;
 
@@ -237,23 +236,23 @@ const msg = document.getElementById('msg');
 
 if (result.success) {
 
-```
+
 msg.className = 'msg-success';
 
 msg.innerHTML =
   '✅ Produto cadastrado';
 
 e.target.reset();
-```
+
 
 } else {
 
-```
+
 msg.className = 'msg-error';
 
 msg.innerHTML =
   '❌ ' + result.error;
-```
+
 
 }
 }
@@ -276,7 +275,7 @@ result.success &&
 result.produtos.length > 0
 ) {
 
-```
+
 result.produtos.forEach(produto => {
 
   html += `
@@ -297,13 +296,13 @@ result.produtos.forEach(produto => {
 
   `;
 });
-```
+
 
 }
 
 app.innerHTML = `
 
-```
+
 <section>
 
   <h2>📦 Estoque</h2>
@@ -339,7 +338,7 @@ app.innerHTML = `
   </div>
 
 </section>
-```
+
 
 `;
 }
@@ -359,7 +358,7 @@ let options = '';
 
 if (result.success) {
 
-```
+
 result.produtos.forEach(produto => {
 
   options += `
@@ -372,13 +371,13 @@ result.produtos.forEach(produto => {
 
   `;
 });
-```
+
 
 }
 
 app.innerHTML = `
 
-```
+
 <section>
 
   <h2>💰 Registrar Venda</h2>
@@ -432,7 +431,7 @@ app.innerHTML = `
   <div id="msgVenda"></div>
 
 </section>
-```
+
 
 `;
 
@@ -471,23 +470,23 @@ document.getElementById('msgVenda');
 
 if (result.success) {
 
-```
+
 msg.className = 'msg-success';
 
 msg.innerHTML =
   '✅ Venda registrada';
 
 e.target.reset();
-```
+
 
 } else {
 
-```
+
 msg.className = 'msg-error';
 
 msg.innerHTML =
   '❌ ' + result.error;
-```
+
 
 }
 }
