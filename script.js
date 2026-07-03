@@ -1,3 +1,6 @@
+// ======================================
+// CONFIGURAÇÃO API
+// ======================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzWrSiJmWEuT0MJm2MZczxqbqcHAOvCcUJud-0Ke59Ag3V1TjAsSIvF7zh5b9cBtMNRrw/exec';
 
 // ======================================
@@ -5,42 +8,17 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzWrSiJmWEuT0MJm2MZczxq
 // ======================================
 async function callAPI(action, data = null) {
     const url = `${API_URL}?action=${action}`;
-    
     try {
         const options = {
             method: data ? 'POST' : 'GET',
-            headers: data ? { 'Content-Type': 'application/json' } : {}
+            ...(data && { body: JSON.stringify(data) })
         };
-        
-        if (data) {
-            options.body = JSON.stringify(data);
-        }
-        
         const response = await fetch(url, options);
-        const result = await response.json();
-        return result;
+        return await response.json();
     } catch (error) {
         console.error(error);
-        return {
-            success: false,
-            error: error.message
-        };
+        return { success: false, error: error.message };
     }
-}
-
-// ======================================
-// UTILITÁRIOS
-// ======================================
-const pageRenderers = {
-    home: renderHome,
-    cadastro: renderCadastro,
-    estoque: renderEstoque,
-    vendas: renderVendas
-};
-
-function showMessage(element, success, message) {
-    element.className = success ? 'msg-success' : 'msg-error';
-    element.innerHTML = success ? `✅ ${message}` : `❌ ${message}`;
 }
 
 // ======================================
@@ -54,10 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
-            const page = btn.dataset.page;
-            if (pageRenderers[page]) {
-                pageRenderers[page]();
-            }
+            const pageMap = {
+                'home': renderHome,
+                'cadastro': renderCadastro,
+                'estoque': renderEstoque,
+                'vendas': renderVendas
+            };
+            pageMap[btn.dataset.page]?.();
         });
     });
 });
@@ -72,7 +53,7 @@ async function renderHome() {
     let totalProdutos = 0;
     let valorTotal = 0;
     
-    if (result.success && result.produtos) {
+    if (result.success) {
         totalProdutos = result.produtos.length;
         result.produtos.forEach(produto => {
             valorTotal += Number(produto.preco || 0) * Number(produto.quantidade || 0);
@@ -93,7 +74,6 @@ async function renderHome() {
 // ======================================
 function renderCadastro() {
     const app = document.getElementById('app');
-    
     app.innerHTML = `
         <section>
             <h2>➕ Cadastrar Produto</h2>
@@ -115,25 +95,25 @@ function renderCadastro() {
             <div id="msg"></div>
         </section>
     `;
-    
     document.getElementById('formCadastro').addEventListener('submit', cadastrarProduto);
 }
 
 async function cadastrarProduto(e) {
     e.preventDefault();
-    
+    const form = e.target;
     const nome = document.getElementById('nome').value;
     const preco = Number(document.getElementById('preco').value);
     const quantidade = Number(document.getElementById('quantidade').value);
-    
     const result = await callAPI('cadastrarProduto', { nome, preco, quantidade });
     const msg = document.getElementById('msg');
     
     if (result.success) {
-        showMessage(msg, true, 'Produto cadastrado');
-        e.target.reset();
+        msg.className = 'msg-success';
+        msg.innerHTML = '✅ Produto cadastrado';
+        form.reset();
     } else {
-        showMessage(msg, false, result.error);
+        msg.className = 'msg-error';
+        msg.innerHTML = '❌ ' + result.error;
     }
 }
 
@@ -143,9 +123,9 @@ async function cadastrarProduto(e) {
 async function renderEstoque() {
     const app = document.getElementById('app');
     const result = await callAPI('listarProdutos');
-    
     let html = '';
-    if (result.success && result.produtos && result.produtos.length > 0) {
+    
+    if (result.success && result.produtos.length > 0) {
         result.produtos.forEach(produto => {
             html += `
                 <tr>
@@ -184,9 +164,9 @@ async function renderEstoque() {
 async function renderVendas() {
     const app = document.getElementById('app');
     const result = await callAPI('listarProdutos');
-    
     let options = '';
-    if (result.success && result.produtos) {
+    
+    if (result.success) {
         result.produtos.forEach(produto => {
             options += `<option value="${produto.id}">${produto.nome}</option>`;
         });
@@ -213,24 +193,24 @@ async function renderVendas() {
             <div id="msgVenda"></div>
         </section>
     `;
-    
     document.getElementById('formVenda').addEventListener('submit', registrarVenda);
 }
 
 async function registrarVenda(e) {
     e.preventDefault();
-    
+    const form = e.target;
     const produtoId = document.getElementById('produtoId').value;
     const quantidade = Number(document.getElementById('quantidadeVenda').value);
     const cliente = document.getElementById('cliente').value;
-    
     const result = await callAPI('registrarVenda', { produtoId, quantidade, cliente });
     const msg = document.getElementById('msgVenda');
     
     if (result.success) {
-        showMessage(msg, true, 'Venda registrada');
-        e.target.reset();
+        msg.className = 'msg-success';
+        msg.innerHTML = '✅ Venda registrada';
+        form.reset();
     } else {
-        showMessage(msg, false, result.error);
+        msg.className = 'msg-error';
+        msg.innerHTML = '❌ ' + result.error;
     }
 }
