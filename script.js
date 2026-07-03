@@ -15,7 +15,7 @@ async function callAPI(action, data = null) {
         };
         const response = await fetch(url, options);
         const result = await response.json();
-        console.log(`Resposta da API (${action}):`, result); // Para debug
+        console.log(`Resposta da API (${action}):`, result);
         return result;
     } catch (error) {
         console.error('Erro na API:', error);
@@ -55,13 +55,10 @@ async function renderHome() {
     let totalProdutos = 0;
     let valorTotal = 0;
     
-    if (result.success && result.data) {
-        totalProdutos = result.data.length;
-        result.data.forEach(produto => {
-            // Ajuste: usando as propriedades corretas
-            const preco = parseFloat(produto.preco || produto.Preco || 0);
-            const quantidade = parseInt(produto.quantidade || produto.Quantidade || 0);
-            valorTotal += preco * quantidade;
+    if (result.success && result.produtos) {
+        totalProdutos = result.produtos.length;
+        result.produtos.forEach(produto => {
+            valorTotal += (produto.preco || 0) * (produto.quantidade || 0);
         });
     }
     
@@ -95,7 +92,7 @@ function renderCadastro() {
                     <label>Quantidade</label>
                     <input type="number" id="quantidade" required placeholder="0">
                 </div>
-                <button class="btn-submit" type="submit">Salvar Produto</button>
+                <button class="btn-submit" type="submit">Cadastrar Produto</button>
             </form>
             <div id="msg"></div>
         </section>
@@ -111,7 +108,7 @@ async function cadastrarProduto(e) {
     const quantidade = parseInt(document.getElementById('quantidade').value);
     const msg = document.getElementById('msg');
     
-    // Validação básica
+    // Validações
     if (!nome) {
         msg.className = 'msg-error';
         msg.innerHTML = '❌ Por favor, informe o nome do produto';
@@ -130,6 +127,7 @@ async function cadastrarProduto(e) {
         return;
     }
     
+    // Envia para a API
     const result = await callAPI('cadastrarProduto', { 
         nome, 
         preco, 
@@ -140,7 +138,8 @@ async function cadastrarProduto(e) {
         msg.className = 'msg-success';
         msg.innerHTML = '✅ Produto cadastrado com sucesso!';
         form.reset();
-        // Atualiza o estoque se estiver visível
+        
+        // Recarrega a lista se estiver na página de estoque
         const activePage = document.querySelector('.nav-btn.active');
         if (activePage && activePage.dataset.page === 'estoque') {
             renderEstoque();
@@ -159,20 +158,14 @@ async function renderEstoque() {
     const result = await callAPI('listarProdutos');
     let html = '';
     
-    if (result.success && result.data && result.data.length > 0) {
-        result.data.forEach((produto, index) => {
-            // Ajuste: usando as propriedades corretas da planilha
-            const id = produto.id || produto.ID || index + 1;
-            const nome = produto.nome || produto.Nome || produto.produto || 'Sem nome';
-            const quantidade = produto.quantidade || produto.Quantidade || 0;
-            const preco = parseFloat(produto.preco || produto.Preco || 0);
-            
+    if (result.success && result.produtos && result.produtos.length > 0) {
+        result.produtos.forEach(produto => {
             html += `
                 <tr>
-                    <td>${id}</td>
-                    <td>${nome}</td>
-                    <td>${quantidade}</td>
-                    <td>R$ ${preco.toFixed(2)}</td>
+                    <td>${produto.id}</td>
+                    <td>${produto.nome}</td>
+                    <td>${produto.quantidade}</td>
+                    <td>R$ ${(produto.preco || 0).toFixed(2)}</td>
                 </tr>
             `;
         });
@@ -191,7 +184,7 @@ async function renderEstoque() {
             <h2>📦 Estoque</h2>
             <div style="margin-bottom: 15px;">
                 <button onclick="renderEstoque()" class="btn-submit" style="padding: 8px 16px; font-size: 14px;">
-                    🔄 Atualizar
+                    🔄 Atualizar Estoque
                 </button>
             </div>
             <div class="table-container">
@@ -219,13 +212,14 @@ async function renderVendas() {
     const result = await callAPI('listarProdutos');
     let options = '<option value="">Selecione um produto...</option>';
     
-    if (result.success && result.data && result.data.length > 0) {
-        result.data.forEach(produto => {
-            const nome = produto.nome || produto.Nome || produto.produto || 'Sem nome';
-            const id = produto.id || produto.ID;
-            // Mostra também a quantidade disponível
-            const quantidade = produto.quantidade || produto.Quantidade || 0;
-            options += `<option value="${id}" data-quantidade="${quantidade}">${nome} (${quantidade} disponível)</option>`;
+    if (result.success && result.produtos && result.produtos.length > 0) {
+        result.produtos.forEach(produto => {
+            const disponivel = produto.quantidade || 0;
+            options += `
+                <option value="${produto.id}" data-quantidade="${disponivel}">
+                    ${produto.nome} (${disponivel} disponível) - R$ ${(produto.preco || 0).toFixed(2)}
+                </option>
+            `;
         });
     }
     
@@ -276,7 +270,7 @@ async function registrarVenda(e) {
         return;
     }
     
-    // Verifica se há estoque suficiente
+    // Verifica estoque disponível
     const select = document.getElementById('produtoId');
     const selectedOption = select.options[select.selectedIndex];
     const disponivel = parseInt(selectedOption.dataset.quantidade || 0);
@@ -287,6 +281,7 @@ async function registrarVenda(e) {
         return;
     }
     
+    // Registra a venda
     const result = await callAPI('registrarVenda', { 
         produtoId, 
         quantidade, 
@@ -295,9 +290,12 @@ async function registrarVenda(e) {
     
     if (result.success) {
         msg.className = 'msg-success';
-        msg.innerHTML = `✅ Venda registrada com sucesso! ${cliente} - ${quantidade} unidades`;
+        msg.innerHTML = `✅ Venda registrada com sucesso!<br>
+                         Cliente: ${cliente}<br>
+                         Quantidade: ${quantidade} unidades`;
         form.reset();
-        // Atualiza o estoque se estiver visível
+        
+        // Recarrega o estoque se estiver visível
         const activePage = document.querySelector('.nav-btn.active');
         if (activePage && activePage.dataset.page === 'estoque') {
             renderEstoque();
