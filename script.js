@@ -39,7 +39,7 @@ console.error(error);
 return {
   success: false,
   error: error.message
-};
+}
 
 
 }
