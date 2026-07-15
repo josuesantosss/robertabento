@@ -3,24 +3,14 @@
 // ======================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzWrSiJmWEuT0MJm2MZczxqbqcHAOvCcUJud-0Ke59Ag3V1TjAsSIvF7zh5b9cBtMNRrw/exec';
 
-// ======================================
-// API
-// ======================================
 async function callAPI(action, data = null) {
     const url = `${API_URL}?action=${action}`;
-    try {
-        const options = {
-            method: data ? 'POST' : 'GET',
-            ...(data && { body: JSON.stringify(data) })
-        };
-        const response = await fetch(url, options);
-        const result = await response.json();
-        console.log(`Resposta da API (${action}):`, result);
-        return result;
-    } catch (error) {
-        console.error('Erro na API:', error);
-        return { success: false, error: error.message };
-    }
+    const options = {
+        method: data ? 'POST' : 'GET',
+        body: data ? JSON.stringify(data) : null
+    };
+    const response = await fetch(url, options);
+    return await response.json();
 }
 
 // ======================================
@@ -28,23 +18,79 @@ async function callAPI(action, data = null) {
 // ======================================
 document.addEventListener('DOMContentLoaded', () => {
     renderHome();
-    
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            const pageMap = {
-                'home': renderHome,
-                'cadastro': renderCadastro,
-                'estoque': renderEstoque,
-                'vendas': renderVendas,
-                'clientes': renderClientes
+            e.target.classList.add('active');
+            const pages = { 
+                'home': renderHome, 
+                'cadastro': renderCadastro, 
+                'estoque': renderEstoque, 
+                'vendas': renderVendas, 
+                'clientes': renderClientes 
             };
-            pageMap[btn.dataset.page]?.();
+            pages[e.target.dataset.page]?.();
         });
     });
 });
+
+// ======================================
+// RENDERIZAÇÃO CLIENTES
+// ======================================
+async function renderClientes() {
+    const app = document.getElementById('app');
+    const res = await callAPI('listarVendasPorCliente');
+    let html = '';
+    
+    if (res.success) {
+        res.clientes.forEach(c => {
+            const saldo = c.totalGasto - c.totalPago;
+            html += `
+                <tr onclick="abrirDetalhes('${c.nome}')" style="cursor:pointer; background: #fdfdfd;">
+                    <td>${c.nome}</td>
+                    <td>R$ ${c.totalGasto.toFixed(2)}</td>
+                    <td>R$ ${c.totalPago.toFixed(2)}</td>
+                    <td><strong>R$ ${saldo.toFixed(2)}</strong></td>
+                </tr>`;
+        });
+    }
+    app.innerHTML = `
+        <section>
+            <h2>👥 Clientes (Clique para detalhes)</h2>
+            <table>
+                <thead><tr><th>Cliente</th><th>Total Gasto</th><th>Pago</th><th>Devido</th></tr></thead>
+                <tbody>${html}</tbody>
+            </table>
+            <div id="detalhesCliente" style="margin-top:20px; padding:10px; border:1px solid #ccc;"></div>
+        </section>`;
+}
+
+async function abrirDetalhes(nome) {
+    const res = await callAPI('listarDetalhesCliente', { cliente: nome });
+    const container = document.getElementById('detalhesCliente');
+    
+    let hist = res.historico.map(h => `<li>${h.data.split('T')[0]}: ${h.produto} - R$ ${h.total.toFixed(2)}</li>`).join('');
+    
+    container.innerHTML = `
+        <h3>Histórico: ${nome}</h3>
+        <ul>${hist}</ul>
+        <input type="number" id="valorPagamento" placeholder="Valor do pagamento">
+        <button onclick="efetuarPagamento('${nome}')">Registrar Pagamento</button>
+    `;
+}
+
+async function efetuarPagamento(nome) {
+    const valor = parseFloat(document.getElementById('valorPagamento').value);
+    if (!valor || valor <= 0) return alert("Insira um valor válido");
+    
+    const res = await callAPI('registrarPagamento', { cliente: nome, valor: valor });
+    if (res.success) {
+        alert("Pagamento registrado com sucesso!");
+        renderClientes(); 
+    } else {
+        alert("Erro ao registrar pagamento.");
+    }
+}
 
 // ======================================
 // HOME
