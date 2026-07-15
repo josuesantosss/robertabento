@@ -305,3 +305,44 @@ async function registrarVenda(e) {
         msg.innerHTML = '❌ Erro ao registrar venda: ' + (result.error || 'Tente novamente');
     }
 }
+// ======================================
+// RELATÓRIO DE CLIENTES (Nova função)
+// ======================================
+async function renderClientes() {
+    const app = document.getElementById('app');
+    // Você precisará criar uma nova ação na sua API para buscar dados de vendas
+    const result = await callAPI('listarVendasPorCliente');
+    
+    let html = '';
+    
+    if (result.success && result.clientes) {
+        result.clientes.forEach(cliente => {
+            const aPagar = cliente.totalGasto - cliente.totalPago;
+            html += `
+                <tr>
+                    <td>${cliente.nome}</td>
+                    <td>R$ ${cliente.totalGasto.toFixed(2)}</td>
+                    <td>R$ ${cliente.totalPago.toFixed(2)}</td>
+                    <td>R$ ${aPagar.toFixed(2)}</td>
+                </tr>
+            `;
+        });
+    }
+
+    app.innerHTML = `
+        <section>
+            <h2>👥 Relatório de Clientes</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Total Gastou</th>
+                        <th>Total Pago</th>
+                        <th>A Pagar</th>
+                    </tr>
+                </thead>
+                <tbody>${html}</tbody>
+            </table>
+        </section>
+    `;
+}
