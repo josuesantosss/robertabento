@@ -38,7 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 'home': renderHome,
                 'cadastro': renderCadastro,
                 'estoque': renderEstoque,
-                'vendas': renderVendas
+                'vendas': renderVendas,
+                'clientes': renderClientes
             };
             pageMap[btn.dataset.page]?.();
         });
@@ -108,45 +109,18 @@ async function cadastrarProduto(e) {
     const quantidade = parseInt(document.getElementById('quantidade').value);
     const msg = document.getElementById('msg');
     
-    // Validações
-    if (!nome) {
-        msg.className = 'msg-error';
-        msg.innerHTML = '❌ Por favor, informe o nome do produto';
+    if (!nome || isNaN(preco) || isNaN(quantidade)) {
+        msg.innerHTML = '❌ Preencha todos os campos corretamente.';
         return;
     }
     
-    if (isNaN(preco) || preco <= 0) {
-        msg.className = 'msg-error';
-        msg.innerHTML = '❌ Por favor, informe um preço válido';
-        return;
-    }
-    
-    if (isNaN(quantidade) || quantidade < 0) {
-        msg.className = 'msg-error';
-        msg.innerHTML = '❌ Por favor, informe uma quantidade válida';
-        return;
-    }
-    
-    // Envia para a API
-    const result = await callAPI('cadastrarProduto', { 
-        nome, 
-        preco, 
-        quantidade 
-    });
+    const result = await callAPI('cadastrarProduto', { nome, preco, quantidade });
     
     if (result.success) {
-        msg.className = 'msg-success';
-        msg.innerHTML = '✅ Produto cadastrado com sucesso!';
+        msg.innerHTML = '✅ Produto cadastrado!';
         form.reset();
-        
-        // Recarrega a lista se estiver na página de estoque
-        const activePage = document.querySelector('.nav-btn.active');
-        if (activePage && activePage.dataset.page === 'estoque') {
-            renderEstoque();
-        }
     } else {
-        msg.className = 'msg-error';
-        msg.innerHTML = '❌ Erro ao cadastrar: ' + (result.error || 'Tente novamente');
+        msg.innerHTML = '❌ Erro ao cadastrar.';
     }
 }
 
@@ -158,48 +132,19 @@ async function renderEstoque() {
     const result = await callAPI('listarProdutos');
     let html = '';
     
-    if (result.success && result.produtos && result.produtos.length > 0) {
-        result.produtos.forEach(produto => {
-            html += `
-                <tr>
-                    <td>${produto.id}</td>
-                    <td>${produto.nome}</td>
-                    <td>${produto.quantidade}</td>
-                    <td>R$ ${(produto.preco || 0).toFixed(2)}</td>
-                </tr>
-            `;
+    if (result.success && result.produtos) {
+        result.produtos.forEach(p => {
+            html += `<tr><td>${p.id}</td><td>${p.nome}</td><td>${p.quantidade}</td><td>R$ ${p.preco.toFixed(2)}</td></tr>`;
         });
-    } else {
-        html = `
-            <tr>
-                <td colspan="4" style="text-align: center; padding: 20px;">
-                    ${result.success ? '📭 Nenhum produto cadastrado' : '❌ Erro ao carregar produtos'}
-                </td>
-            </tr>
-        `;
     }
     
     app.innerHTML = `
         <section>
             <h2>📦 Estoque</h2>
-            <div style="margin-bottom: 15px;">
-                <button onclick="renderEstoque()" class="btn-submit" style="padding: 8px 16px; font-size: 14px;">
-                    🔄 Atualizar Estoque
-                </button>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Produto</th>
-                            <th>Quantidade</th>
-                            <th>Preço</th>
-                        </tr>
-                    </thead>
-                    <tbody>${html}</tbody>
-                </table>
-            </div>
+            <table>
+                <thead><tr><th>ID</th><th>Produto</th><th>Qtd</th><th>Preço</th></tr></thead>
+                <tbody>${html}</tbody>
+            </table>
         </section>
     `;
 }
@@ -210,16 +155,11 @@ async function renderEstoque() {
 async function renderVendas() {
     const app = document.getElementById('app');
     const result = await callAPI('listarProdutos');
-    let options = '<option value="">Selecione um produto...</option>';
+    let options = '<option value="">Selecione...</option>';
     
-    if (result.success && result.produtos && result.produtos.length > 0) {
-        result.produtos.forEach(produto => {
-            const disponivel = produto.quantidade || 0;
-            options += `
-                <option value="${produto.id}" data-quantidade="${disponivel}">
-                    ${produto.nome} (${disponivel} disponível) - R$ ${(produto.preco || 0).toFixed(2)}
-                </option>
-            `;
+    if (result.success && result.produtos) {
+        result.produtos.forEach(p => {
+            options += `<option value="${p.id}" data-quantidade="${p.quantidade}">${p.nome}</option>`;
         });
     }
     
@@ -227,21 +167,10 @@ async function renderVendas() {
         <section>
             <h2>💰 Registrar Venda</h2>
             <form id="formVenda">
-                <div class="form-group">
-                    <label>Produto</label>
-                    <select id="produtoId" required>
-                        ${options}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Quantidade</label>
-                    <input type="number" id="quantidadeVenda" required placeholder="0" min="1">
-                </div>
-                <div class="form-group">
-                    <label>Nome do Cliente</label>
-                    <input type="text" id="cliente" placeholder="Digite o nome do cliente">
-                </div>
-                <button class="btn-submit" type="submit">Registrar Venda</button>
+                <select id="produtoId" required>${options}</select>
+                <input type="number" id="quantidadeVenda" required placeholder="Qtd">
+                <input type="text" id="cliente" placeholder="Nome do Cliente">
+                <button type="submit">Registrar Venda</button>
             </form>
             <div id="msgVenda"></div>
         </section>
@@ -251,78 +180,33 @@ async function renderVendas() {
 
 async function registrarVenda(e) {
     e.preventDefault();
-    const form = e.target;
-    const produtoId = document.getElementById('produtoId').value;
-    const quantidade = parseInt(document.getElementById('quantidadeVenda').value);
-    const cliente = document.getElementById('cliente').value.trim() || 'Cliente não informado';
+    const data = {
+        produtoId: document.getElementById('produtoId').value,
+        quantidade: parseInt(document.getElementById('quantidadeVenda').value),
+        cliente: document.getElementById('cliente').value.trim()
+    };
+    
+    const result = await callAPI('registrarVenda', data);
     const msg = document.getElementById('msgVenda');
-    
-    // Validações
-    if (!produtoId) {
-        msg.className = 'msg-error';
-        msg.innerHTML = '❌ Por favor, selecione um produto';
-        return;
-    }
-    
-    if (isNaN(quantidade) || quantidade <= 0) {
-        msg.className = 'msg-error';
-        msg.innerHTML = '❌ Por favor, informe uma quantidade válida';
-        return;
-    }
-    
-    // Verifica estoque disponível
-    const select = document.getElementById('produtoId');
-    const selectedOption = select.options[select.selectedIndex];
-    const disponivel = parseInt(selectedOption.dataset.quantidade || 0);
-    
-    if (quantidade > disponivel) {
-        msg.className = 'msg-error';
-        msg.innerHTML = `❌ Quantidade insuficiente! Disponível: ${disponivel}`;
-        return;
-    }
-    
-    // Registra a venda
-    const result = await callAPI('registrarVenda', { 
-        produtoId, 
-        quantidade, 
-        cliente 
-    });
-    
-    if (result.success) {
-        msg.className = 'msg-success';
-        msg.innerHTML = `✅ Venda registrada com sucesso!<br>
-                         Cliente: ${cliente}<br>
-                         Quantidade: ${quantidade} unidades`;
-        form.reset();
-        
-        // Recarrega o estoque se estiver visível
-        const activePage = document.querySelector('.nav-btn.active');
-        if (activePage && activePage.dataset.page === 'estoque') {
-            renderEstoque();
-        }
-    } else {
-        msg.className = 'msg-error';
-        msg.innerHTML = '❌ Erro ao registrar venda: ' + (result.error || 'Tente novamente');
-    }
+    msg.innerHTML = result.success ? '✅ Venda registrada!' : '❌ Erro ao vender.';
 }
+
 // ======================================
-// RELATÓRIO DE CLIENTES (Nova função)
+// RELATÓRIO DE CLIENTES
 // ======================================
 async function renderClientes() {
     const app = document.getElementById('app');
-    // Você precisará criar uma nova ação na sua API para buscar dados de vendas
     const result = await callAPI('listarVendasPorCliente');
     
     let html = '';
-    
     if (result.success && result.clientes) {
-        result.clientes.forEach(cliente => {
-            const aPagar = cliente.totalGasto - cliente.totalPago;
+        result.clientes.forEach(c => {
+            const aPagar = c.totalGasto - c.totalPago;
             html += `
                 <tr>
-                    <td>${cliente.nome}</td>
-                    <td>R$ ${cliente.totalGasto.toFixed(2)}</td>
-                    <td>R$ ${cliente.totalPago.toFixed(2)}</td>
+                    <td>${c.nome}</td>
+                    <td>R$ ${c.totalGasto.toFixed(2)}</td>
+                    <td>R$ ${c.totalPago.toFixed(2)}</td>
                     <td>R$ ${aPagar.toFixed(2)}</td>
                 </tr>
             `;
@@ -334,12 +218,7 @@ async function renderClientes() {
             <h2>👥 Relatório de Clientes</h2>
             <table>
                 <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Total Gastou</th>
-                        <th>Total Pago</th>
-                        <th>A Pagar</th>
-                    </tr>
+                    <tr><th>Cliente</th><th>Total Gasto</th><th>Pago</th><th>A Pagar</th></tr>
                 </thead>
                 <tbody>${html}</tbody>
             </table>
