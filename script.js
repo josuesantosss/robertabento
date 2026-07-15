@@ -7,10 +7,16 @@ async function callAPI(action, data = null) {
     const url = `${API_URL}?action=${action}`;
     const options = {
         method: data ? 'POST' : 'GET',
+        headers: { 'Content-Type': 'application/json' },
         body: data ? JSON.stringify(data) : null
     };
-    const response = await fetch(url, options);
-    return await response.json();
+    try {
+        const response = await fetch(url, options);
+        return await response.json();
+    } catch (error) {
+        console.error('Erro na API:', error);
+        return { success: false, error: error.message };
+    }
 }
 
 // ======================================
@@ -35,18 +41,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ======================================
-// RENDERIZAÇÃO CLIENTES
+// RENDERIZAÇÃO CLIENTES (UNIFICADA)
 // ======================================
 async function renderClientes() {
     const app = document.getElementById('app');
     const res = await callAPI('listarVendasPorCliente');
     let html = '';
     
-    if (res.success) {
+    if (res.success && res.clientes) {
         res.clientes.forEach(c => {
             const saldo = c.totalGasto - c.totalPago;
             html += `
-                <tr onclick="abrirDetalhes('${c.nome}')" style="cursor:pointer; background: #fdfdfd;">
+                <tr onclick="window.abrirDetalhes('${c.nome}')" style="cursor:pointer; background: #fdfdfd;">
                     <td>${c.nome}</td>
                     <td>R$ ${c.totalGasto.toFixed(2)}</td>
                     <td>R$ ${c.totalPago.toFixed(2)}</td>
@@ -56,7 +62,7 @@ async function renderClientes() {
     }
     app.innerHTML = `
         <section>
-            <h2>👥 Clientes (Clique para detalhes)</h2>
+            <h2>👥 Clientes (Clique na linha para detalhes)</h2>
             <table>
                 <thead><tr><th>Cliente</th><th>Total Gasto</th><th>Pago</th><th>Devido</th></tr></thead>
                 <tbody>${html}</tbody>
@@ -65,32 +71,36 @@ async function renderClientes() {
         </section>`;
 }
 
-async function abrirDetalhes(nome) {
+// ======================================
+// FUNÇÕES DE AÇÃO (GLOBAL)
+// ======================================
+window.abrirDetalhes = async function(nome) {
     const res = await callAPI('listarDetalhesCliente', { cliente: nome });
     const container = document.getElementById('detalhesCliente');
     
-    let hist = res.historico.map(h => `<li>${h.data.split('T')[0]}: ${h.produto} - R$ ${h.total.toFixed(2)}</li>`).join('');
-    
-    container.innerHTML = `
-        <h3>Histórico: ${nome}</h3>
-        <ul>${hist}</ul>
-        <input type="number" id="valorPagamento" placeholder="Valor do pagamento">
-        <button onclick="efetuarPagamento('${nome}')">Registrar Pagamento</button>
-    `;
-}
+    if (res.success && res.historico) {
+        let hist = res.historico.map(h => `<li>${h.data.split('T')[0]}: ${h.produto} - R$ ${h.total.toFixed(2)}</li>`).join('');
+        container.innerHTML = `
+            <h3>Histórico: ${nome}</h3>
+            <ul>${hist}</ul>
+            <input type="number" id="valorPagamento" placeholder="Valor do pagamento">
+            <button onclick="window.efetuarPagamento('${nome}')">Registrar Pagamento</button>
+        `;
+    }
+};
 
-async function efetuarPagamento(nome) {
+window.efetuarPagamento = async function(nome) {
     const valor = parseFloat(document.getElementById('valorPagamento').value);
     if (!valor || valor <= 0) return alert("Insira um valor válido");
     
     const res = await callAPI('registrarPagamento', { cliente: nome, valor: valor });
     if (res.success) {
-        alert("Pagamento registrado com sucesso!");
+        alert("Pagamento registrado!");
         renderClientes(); 
     } else {
-        alert("Erro ao registrar pagamento.");
+        alert("Erro ao registrar.");
     }
-}
+};
 
 // ======================================
 // HOME
@@ -98,24 +108,12 @@ async function efetuarPagamento(nome) {
 async function renderHome() {
     const app = document.getElementById('app');
     const result = await callAPI('listarProdutos');
-    
-    let totalProdutos = 0;
-    let valorTotal = 0;
-    
+    let totalProdutos = 0, valorTotal = 0;
     if (result.success && result.produtos) {
         totalProdutos = result.produtos.length;
-        result.produtos.forEach(produto => {
-            valorTotal += (produto.preco || 0) * (produto.quantidade || 0);
-        });
+        result.produtos.forEach(p => valorTotal += (p.preco * p.quantidade));
     }
-    
-    app.innerHTML = `
-        <section>
-            <h2>🏠 Dashboard</h2>
-            <p>Total de produtos: <strong>${totalProdutos}</strong></p>
-            <p>Valor total em estoque: <strong>R$ ${valorTotal.toFixed(2)}</strong></p>
-        </section>
-    `;
+    app.innerHTML = `<section><h2>🏠 Dashboard</h2><p>Produtos: ${totalProdutos}</p><p>Valor Estoque: R$ ${valorTotal.toFixed(2)}</p></section>`;
 }
 
 // ======================================
@@ -123,151 +121,37 @@ async function renderHome() {
 // ======================================
 function renderCadastro() {
     const app = document.getElementById('app');
-    app.innerHTML = `
-        <section>
-            <h2>➕ Cadastrar Produto</h2>
-            <form id="formCadastro">
-                <div class="form-group">
-                    <label>Nome do Produto</label>
-                    <input type="text" id="nome" required placeholder="Digite o nome do produto">
-                </div>
-                <div class="form-group">
-                    <label>Preço (R$)</label>
-                    <input type="number" id="preco" step="0.01" required placeholder="0.00">
-                </div>
-                <div class="form-group">
-                    <label>Quantidade</label>
-                    <input type="number" id="quantidade" required placeholder="0">
-                </div>
-                <button class="btn-submit" type="submit">Cadastrar Produto</button>
-            </form>
-            <div id="msg"></div>
-        </section>
-    `;
+    app.innerHTML = `<section><h2>➕ Cadastrar</h2><form id="formCadastro"><input type="text" id="nome" required placeholder="Nome"><input type="number" id="preco" step="0.01" required placeholder="Preço"><input type="number" id="quantidade" required placeholder="Qtd"><button type="submit">Cadastrar</button></form><div id="msg"></div></section>`;
     document.getElementById('formCadastro').addEventListener('submit', cadastrarProduto);
 }
 
 async function cadastrarProduto(e) {
     e.preventDefault();
-    const form = e.target;
-    const nome = document.getElementById('nome').value.trim();
-    const preco = parseFloat(document.getElementById('preco').value);
-    const quantidade = parseInt(document.getElementById('quantidade').value);
-    const msg = document.getElementById('msg');
-    
-    if (!nome || isNaN(preco) || isNaN(quantidade)) {
-        msg.innerHTML = '❌ Preencha todos os campos corretamente.';
-        return;
-    }
-    
-    const result = await callAPI('cadastrarProduto', { nome, preco, quantidade });
-    
-    if (result.success) {
-        msg.innerHTML = '✅ Produto cadastrado!';
-        form.reset();
-    } else {
-        msg.innerHTML = '❌ Erro ao cadastrar.';
-    }
+    const res = await callAPI('cadastrarProduto', { nome: document.getElementById('nome').value, preco: parseFloat(document.getElementById('preco').value), quantidade: parseInt(document.getElementById('quantidade').value) });
+    document.getElementById('msg').innerHTML = res.success ? '✅ Cadastrado!' : '❌ Erro.';
 }
 
 // ======================================
 // ESTOQUE
 // ======================================
 async function renderEstoque() {
-    const app = document.getElementById('app');
-    const result = await callAPI('listarProdutos');
-    let html = '';
-    
-    if (result.success && result.produtos) {
-        result.produtos.forEach(p => {
-            html += `<tr><td>${p.id}</td><td>${p.nome}</td><td>${p.quantidade}</td><td>R$ ${p.preco.toFixed(2)}</td></tr>`;
-        });
-    }
-    
-    app.innerHTML = `
-        <section>
-            <h2>📦 Estoque</h2>
-            <table>
-                <thead><tr><th>ID</th><th>Produto</th><th>Qtd</th><th>Preço</th></tr></thead>
-                <tbody>${html}</tbody>
-            </table>
-        </section>
-    `;
+    const res = await callAPI('listarProdutos');
+    let html = res.success ? res.produtos.map(p => `<tr><td>${p.id}</td><td>${p.nome}</td><td>${p.quantidade}</td><td>R$ ${p.preco.toFixed(2)}</td></tr>`).join('') : '';
+    document.getElementById('app').innerHTML = `<section><h2>📦 Estoque</h2><table><thead><tr><th>ID</th><th>Produto</th><th>Qtd</th><th>Preço</th></tr></thead><tbody>${html}</tbody></table></section>`;
 }
 
 // ======================================
 // VENDAS
 // ======================================
 async function renderVendas() {
-    const app = document.getElementById('app');
-    const result = await callAPI('listarProdutos');
-    let options = '<option value="">Selecione...</option>';
-    
-    if (result.success && result.produtos) {
-        result.produtos.forEach(p => {
-            options += `<option value="${p.id}" data-quantidade="${p.quantidade}">${p.nome}</option>`;
-        });
-    }
-    
-    app.innerHTML = `
-        <section>
-            <h2>💰 Registrar Venda</h2>
-            <form id="formVenda">
-                <select id="produtoId" required>${options}</select>
-                <input type="number" id="quantidadeVenda" required placeholder="Qtd">
-                <input type="text" id="cliente" placeholder="Nome do Cliente">
-                <button type="submit">Registrar Venda</button>
-            </form>
-            <div id="msgVenda"></div>
-        </section>
-    `;
+    const res = await callAPI('listarProdutos');
+    let opts = res.success ? res.produtos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('') : '';
+    document.getElementById('app').innerHTML = `<section><h2>💰 Venda</h2><form id="formVenda"><select id="produtoId">${opts}</select><input type="number" id="quantidadeVenda" required placeholder="Qtd"><input type="text" id="cliente" placeholder="Cliente"><button type="submit">Registrar Venda</button></form><div id="msgVenda"></div></section>`;
     document.getElementById('formVenda').addEventListener('submit', registrarVenda);
 }
 
 async function registrarVenda(e) {
     e.preventDefault();
-    const data = {
-        produtoId: document.getElementById('produtoId').value,
-        quantidade: parseInt(document.getElementById('quantidadeVenda').value),
-        cliente: document.getElementById('cliente').value.trim()
-    };
-    
-    const result = await callAPI('registrarVenda', data);
-    const msg = document.getElementById('msgVenda');
-    msg.innerHTML = result.success ? '✅ Venda registrada!' : '❌ Erro ao vender.';
-}
-
-// ======================================
-// RELATÓRIO DE CLIENTES
-// ======================================
-async function renderClientes() {
-    const app = document.getElementById('app');
-    const result = await callAPI('listarVendasPorCliente');
-    
-    let html = '';
-    if (result.success && result.clientes) {
-        result.clientes.forEach(c => {
-            const aPagar = c.totalGasto - c.totalPago;
-            html += `
-                <tr>
-                    <td>${c.nome}</td>
-                    <td>R$ ${c.totalGasto.toFixed(2)}</td>
-                    <td>R$ ${c.totalPago.toFixed(2)}</td>
-                    <td>R$ ${aPagar.toFixed(2)}</td>
-                </tr>
-            `;
-        });
-    }
-
-    app.innerHTML = `
-        <section>
-            <h2>👥 Relatório de Clientes</h2>
-            <table>
-                <thead>
-                    <tr><th>Cliente</th><th>Total Gasto</th><th>Pago</th><th>A Pagar</th></tr>
-                </thead>
-                <tbody>${html}</tbody>
-            </table>
-        </section>
-    `;
+    const res = await callAPI('registrarVenda', { produtoId: document.getElementById('produtoId').value, quantidade: parseInt(document.getElementById('quantidadeVenda').value), cliente: document.getElementById('cliente').value.trim() });
+    document.getElementById('msgVenda').innerHTML = res.success ? '✅ Venda ok!' : '❌ Erro.';
 }
