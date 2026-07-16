@@ -3,26 +3,101 @@
 // ======================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbzWrSiJmWEuT0MJm2MZczxqbqcHAOvCcUJud-0Ke59Ag3V1TjAsSIvF7zh5b9cBtMNRrw/exec';
 
+// Flag para debug
+const DEBUG = true;
+
 async function callAPI(action, data = null) {
     const url = `${API_URL}?action=${action}`;
     const options = {
         method: data ? 'POST' : 'GET',
         headers: { 'Content-Type': 'application/json' },
-        body: data ? JSON.stringify(data) : null
     };
+    
+    // Adiciona body apenas se for POST
+    if (data) {
+        options.body = JSON.stringify(data);
+    }
+    
+    if (DEBUG) {
+        console.log(`🔍 Chamando API: ${action}`);
+        console.log('URL:', url);
+        console.log('Método:', options.method);
+        console.log('Dados:', data);
+    }
     
     try {
         const response = await fetch(url, options);
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (DEBUG) {
+            console.log('📡 Status da resposta:', response.status);
+            console.log('📡 OK?:', response.ok);
         }
         
-        const result = await response.json();
+        // Verifica se a resposta foi bem-sucedida
+        if (!response.ok) {
+            const errorText = await response.text();
+            if (DEBUG) console.error('❌ Resposta de erro:', errorText);
+            throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+        }
+        
+        // Tenta extrair o JSON da resposta
+        const responseText = await response.text();
+        if (DEBUG) console.log('📄 Resposta bruta:', responseText);
+        
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            if (DEBUG) console.error('❌ Erro ao parsear JSON:', parseError);
+            throw new Error('Resposta do servidor não é um JSON válido');
+        }
+        
+        if (DEBUG) console.log('✅ Resultado:', result);
+        return result;
+        
+    } catch (error) {
+        console.error('❌ Erro na API:', error);
+        
+        // Exibe mensagem mais descritiva
+        let errorMessage = 'Erro de comunicação com o servidor';
+        
+        if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Não foi possível conectar ao servidor. Verifique sua internet e a URL da API.';
+        } else if (error.message.includes('HTTP error')) {
+            errorMessage = `Erro do servidor: ${error.message}`;
+        } else if (error.message.includes('JSON')) {
+            errorMessage = 'Resposta inválida do servidor. Verifique o código do Google Apps Script.';
+        }
+        
+        showNotification(errorMessage, 'error');
+        return { 
+            success: false, 
+            error: error.message,
+            errorDetails: errorMessage 
+        };
+    }
+}
+
+// ======================================
+// FUNÇÃO PARA TESTAR CONEXÃO
+// ======================================
+async function testarConexao() {
+    console.log('🧪 Iniciando teste de conexão...');
+    
+    try {
+        // Teste 1: Verificar se a URL base é acessível
+        console.log('1️⃣ Testando URL base...');
+        const response = await fetch(API_URL);
+        console.log('Status:', response.status);
+        
+        // Teste 2: Tentar ação simples (listarProdutos sem parâmetros)
+        console.log('2️⃣ Testando listarProdutos...');
+        const result = await callAPI('listarProdutos');
+        console.log('Resultado:', result);
+        
         return result;
     } catch (error) {
-        console.error('Erro na API:', error);
-        showNotification('Erro de conexão com o servidor', 'error');
+        console.error('Erro no teste:', error);
         return { success: false, error: error.message };
     }
 }
@@ -44,19 +119,23 @@ function showNotification(message, type = 'info') {
         notification.style.opacity = '0';
         notification.style.transform = 'translateX(100%)';
         setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    }, 5000); // Aumentado para 5 segundos para ler mensagens de erro
 }
 
 function formatDate(dateString) {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return dateString;
+    }
 }
 
 function formatCurrency(value) {
@@ -70,6 +149,10 @@ function formatCurrency(value) {
 // NAVEGAÇÃO
 // ======================================
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Sistema inicializado');
+    console.log('🔗 API URL:', API_URL);
+    
+    // Adiciona botão de teste na página inicial temporariamente
     renderHome();
     
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -96,12 +179,56 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ======================================
-// HOME - DASHBOARD
+// HOME - DASHBOARD COM TESTE DE CONEXÃO
 // ======================================
 async function renderHome() {
     const app = document.getElementById('app');
-    app.innerHTML = '<div class="loading">Carregando dashboard...</div>';
+    app.innerHTML = '<div class="loading">Verificando conexão com servidor...</div>';
     
+    // Primeiro testa a conexão
+    const teste = await testarConexao();
+    
+    if (!teste.success) {
+        app.innerHTML = `
+            <section>
+                <h2>❌ Erro de Conexão</h2>
+                <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3>⚠️ Não foi possível conectar ao servidor</h3>
+                    <p><strong>Erro:</strong> ${teste.error || 'Desconhecido'}</p>
+                    <p><strong>URL da API:</strong> ${API_URL}</p>
+                    
+                    <div style="margin-top: 20px;">
+                        <h4>Possíveis problemas:</h4>
+                        <ul>
+                            <li>❌ URL da API incorreta ou expirada</li>
+                            <li>❌ Google Apps Script não está implantado como "Aplicativo da Web"</li>
+                            <li>❌ Permissões do script não configuradas ("Qualquer pessoa pode acessar")</li>
+                            <li>❌ Erro no código do Google Apps Script</li>
+                            <li>❌ Problema de CORS não resolvido</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <h4>Como resolver:</h4>
+                        <ol>
+                            <li>Vá até o Google Apps Script</li>
+                            <li>Clique em "Implantar" > "Nova implantação"</li>
+                            <li>Escolha "Aplicativo da Web"</li>
+                            <li>Em "Quem pode acessar", selecione "Qualquer pessoa"</li>
+                            <li>Copie a nova URL e atualize a constante API_URL</li>
+                            <li>Certifique-se de que a função doGet está implementada corretamente</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <button onclick="renderHome()" style="margin-right: 10px;">🔄 Tentar Novamente</button>
+                <button onclick="abrirConsoleERRO()" style="background: #666;">📋 Ver Console</button>
+            </section>
+        `;
+        return;
+    }
+    
+    // Se conectou, continua normalmente
     try {
         const [produtosRes, vendasRes] = await Promise.all([
             callAPI('listarProdutos'),
@@ -115,7 +242,6 @@ async function renderHome() {
         if (produtosRes.success && produtosRes.produtos) {
             totalProdutos = produtosRes.produtos.length;
             produtosRes.produtos.forEach(p => {
-                // A: id | B: nome | C: preco | D: quantidade
                 const preco = parseFloat(p.preco) || 0;
                 const quantidade = parseInt(p.quantidade) || 0;
                 valorEstoque += (preco * quantidade);
@@ -130,7 +256,6 @@ async function renderHome() {
         
         if (vendasRes.success && vendasRes.vendas) {
             vendasRes.vendas.forEach(v => {
-                // A: id_venda | B: data | C: produto | D: quantidade | E: total | F: cliente
                 const dataVenda = new Date(v.data);
                 const total = parseFloat(v.total) || 0;
                 
@@ -193,18 +318,33 @@ async function renderHome() {
                         ⚠️ Atenção: ${produtosBaixoEstoque} produto(s) com estoque baixo (≤ 5 unidades)
                     </div>
                 ` : ''}
+                
+                <div style="margin-top: 20px; font-size: 12px; color: #999;">
+                    ✅ Conectado ao servidor com sucesso
+                </div>
             </section>
         `;
         
     } catch (error) {
+        console.error('Erro no dashboard:', error);
         app.innerHTML = `
             <section>
                 <h2>❌ Erro ao carregar dashboard</h2>
                 <p>${error.message}</p>
-                <button onclick="renderHome()" class="retry-btn">Tentar novamente</button>
+                <button onclick="renderHome()">Tentar novamente</button>
             </section>
         `;
     }
+}
+
+// ======================================
+// FUNÇÃO AUXILIAR PARA DEBUG
+// ======================================
+function abrirConsoleERRO() {
+    alert('Pressione F12 para abrir o console do navegador e verifique os logs detalhados.\n\nProcure por mensagens em vermelho.');
+    console.log('📋 Console de debug ativo');
+    console.log('API_URL:', API_URL);
+    console.log('Verifique se há erros em vermelho acima ↑');
 }
 
 // ======================================
