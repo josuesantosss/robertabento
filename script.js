@@ -1,7 +1,7 @@
 // ======================================
 // CONFIGURAÇÃO API
 // ======================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbzWrSiJmWEuT0MJm2MZczxqbqcHAOvCcUJud-0Ke59Ag3V1TjAsSIvF7zh5b9cBtMNRrw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx2EML5Q5heS2U0JQ7ia0D9YaA2RoIpr56GMtJAfCyvLj25OY7FFep12yagVkC5qPtqgw/exec';
 
 // Flag para debug
 const DEBUG = true;
