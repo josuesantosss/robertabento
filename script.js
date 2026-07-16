@@ -1,3 +1,4 @@
+
 // ======================================
 // CONFIGURAÇÃO API
 // ======================================
@@ -7,7 +8,13 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzWrSiJmWEuT0MJm2MZczxq
 // API
 // ======================================
 async function callAPI(action, data = null) {
+    // Se for uma ação GET com parâmetros, trata corretamente
     let url = `${API_URL}?action=${action}`;
+    
+    // Se action já tem parâmetros (ex: listarDetalhesCliente&cliente=João)
+    if (action.includes('&')) {
+        url = `${API_URL}?${action}`;
+    }
     
     try {
         const options = {
@@ -15,6 +22,8 @@ async function callAPI(action, data = null) {
             headers: data ? { 'Content-Type': 'application/json' } : {},
             ...(data && { body: JSON.stringify(data) })
         };
+        
+        console.log(`Chamando API: ${url}`, options);
         
         const response = await fetch(url, options);
         const result = await response.json();
@@ -484,7 +493,7 @@ async function carregarTabelaClientes(filtro = '') {
         if (result.success && result.clientes && result.clientes.length > 0) {
             // Filtra clientes (exclui "Cliente não informado" e aplica busca)
             let clientesFiltrados = result.clientes.filter(c => 
-                c.nome !== 'Cliente não informado'
+                c.nome && c.nome !== 'Cliente não informado'
             );
             
             if (filtro) {
@@ -521,17 +530,19 @@ async function carregarTabelaClientes(filtro = '') {
         }
         
         container.innerHTML = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Total Gasto</th>
-                        <th>Total Pago</th>
-                        <th>Saldo</th>
-                    </tr>
-                </thead>
-                <tbody>${html}</tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Total Gasto</th>
+                            <th>Total Pago</th>
+                            <th>Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>${html}</tbody>
+                </table>
+            </div>
             <p style="margin-top: 10px; font-size: 12px; color: #666;">
                 🟢 Quitado | 🔴 Em débito | 🟡 Crédito | Clique no cliente para ver detalhes
             </p>
@@ -549,12 +560,10 @@ async function mostrarDetalhesCliente(nomeCliente) {
     container.innerHTML = '<p style="padding: 20px;">Carregando detalhes...</p>';
     
     try {
-        // ✅ CORRIGIDO: Chamada GET com parâmetro na URL
-        const url = `listarDetalhesCliente&cliente=${encodeURIComponent(nomeCliente)}`;
-        console.log('Buscando detalhes:', url);
-        const result = await callAPI(url);
+        // Chama a API com o parâmetro cliente
+        const result = await callAPI(`listarDetalhesCliente&cliente=${encodeURIComponent(nomeCliente)}`);
         
-        console.log('Resultado detalhes:', result);
+        console.log('Detalhes do cliente:', result);
         
         if (result.success && result.historico && result.historico.length > 0) {
             let historicoHtml = result.historico.map(h => {
@@ -610,10 +619,10 @@ async function mostrarDetalhesCliente(nomeCliente) {
                     
                     <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                         <h4>💳 Registrar Pagamento</h4>
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                             <input type="number" id="valorPagamento" placeholder="Valor do pagamento" 
                                    min="0.01" step="0.01"
-                                   style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                                   style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; min-width: 150px;">
                             <button onclick="registrarPagamentoCliente('${nomeCliente.replace(/'/g, "\\'")}')" 
                                     style="background: #48bb78; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; white-space: nowrap;">
                                 💵 Registrar
@@ -668,36 +677,45 @@ async function registrarPagamentoCliente(nomeCliente) {
         return;
     }
     
-    msgDiv.innerHTML = '<p style="color: #667eea;">Registrando pagamento...</p>';
+    msgDiv.innerHTML = '<p style="color: #667eea;">⏳ Registrando pagamento...</p>';
     
     try {
         const result = await callAPI('registrarPagamento', {
             cliente: nomeCliente,
-            valor: valor
+            valor: valor,
+            observacao: 'Pagamento registrado pelo sistema'
         });
+        
+        console.log('Resposta do pagamento:', result);
         
         if (result.success) {
             msgDiv.innerHTML = `<p style="color: #38a169;">✅ Pagamento de R$ ${valor.toFixed(2)} registrado com sucesso!</p>`;
             valorInput.value = '';
             
-            // Atualizar lista e detalhes
+            // Atualiza a lista de clientes e os detalhes
             await carregarTabelaClientes();
             setTimeout(() => mostrarDetalhesCliente(nomeCliente), 500);
         } else {
             msgDiv.innerHTML = `<p style="color: #e53e3e;">❌ Erro: ${result.error || 'Tente novamente'}</p>`;
         }
     } catch (error) {
+        console.error('Erro ao registrar pagamento:', error);
         msgDiv.innerHTML = `<p style="color: #e53e3e;">❌ Erro de conexão: ${error.message}</p>`;
     }
 }
 
-// Tornar funções disponíveis globalmente para onclick
+// ======================================
+// TORNAR FUNÇÕES GLOBAIS
+// ======================================
 window.mostrarDetalhesCliente = mostrarDetalhesCliente;
 window.registrarPagamentoCliente = registrarPagamentoCliente;
+window.renderHome = renderHome;
+window.renderEstoque = renderEstoque;
+window.renderVendas = renderVendas;
 
 // ======================================
 // INICIALIZAÇÃO
 // ======================================
 console.log('🚀 Sistema de Vendas inicializado!');
-console.log('📱 Versão: 2.0 - Completa');
+console.log('📱 Versão: 2.1 - Completa com Pagamentos');
 console.log('✅ Páginas: Home, Cadastro, Estoque, Vendas, Clientes');
