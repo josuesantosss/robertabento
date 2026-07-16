@@ -423,7 +423,7 @@ async function renderHome() {
     
     app.innerHTML = `
         <section>
-            <h2>🏠 Dashboard 1</h2>
+            <h2>🏠 Dashboard 2</h2>
             <div style="text-align: center; padding: 40px;">
                 <div class="loading-spinner" style="font-size: 32px;">⏳</div>
                 <p style="color: #667eea; margin-top: 10px;">Carregando dados...</p>
