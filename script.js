@@ -1,7 +1,7 @@
 // ======================================
 // CONFIGURAÇÃO API
 // ======================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbyWczeEFPb3bHKA2w0wEIxaJjsRP0DqJP0JW3u4T3bjQw1PcnIHid2Lg1iEvRHMMCp9Gw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbz9QxUReCeHSZwEwTMEZMYCMLW-T-COLAu-5Z_v8A1Oj4gIddsOzHnPahrx7vguvW5RWw/exec';
 
 // ======================================
 // SISTEMA DE CACHE
