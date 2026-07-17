@@ -1,3 +1,11 @@
+
+
+// ======================================
+// CONFIGURAÇÃO API
+// ======================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbz9QxUReCeHSZwEwTMEZMYCMLW-T-COLAu-5Z_v8A1Oj4gIddsOzHnPahrx7vguvW5RWw/exec';
+
+
 // ======================================
 // Teste rápido da API
 // ======================================
@@ -12,10 +20,6 @@ async function testarAPI() {
 }
 testarAPI();
 
-// ======================================
-// CONFIGURAÇÃO API
-// ======================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbz9QxUReCeHSZwEwTMEZMYCMLW-T-COLAu-5Z_v8A1Oj4gIddsOzHnPahrx7vguvW5RWw/exec';
 
 // ======================================
 // SISTEMA DE CACHE
