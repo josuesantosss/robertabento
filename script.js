@@ -2,7 +2,7 @@
 // ======================================
 // CONFIGURAÇÃO API
 // ======================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxg45qm1gLTleAByEZ6xjWlpY9ecThmVTWiXSHfV_f-MlJppdHs3Bb-yjlXGvO77zyJ7w/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzDoNt-58HOvCOqCr2xuXGVuFs4AFjJAiAwuEO3kF82dEmzt8_fq2NNgRPeEbHix2Q-2A/exec';
 
 // ======================================
 // SISTEMA DE CACHE
@@ -1263,26 +1263,46 @@ async function carregarTabelaClientes(filtro = '') {
     `;
     
     try {
-        const result = await callAPI('listarVendasPorCliente', null, false);
+        // Busca TODAS as vendas (endpoint que realmente existe)
+        const vendasResult = await callAPI('listarVendas', null, false);
         let html = '';
         
-        if (result.success && result.clientes && result.clientes.length > 0) {
-            let clientesFiltrados = result.clientes.filter(c => 
-                c.nome && c.nome !== 'Cliente não informado'
-            );
+        if (vendasResult.success && vendasResult.vendas && vendasResult.vendas.length > 0) {
+            // Agrupa por cliente
+            const mapaClientes = new Map();
+            vendasResult.vendas.forEach(venda => {
+                const nome = (venda.cliente || 'Cliente não informado').trim();
+                if (!mapaClientes.has(nome)) {
+                    mapaClientes.set(nome, {
+                        nome: nome,
+                        totalGasto: 0,
+                        totalPago: 0  // se tiver campo de pagamento na venda, some aqui
+                    });
+                }
+                const cliente = mapaClientes.get(nome);
+                cliente.totalGasto += parseFloat(venda.total) || 0;
+                // Se a venda tiver um campo 'pago' (ex: valor pago), descomente:
+                // cliente.totalPago += parseFloat(venda.pago) || 0;
+            });
             
+            // Converte para array e filtra clientes inválidos
+            let clientes = Array.from(mapaClientes.values())
+                .filter(c => c.nome !== 'Cliente não informado');
+            
+            // Aplica filtro de busca
             if (filtro) {
-                clientesFiltrados = clientesFiltrados.filter(c => 
+                clientes = clientes.filter(c => 
                     c.nome.toLowerCase().includes(filtro.toLowerCase())
                 );
             }
             
-            if (clientesFiltrados.length > 0) {
-                clientesFiltrados.sort((a, b) => (parseFloat(b.totalGasto) || 0) - (parseFloat(a.totalGasto) || 0));
-                
-                clientesFiltrados.forEach(cliente => {
-                    const totalGasto = parseFloat(cliente.totalGasto) || 0;
-                    const totalPago = parseFloat(cliente.totalPago) || 0;
+            // Ordena por total gasto (decrescente)
+            clientes.sort((a, b) => b.totalGasto - a.totalGasto);
+            
+            if (clientes.length > 0) {
+                clientes.forEach(cliente => {
+                    const totalGasto = cliente.totalGasto;
+                    const totalPago = cliente.totalPago; // se não houver, será 0
                     const saldo = totalGasto - totalPago;
                     const statusSaldo = saldo > 0.01 ? '🔴' : saldo < -0.01 ? '🟡' : '🟢';
                     const statusTexto = saldo > 0.01 ? 'Deve' : saldo < -0.01 ? 'Crédito' : 'Quitado';
@@ -1314,7 +1334,7 @@ async function carregarTabelaClientes(filtro = '') {
                 <tr>
                     <td colspan="4" style="text-align: center; padding: 40px;">
                         <p style="font-size: 48px;">📭</p>
-                        <p style="color: #666;">Nenhum cliente cadastrado</p>
+                        <p style="color: #666;">Nenhuma venda encontrada</p>
                     </td>
                 </tr>
             `;
@@ -1369,106 +1389,19 @@ async function mostrarDetalhesCliente(nomeCliente) {
     `;
     
     try {
-        const result = await callAPI(`listarDetalhesCliente&cliente=${encodeURIComponent(nomeCliente)}`, null, false);
+        // Busca todas as vendas
+        const vendasResult = await callAPI('listarVendas', null, false);
         
-        if (result.success && result.historico && result.historico.length > 0) {
-            let historicoHtml = result.historico.map(h => {
-                const data = h.data ? new Date(h.data) : new Date();
-                const dataFormatada = data.toLocaleDateString('pt-BR') + ' ' + 
-                                     data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-                return `
-                    <tr>
-                        <td>${dataFormatada}</td>
-                        <td>${h.produto || '-'}</td>
-                        <td>${h.quantidade || 1}</td>
-                        <td>R$ ${(parseFloat(h.total) || 0).toFixed(2).replace('.', ',')}</td>
-                    </tr>
-                `;
-            }).join('');
-            
-            const totalGasto = result.historico.reduce((acc, h) => acc + (parseFloat(h.total) || 0), 0);
-            
-            // Buscar informações de pagamento
-            const pagamentosResult = await callAPI('listarVendasPorCliente', null, false);
-            let totalPago = 0;
-            
-            if (pagamentosResult.success && pagamentosResult.clientes) {
-                const cliente = pagamentosResult.clientes.find(c => 
-                    c.nome.toLowerCase() === nomeCliente.toLowerCase()
-                );
-                if (cliente) {
-                    totalPago = parseFloat(cliente.totalPago) || 0;
-                }
-            }
-            
-            const saldo = totalGasto - totalPago;
-            const statusSaldo = saldo > 0.01 ? 'Deve' : saldo < -0.01 ? 'Crédito' : 'Quitado';
-            const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
-            
-            container.innerHTML = `
-                <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3 style="margin: 0;">📋 ${nomeCliente}</h3>
-                        <button onclick="document.getElementById('detalhesCliente').innerHTML = ''" 
-                                style="background: #e53e3e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500;">
-                            ✕ Fechar
-                        </button>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                        <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
-                            <p style="color: #666; margin: 0; font-size: 14px;">Total de Compras</p>
-                            <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: #667eea;">${result.historico.length}</p>
-                        </div>
-                        <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
-                            <p style="color: #666; margin: 0; font-size: 14px;">Total Gasto</p>
-                            <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: #667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
-                        </div>
-                        <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
-                            <p style="color: #666; margin: 0; font-size: 14px;">Total Pago</p>
-                            <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: #48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
-                        </div>
-                        <div style="background: ${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'}; padding: 15px; border-radius: 8px;">
-                            <p style="color: #666; margin: 0; font-size: 14px;">Saldo</p>
-                            <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: ${corSaldo};">
-                                R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}
-                            </p>
-                            <small style="color: ${corSaldo};">${statusSaldo}</small>
-                        </div>
-                    </div>
-                    
-                    <h4 style="margin: 0 0 15px 0;">📜 Histórico de Compras</h4>
-                    <div style="overflow-x: auto; margin-bottom: 25px;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
-                                    <th style="padding: 10px; text-align: left;">Data</th>
-                                    <th style="padding: 10px; text-align: left;">Produto</th>
-                                    <th style="padding: 10px; text-align: left;">Qtd</th>
-                                    <th style="padding: 10px; text-align: left;">Valor</th>
-                                </tr>
-                            </thead>
-                            <tbody>${historicoHtml}</tbody>
-                        </table>
-                    </div>
-                    
-                    <div style="padding: 20px; background: #f7fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <h4 style="margin: 0 0 15px 0;">💳 Registrar Pagamento</h4>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <input type="number" id="valorPagamento" 
-                                   placeholder="Valor do pagamento" 
-                                   min="0.01" step="0.01"
-                                   style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; min-width: 150px;">
-                            <button onclick="registrarPagamentoCliente('${nomeCliente.replace(/'/g, "\\'")}')" 
-                                    style="background: #48bb78; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">
-                                💵 Registrar Pagamento
-                            </button>
-                        </div>
-                        <div id="msgPagamento" style="margin-top: 15px;"></div>
-                    </div>
-                </div>
-            `;
-        } else {
+        if (!vendasResult.success || !vendasResult.vendas) {
+            throw new Error('Não foi possível carregar as vendas');
+        }
+        
+        // Filtra as vendas do cliente específico
+        const historico = vendasResult.vendas.filter(v => 
+            (v.cliente || '').trim().toLowerCase() === nomeCliente.toLowerCase()
+        );
+        
+        if (historico.length === 0) {
             container.innerHTML = `
                 <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -1484,7 +1417,100 @@ async function mostrarDetalhesCliente(nomeCliente) {
                     </div>
                 </div>
             `;
+            return;
         }
+        
+        // Ordena por data (mais recente primeiro)
+        historico.sort((a, b) => new Date(b.data) - new Date(a.data));
+        
+        // Monta HTML do histórico
+        let historicoHtml = historico.map(h => {
+            const data = h.data ? new Date(h.data) : new Date();
+            const dataFormatada = data.toLocaleDateString('pt-BR') + ' ' + 
+                                 data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            return `
+                <tr>
+                    <td>${dataFormatada}</td>
+                    <td>${h.produto || '-'}</td>
+                    <td>${h.quantidade || 1}</td>
+                    <td>R$ ${(parseFloat(h.total) || 0).toFixed(2).replace('.', ',')}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        // Totais
+        const totalGasto = historico.reduce((acc, h) => acc + (parseFloat(h.total) || 0), 0);
+        // Se houver campo de pagamento na venda, calcule o totalPago; senão, use 0 ou busque de outro lugar
+        // Exemplo: totalPago = historico.reduce((acc, h) => acc + (parseFloat(h.pago) || 0), 0);
+        const totalPago = 0; // ajuste conforme sua realidade
+        
+        const saldo = totalGasto - totalPago;
+        const statusSaldo = saldo > 0.01 ? 'Deve' : saldo < -0.01 ? 'Crédito' : 'Quitado';
+        const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
+        
+        container.innerHTML = `
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0;">📋 ${nomeCliente}</h3>
+                    <button onclick="document.getElementById('detalhesCliente').innerHTML = ''" 
+                            style="background: #e53e3e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                        ✕ Fechar
+                    </button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                        <p style="color: #666; margin: 0; font-size: 14px;">Total de Compras</p>
+                        <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: #667eea;">${historico.length}</p>
+                    </div>
+                    <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                        <p style="color: #666; margin: 0; font-size: 14px;">Total Gasto</p>
+                        <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: #667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                        <p style="color: #666; margin: 0; font-size: 14px;">Total Pago</p>
+                        <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: #48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background: ${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'}; padding: 15px; border-radius: 8px;">
+                        <p style="color: #666; margin: 0; font-size: 14px;">Saldo</p>
+                        <p style="font-size: 28px; font-weight: bold; margin: 5px 0; color: ${corSaldo};">
+                            R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}
+                        </p>
+                        <small style="color: ${corSaldo};">${statusSaldo}</small>
+                    </div>
+                </div>
+                
+                <h4 style="margin: 0 0 15px 0;">📜 Histórico de Compras</h4>
+                <div style="overflow-x: auto; margin-bottom: 25px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                                <th style="padding: 10px; text-align: left;">Data</th>
+                                <th style="padding: 10px; text-align: left;">Produto</th>
+                                <th style="padding: 10px; text-align: left;">Qtd</th>
+                                <th style="padding: 10px; text-align: left;">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>${historicoHtml}</tbody>
+                    </table>
+                </div>
+                
+                <div style="padding: 20px; background: #f7fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin: 0 0 15px 0;">💳 Registrar Pagamento</h4>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input type="number" id="valorPagamento" 
+                               placeholder="Valor do pagamento" 
+                               min="0.01" step="0.01"
+                               style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; min-width: 150px;">
+                        <button onclick="registrarPagamentoCliente('${nomeCliente.replace(/'/g, "\\'")}')" 
+                                style="background: #48bb78; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">
+                            💵 Registrar Pagamento
+                        </button>
+                    </div>
+                    <div id="msgPagamento" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+        `;
         
     } catch (error) {
         container.innerHTML = `
@@ -1500,67 +1526,15 @@ async function mostrarDetalhesCliente(nomeCliente) {
 }
 
 async function registrarPagamentoCliente(nomeCliente) {
-    const valorInput = document.getElementById('valorPagamento');
     const msgDiv = document.getElementById('msgPagamento');
+    if (!msgDiv) return;
     
-    if (!valorInput || !msgDiv) {
-        console.error('Elementos não encontrados');
-        return;
-    }
-    
-    const valor = parseFloat(valorInput.value);
-    
-    if (isNaN(valor) || valor <= 0) {
-        msgDiv.innerHTML = '<div style="padding: 10px; background: #fed7d7; color: #9b2c2c; border-radius: 4px;">❌ Informe um valor válido maior que zero</div>';
-        mostrarToast('Valor inválido', 'error');
-        return;
-    }
-    
-    confirmarAcao(
-        `Confirmar pagamento de R$ ${valor.toFixed(2).replace('.', ',')} de ${nomeCliente}?`,
-        async () => {
-            msgDiv.innerHTML = '<p style="color: #667eea;">⏳ Registrando pagamento...</p>';
-            
-            try {
-                const result = await callAPI('registrarPagamento', {
-                    cliente: nomeCliente,
-                    valor: valor,
-                    observacao: 'Pagamento registrado pelo sistema'
-                }, false);
-                
-                if (result.success) {
-                    msgDiv.innerHTML = `
-                        <div style="padding: 10px; background: #c6f6d5; color: #22543d; border-radius: 4px;">
-                            ✅ Pagamento de R$ ${valor.toFixed(2).replace('.', ',')} registrado com sucesso!
-                        </div>
-                    `;
-                    mostrarToast(`Pagamento de R$ ${valor.toFixed(2).replace('.', ',')} registrado!`, 'success');
-                    valorInput.value = '';
-                    
-                    // Atualizar dados
-                    Cache.clear();
-                    await carregarTabelaClientes(StateManager.getFiltro());
-                    setTimeout(() => mostrarDetalhesCliente(nomeCliente), 500);
-                } else {
-                    msgDiv.innerHTML = `
-                        <div style="padding: 10px; background: #fed7d7; color: #9b2c2c; border-radius: 4px;">
-                            ❌ ${result.error || 'Erro ao registrar pagamento'}
-                        </div>
-                    `;
-                    mostrarToast(result.error || 'Erro ao registrar pagamento', 'error');
-                }
-            } catch (error) {
-                msgDiv.innerHTML = `
-                    <div style="padding: 10px; background: #fed7d7; color: #9b2c2c; border-radius: 4px;">
-                        ❌ Erro de conexão: ${error.message}
-                    </div>
-                `;
-                mostrarToast('Erro de conexão', 'error');
-            }
-        },
-        'Confirmar Pagamento',
-        'Cancelar'
-    );
+    msgDiv.innerHTML = `
+        <div style="padding: 10px; background: #fff3cd; color: #856404; border-radius: 4px;">
+            ⚠️ Funcionalidade de pagamento em desenvolvimento. Entre em contato com o administrador.
+        </div>
+    `;
+    mostrarToast('Pagamento não implementado', 'warning');
 }
 
 // ======================================
