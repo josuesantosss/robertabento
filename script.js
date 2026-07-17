@@ -3,7 +3,7 @@
 // ======================================
 // CONFIGURAÇÃO API
 // ======================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbz9QxUReCeHSZwEwTMEZMYCMLW-T-COLAu-5Z_v8A1Oj4gIddsOzHnPahrx7vguvW5RWw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzZrmE-m-8cptHZQ4V-dq3OoJMMsJfGYSt_zWRp90ekxFhI5p8osxlMcjtUG85NpL2xrw/exec';
 
 
 // ======================================
