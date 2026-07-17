@@ -1528,3 +1528,18 @@ console.log('  - Dropdown de clientes com cadastro rápido');
 console.log('  - Tratamento de erros aprimorado');
 console.log('  - Timeout nas requisições');
 console.log('⌨️ Atalhos: Ctrl+1 a Ctrl+5 para navegar');
+
+window.cadastrarProduto = cadastrarProduto;
+window.registrarVendaMulti = registrarVendaMulti;
+window.renderVendas = renderVendas;
+window.renderClientes = renderClientes;
+window.renderEstoque = renderEstoque;
+window.renderCadastro = renderCadastro;
+window.atualizarDashboard = atualizarDashboard;
+window.carregarTabelaClientes = carregarTabelaClientes;
+window.confirmarExclusaoProduto = confirmarExclusaoProduto;
+window.adicionarLinhaItem = adicionarLinhaItem;
+window.removerLinhaItem = removerLinhaItem;
+window.adicionarNovoCliente = adicionarNovoCliente;
+window.mostrarToast = mostrarToast;
+window.confirmarAcao = confirmarAcao;
