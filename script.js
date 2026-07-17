@@ -175,6 +175,56 @@
         console.log('✅ Sistema inicializado com sucesso!');
     });
 
+    // ============================================================
+// BLOQUEAR ZOOM
+// ============================================================
+function bloquearZoom() {
+  // Meta tag via JS (caso não tenha acesso direto ao HTML)
+  const meta = document.createElement('meta');
+  meta.name = 'viewport';
+  meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+  document.head.appendChild(meta);
+
+  // CSS inline
+  const style = document.createElement('style');
+  style.textContent = `
+    * {
+      touch-action: pan-x pan-y;
+      -webkit-user-zoom: none;
+      user-zoom: none;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Bloqueia wheel com Ctrl
+  document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+
+  // Bloqueia atalhos de teclado
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '_' || e.key === '0')) {
+      e.preventDefault();
+    }
+  });
+
+  // Previne duplo clique
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+
+  // Previne zoom por toque duplo
+  let lastTouch = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouch <= 300) e.preventDefault();
+    lastTouch = now;
+  }, { passive: false });
+
+  console.log('🔒 Zoom bloqueado');
+}
+
+// Chame após o DOM carregado
+document.addEventListener('DOMContentLoaded', bloquearZoom);
+
     function adicionarEstilosCSS() {
         const style = document.createElement('style');
         style.textContent = `
