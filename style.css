@@ -423,3 +423,10 @@ footer {
     padding: 6px 12px;
   }
 }
+
+/* Impede zoom por gestos em navegadores que suportam */
+* {
+  touch-action: pan-x pan-y; /* ou 'manipulation' para desativar zoom por duplo toque */
+  -webkit-user-zoom: none;
+  user-zoom: none;
+}
