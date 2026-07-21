@@ -32,6 +32,30 @@
     };
 
     // ============================================================
+    // FUNÇÃO DE SAUDAÇÃO
+    // ============================================================
+    function obterSaudacao() {
+        const agora = new Date();
+        const hora = agora.getHours();
+        let saudacao;
+        
+        if (hora >= 5 && hora < 12) {
+            saudacao = 'Bom dia';
+        } else if (hora >= 12 && hora < 18) {
+            saudacao = 'Boa tarde';
+        } else {
+            saudacao = 'Boa noite';
+        }
+        
+        const horario = agora.toLocaleTimeString('pt-BR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        return { saudacao, horario };
+    }
+
+    // ============================================================
     // NOTIFICAÇÕES TOAST
     // ============================================================
     function mostrarToast(mensagem, tipo = 'success') {
@@ -239,6 +263,14 @@
             .produto-item:last-child { border-bottom: none; margin-bottom: 0; }
             .valor-pago-container { transition: all 0.3s ease; }
             .valor-pago-container:focus-within { transform: scale(1.02); }
+            .saudacao-card { 
+                animation: slideInRight 0.5s ease;
+                transition: all 0.3s ease;
+            }
+            .saudacao-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -286,9 +318,57 @@
         const app = document.getElementById('app');
         if (!app) return;
 
+        const { saudacao, horario } = obterSaudacao();
+
         app.innerHTML = `
             <section>
                 <h2>🏠 Dashboard</h2>
+                
+                <!-- Saudação Personalizada -->
+                <div class="saudacao-card" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 25px 30px;
+                    border-radius: 15px;
+                    margin-bottom: 25px;
+                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="
+                                background: rgba(255, 255, 255, 0.2);
+                                border-radius: 50%;
+                                width: 60px;
+                                height: 60px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 30px;
+                            ">
+                                👩‍💼
+                            </div>
+                            <div>
+                                <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 300; letter-spacing: 0.5px;">
+                                    ${saudacao},
+                                </p>
+                                <p style="font-size: 32px; margin: 5px 0 0 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+                                    Roberta! 👋
+                                </p>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.15); padding: 15px 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+                                <span style="font-size: 28px;">🕐</span>
+                                <div>
+                                    <p style="font-size: 12px; margin: 0; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">Agora são</p>
+                                    <p style="font-size: 28px; margin: 0; font-weight: 700; letter-spacing: 1px;">${horario}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="text-align:center; padding:40px;">
                     <div class="loading-spinner" style="font-size:32px;">⏳</div>
                     <p style="color:#667eea; margin-top:10px;">Carregando dados...</p>
@@ -385,6 +465,51 @@
                         <button onclick="window.atualizarDashboard()" class="btn-primary" style="background:#667eea; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:500;">
                             🔄 Atualizar
                         </button>
+                    </div>
+
+                    <!-- Saudação Personalizada -->
+                    <div class="saudacao-card" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 25px 30px;
+                        border-radius: 15px;
+                        margin-bottom: 25px;
+                        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                    ">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="
+                                    background: rgba(255, 255, 255, 0.2);
+                                    border-radius: 50%;
+                                    width: 60px;
+                                    height: 60px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 30px;
+                                ">
+                                    👩‍💼
+                                </div>
+                                <div>
+                                    <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 300; letter-spacing: 0.5px;">
+                                        ${saudacao},
+                                    </p>
+                                    <p style="font-size: 32px; margin: 5px 0 0 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+                                        Roberta! 👋
+                                    </p>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.15); padding: 15px 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+                                    <span style="font-size: 28px;">🕐</span>
+                                    <div>
+                                        <p style="font-size: 12px; margin: 0; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">Agora são</p>
+                                        <p style="font-size: 28px; margin: 0; font-weight: 700; letter-spacing: 1px;">${horario}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:20px; margin-top:20px;">
@@ -743,20 +868,20 @@
                                 `).join('')}
                             </div>
 
-                            <!-- Total geral -->
-                            <div style="margin-top:20px; padding:15px; background:#f7fafc; border-radius:8px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
-                                    <div>
+                            <!-- Total geral e Valor Pago -->
+                            <div style="margin-top:20px; padding:20px; background:#f7fafc; border-radius:12px; border: 2px solid #e2e8f0;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
+                                    <div style="flex:1; min-width:200px;">
                                         <span style="font-size:14px; color:#666;">Total da Venda:</span>
-                                        <span id="totalVenda" style="font-size:28px; font-weight:bold; color:#667eea; display:block;">R$ 0,00</span>
+                                        <span id="totalVenda" style="font-size:32px; font-weight:bold; color:#667eea; display:block;">R$ 0,00</span>
                                     </div>
                                     <div class="valor-pago-container" style="flex:1; min-width:200px;">
-                                        <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">💵 Valor Pago na Hora</label>
+                                        <label style="display:block; margin-bottom:8px; color:#4a5568; font-weight:500;">💵 Valor Pago na Hora</label>
                                         <input type="number" id="valorPago" step="0.01" min="0" placeholder="Digite o valor pago..." style="width:100%; padding:12px; border:2px solid #48bb78; border-radius:8px; font-size:16px; font-weight:bold; background:#f0fff4;">
                                     </div>
-                                    <div>
+                                    <div style="flex:1; min-width:200px;">
                                         <span style="font-size:14px; color:#666;">Troco / Pendente:</span>
-                                        <span id="trocoOuPendente" style="font-size:24px; font-weight:bold; color:#e53e3e; display:block;">R$ 0,00</span>
+                                        <span id="trocoOuPendente" style="font-size:28px; font-weight:bold; color:#e53e3e; display:block;">R$ 0,00</span>
                                     </div>
                                 </div>
                             </div>
@@ -886,9 +1011,9 @@
         const troco = valorPago - totalVenda;
         let mensagemConfirmacao;
         if (troco >= 0) {
-            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br>Itens: ${itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}<br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}`;
+            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br><br>Itens: ${itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}<br><br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}`;
         } else {
-            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br>Itens: ${itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}<br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`;
+            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br><br>Itens: ${itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}<br><br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`;
         }
 
         confirmarAcao(
@@ -1292,5 +1417,5 @@
     window.mostrarDetalhesCliente = window.mostrarDetalhesCliente;
     window.cadastrarNovoCliente = window.cadastrarNovoCliente;
 
-    console.log('🚀 Sistema de Vendas v3.2 – Com valor pago na hora da compra');
+    console.log('🚀 Sistema de Vendas v3.3 – Completo com saudação personalizada, valor pago na hora e todas as funcionalidades');
 })();
