@@ -493,7 +493,7 @@
                                     justify-content: center;
                                     font-size: 30px;
                                 ">
-                                    👩‍💼
+                                    👸🏻
                                 </div>
                                 <div>
                                     <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 300; letter-spacing: 0.5px;">
