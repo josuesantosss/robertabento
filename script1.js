@@ -251,6 +251,7 @@
             @keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
             @keyframes scaleIn { from { transform:scale(0.9); opacity:0; } to { transform:scale(1); opacity:1; } }
             @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+            @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.05); } 100% { transform:scale(1); } }
             .loading-spinner { animation: spin 1s linear infinite; }
             .card-dashboard { transition: all 0.3s ease; }
             .card-dashboard:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
@@ -270,6 +271,9 @@
             .saudacao-card:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4) !important;
+            }
+            .btn-processing {
+                animation: pulse 1.5s ease infinite;
             }
         `;
         document.head.appendChild(style);
@@ -969,13 +973,14 @@
     };
 
     // ============================================================
-    // REGISTRAR VENDA MÚLTIPLA (via GET) – COM VALOR PAGO
+    // REGISTRAR VENDA MÚLTIPLA (via GET) – COM VALOR PAGO E PROCESSAMENTO
     // ============================================================
     async function registrarVendaMultipla(e) {
         e.preventDefault();
         const cliente = document.getElementById('clienteSelect').value;
         const msg = document.getElementById('msgVenda');
         const valorPago = parseFloat(document.getElementById('valorPago').value) || 0;
+        const botaoSubmit = document.querySelector('#formVendaMultipla button[type="submit"]');
 
         if (!cliente) {
             msg.innerHTML = '<div style="padding:12px;background:#fed7d7;color:#9b2c2c;border-radius:6px;">❌ Selecione ou cadastre um cliente</div>';
@@ -1020,6 +1025,29 @@
             mensagemConfirmacao,
             async () => {
                 try {
+                    // Mostra indicador de processamento no botão
+                    const textoOriginal = botaoSubmit.innerHTML;
+                    botaoSubmit.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            <span class="loading-spinner" style="font-size: 20px;">⏳</span>
+                            <span>Processando venda...</span>
+                        </div>
+                    `;
+                    botaoSubmit.disabled = true;
+                    botaoSubmit.style.opacity = '0.7';
+                    botaoSubmit.style.cursor = 'not-allowed';
+                    botaoSubmit.classList.add('btn-processing');
+
+                    // Mostra mensagem de processamento
+                    msg.innerHTML = `
+                        <div style="padding: 15px; background: #e3f2fd; color: #0d47a1; border-radius: 8px; border-left: 4px solid #2196f3;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="loading-spinner" style="font-size: 20px;">⏳</span>
+                                <span>Processando venda para ${cliente}...</span>
+                            </div>
+                        </div>
+                    `;
+
                     let todasOk = true;
                     for (const item of itens) {
                         const result = await callAPI('registrarVenda', {
@@ -1046,7 +1074,7 @@
                             }, false);
                         }
                         
-                        let msgVenda = `<div style="padding:15px;background:#c6f6d5;color:#22543d;border-radius:6px;"><strong>✅ Venda registrada com sucesso!</strong><br>Cliente: ${cliente}<br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}`;
+                        let msgVenda = `<div style="padding:15px;background:#c6f6d5;color:#22543d;border-radius:6px; animation: slideInRight 0.3s ease;"><strong>✅ Venda registrada com sucesso!</strong><br>Cliente: ${cliente}<br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}`;
                         
                         if (troco >= 0) {
                             msgVenda += `<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}`;
@@ -1071,6 +1099,13 @@
                     }
                 } catch (error) {
                     msg.innerHTML = `<div style="padding:12px;background:#fed7d7;color:#9b2c2c;border-radius:6px;">❌ Erro: ${error.message}</div>`;
+                } finally {
+                    // Restaura o botão
+                    botaoSubmit.innerHTML = '💰 Registrar Venda';
+                    botaoSubmit.disabled = false;
+                    botaoSubmit.style.opacity = '1';
+                    botaoSubmit.style.cursor = 'pointer';
+                    botaoSubmit.classList.remove('btn-processing');
                 }
             },
             'Confirmar Venda',
@@ -1417,5 +1452,5 @@
     window.mostrarDetalhesCliente = window.mostrarDetalhesCliente;
     window.cadastrarNovoCliente = window.cadastrarNovoCliente;
 
-    console.log('🚀 Sistema de Vendas v3.3 – Completo com saudação personalizada, valor pago na hora e todas as funcionalidades');
+    console.log('🚀 Sistema de Vendas v3.4 – Completo com processamento visual de vendas');
 })();
