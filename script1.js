@@ -268,7 +268,6 @@
                 navButtons.forEach(b => b.classList.remove('active'));
                 button.classList.add('active');
 
-                // Páginas disponíveis (sem 'cadastro')
                 const pageMap = {
                     'home': renderHome,
                     'estoque': renderEstoque,
@@ -296,10 +295,9 @@
     }
 
     // ============================================================
-    // HOME / DASHBOARD
+    // HOME / DASHBOARD (com imagem face.png)
     // ============================================================
     async function renderHome() {
-        // (mesmo código anterior, não alterado)
         const app = document.getElementById('app');
         if (!app) return;
         const { saudacao, horario } = obterSaudacao();
@@ -310,7 +308,9 @@
                 <div class="saudacao-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(102,126,234,0.3); border: 1px solid rgba(255,255,255,0.2);">
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
                         <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 30px;">👸🏻</div>
+                            <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                <img src="img/face.png" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            </div>
                             <div>
                                 <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 300; letter-spacing: 0.5px;">${saudacao},</p>
                                 <p style="font-size: 32px; margin: 5px 0 0 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">Roberta! 👋</p>
@@ -420,7 +420,9 @@
                     <div class="saudacao-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(102,126,234,0.3); border: 1px solid rgba(255,255,255,0.2);">
                         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
                             <div style="display: flex; align-items: center; gap: 15px;">
-                                <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 30px;">👸🏻</div>
+                                <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                    <img src="img/face.png" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                </div>
                                 <div>
                                     <p style="font-size: 16px; margin: 0; opacity: 0.9; font-weight: 300; letter-spacing: 0.5px;">${saudacao},</p>
                                     <p style="font-size: 32px; margin: 5px 0 0 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">Roberta! 👋</p>
@@ -540,7 +542,6 @@
             </section>
         `;
 
-        // Event listener para cadastro rápido
         document.getElementById('formCadastroRapido').addEventListener('submit', cadastrarProdutoRapido);
 
         try {
@@ -565,9 +566,6 @@
                 html = `<tr><td colspan="4" style="text-align:center; padding:40px;"><p style="font-size:48px;">📭</p><p style="color:#666;">Nenhum produto cadastrado</p></td></tr>`;
             }
 
-            // Atualiza a seção com a tabela
-            const section = document.querySelector('section');
-            // Vamos reconstruir o conteúdo completo
             app.innerHTML = `
                 <section>
                     <h2>📦 Estoque</h2>
@@ -621,7 +619,6 @@
                 </section>
             `;
 
-            // Reatribuir event listener ao formulário (pois foi recriado)
             document.getElementById('formCadastroRapido').addEventListener('submit', cadastrarProdutoRapido);
 
         } catch (error) {
@@ -753,7 +750,6 @@
     // VENDAS (sem alterações)
     // ============================================================
     async function renderVendas() {
-        // (mesmo código anterior, mantido)
         const app = document.getElementById('app');
         app.innerHTML = `
             <section>
@@ -862,7 +858,6 @@
                 </section>
             `;
 
-            // Função para calcular totais e troco
             function calcularTotais() {
                 let totalGeral = 0;
                 for (let i = 1; i <= 4; i++) {
