@@ -7,6 +7,20 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbzDoNt-58HOvCOqCr2xuXGVuFs4AFjJAiAwuEO3kF82dEmzt8_fq2NNgRPeEbHix2Q-2A/exec';
 
     // ============================================================
+    // CONFIGURAÇÃO PIX – SUBSTITUA COM SEUS DADOS
+    // ============================================================
+    const PIX_CONFIG = {
+        // Chave Pix (CPF, CNPJ, e-mail, telefone ou chave aleatória)
+        chave: '27194177854', // ← SUBSTITUA AQUI
+        
+        // Nome do recebedor (opcional, até 25 caracteres)
+        nomeRecebedor: 'Roberta Bento',
+        
+        // Cidade do recebedor (opcional, até 15 caracteres)
+        cidade: 'Monte Azul Pta-SP'
+    };
+
+    // ============================================================
     // SISTEMA DE CACHE
     // ============================================================
     const Cache = {
@@ -255,6 +269,7 @@
             .saudacao-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.4) !important; }
             .btn-processing { animation: pulse 1.5s ease infinite; }
             .edit-modal { animation: scaleIn 0.2s ease; }
+            .modal-pix { animation: fadeIn 0.3s ease; }
         `;
         document.head.appendChild(style);
     }
@@ -295,7 +310,186 @@
     }
 
     // ============================================================
-    // HOME / DASHBOARD (com imagem face.png)
+    // QR CODE PIX – FUNÇÕES COMPLETAS
+    // ============================================================
+
+    window.gerarQrCodePix = function(valor, descricao = 'Pagamento') {
+        if (!valor || valor <= 0) {
+            mostrarToast('Valor inválido para gerar QR Code', 'error');
+            return;
+        }
+
+        const txid = 'VENDA' + Date.now().toString().slice(-8);
+        const payload = gerarPayloadPix(
+            PIX_CONFIG.chave,
+            PIX_CONFIG.nomeRecebedor,
+            PIX_CONFIG.cidade,
+            valor,
+            descricao,
+            txid
+        );
+
+        mostrarModalPix(payload, valor, descricao);
+    };
+
+    function gerarPayloadPix(chave, nome, cidade, valor, descricao, txid) {
+        chave = chave.trim();
+        nome = removerAcentos(nome.trim()).substring(0, 25);
+        cidade = removerAcentos(cidade.trim()).substring(0, 15);
+        txid = (txid && txid.trim()) ? txid.trim().substring(0, 25) : '***';
+
+        if (!chave) throw new Error('Chave Pix não configurada');
+
+        let payload = '000201';
+        const gui = '0014BR.GOV.BCB.PIX';
+        const chaveLen = String(chave.length).padStart(2, '0');
+        const merchantAccount = gui + '01' + chaveLen + chave;
+        const merchantAccountLen = String(merchantAccount.length).padStart(2, '0');
+        payload += '26' + merchantAccountLen + merchantAccount;
+        payload += '52040000';
+        payload += '5303986';
+        if (valor && valor > 0) {
+            const valorFormatado = valor.toFixed(2);
+            const valorLen = String(valorFormatado.length).padStart(2, '0');
+            payload += '54' + valorLen + valorFormatado;
+        }
+        payload += '5802BR';
+        const nomeLen = String(nome.length).padStart(2, '0');
+        payload += '59' + nomeLen + nome;
+        const cidadeLen = String(cidade.length).padStart(2, '0');
+        payload += '60' + cidadeLen + cidade;
+        const txidValue = '05' + String(txid.length).padStart(2, '0') + txid;
+        const txidLen = String(txidValue.length).padStart(2, '0');
+        payload += '62' + txidLen + txidValue;
+        payload += '6304';
+        const crc = calcularCRC16(payload);
+        const crcHex = crc.toString(16).toUpperCase().padStart(4, '0');
+        payload += crcHex;
+
+        console.log('📤 Payload Pix gerado:', payload);
+        return payload;
+    }
+
+    function removerAcentos(str) {
+        const mapa = {
+            'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
+            'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+            'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+            'ó': 'o', 'ò': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
+            'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+            'ç': 'c', 'ñ': 'n'
+        };
+        return str.replace(/[áàâãäéèêëíìîïóòôõöúùûüçñ]/g, function(match) {
+            return mapa[match] || match;
+        });
+    }
+
+    function calcularCRC16(payload) {
+        const polynomial = 0x1021;
+        let crc = 0xFFFF;
+        for (let i = 0; i < payload.length; i++) {
+            crc ^= payload.charCodeAt(i) << 8;
+            for (let j = 0; j < 8; j++) {
+                if (crc & 0x8000) {
+                    crc = (crc << 1) ^ polynomial;
+                } else {
+                    crc <<= 1;
+                }
+                crc &= 0xFFFF;
+            }
+        }
+        return crc;
+    }
+
+    function mostrarModalPix(payload, valor, descricao) {
+        const modalAnterior = document.querySelector('.modal-pix');
+        if (modalAnterior) modalAnterior.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-pix';
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+            z-index: 10001; animation: fadeIn 0.3s ease;
+            padding: 20px;
+        `;
+
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(payload)}`;
+
+        overlay.innerHTML = `
+            <div style="background:white; padding:30px; border-radius:16px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation: scaleIn 0.3s ease; position:relative;">
+                <button onclick="this.closest('.modal-pix').remove()" style="position:absolute; top:10px; right:15px; background:transparent; border:none; font-size:24px; cursor:pointer; color:#999;">✕</button>
+                <div style="text-align:center;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px;">
+                        <span style="font-size:28px;">💳</span>
+                        <h2 style="margin:0; color:#2d3748;">Pagar com Pix</h2>
+                    </div>
+                    <div style="background:#f0f4ff; padding:15px; border-radius:12px; margin-bottom:20px;">
+                        <p style="margin:0; font-size:14px; color:#4a5568;">Valor da compra</p>
+                        <p style="margin:0; font-size:32px; font-weight:bold; color:#667eea;">R$ ${valor.toFixed(2).replace('.', ',')}</p>
+                        ${descricao ? `<p style="margin:5px 0 0 0; font-size:12px; color:#666;">${descricao}</p>` : ''}
+                    </div>
+                    <div style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:15px;">
+                        <img src="${qrCodeUrl}" alt="QR Code Pix" style="width:220px; height:220px; margin:0 auto; display:block; background:white; padding:10px; border-radius:8px; image-rendering:pixelated;">
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button onclick="copiarPix('${payload.replace(/'/g, "\\'")}')" style="flex:1; background:#667eea; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:500;">
+                            📋 Copiar Código Pix
+                        </button>
+                        <button onclick="this.closest('.modal-pix').remove()" style="flex:1; background:#e2e8f0; color:#4a5568; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:500;">
+                            Fechar
+                        </button>
+                    </div>
+                    <div style="margin-top:15px; padding:12px; background:#fff3cd; border-radius:8px; font-size:12px; color:#856404;">
+                        ⚠️ Após o pagamento, finalize a compra no sistema.
+                    </div>
+                    <div style="margin-top:10px;">
+                        <button onclick="validarPix('${payload.replace(/'/g, "\\'")}')" style="background:transparent; border:1px solid #667eea; color:#667eea; padding:5px 10px; border-radius:4px; font-size:10px; cursor:pointer;">
+                            🔍 Validar código Pix
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+    }
+
+    function validarPix(payload) {
+        const url = `https://pix.ingressos.etc.br/validador/?pix=${encodeURIComponent(payload)}`;
+        window.open(url, '_blank');
+    }
+
+    function copiarPix(payload) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(payload).then(() => {
+                mostrarToast('✅ Código Pix copiado!', 'success');
+            }).catch(() => {
+                copiarPixFallback(payload);
+            });
+        } else {
+            copiarPixFallback(payload);
+        }
+    }
+
+    function copiarPixFallback(payload) {
+        const textarea = document.createElement('textarea');
+        textarea.value = payload;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            mostrarToast('✅ Código Pix copiado!', 'success');
+        } catch (e) {
+            mostrarToast('❌ Erro ao copiar. Selecione o código manualmente.', 'error');
+        }
+        document.body.removeChild(textarea);
+    }
+
+    // ============================================================
+    // HOME / DASHBOARD
     // ============================================================
     async function renderHome() {
         const app = document.getElementById('app');
@@ -626,9 +820,6 @@
         }
     }
 
-    // ============================================================
-    // CADASTRO RÁPIDO (dentro do estoque)
-    // ============================================================
     async function cadastrarProdutoRapido(e) {
         e.preventDefault();
         const nome = document.getElementById('nomeRapido').value.trim();
@@ -721,9 +912,6 @@
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     };
 
-    // ============================================================
-    // EXCLUIR PRODUTO (chamado do modal)
-    // ============================================================
     window.confirmarExclusaoProduto = function(id, nome) {
         confirmarAcao(
             `Deseja realmente excluir o produto "${nome}"? Esta ação não pode ser desfeita.`,
@@ -747,7 +935,7 @@
     };
 
     // ============================================================
-    // VENDAS (sem alterações)
+    // VENDAS – COM DESCONTO POR PRODUTO (% ou R$) + QR CODE PIX
     // ============================================================
     async function renderVendas() {
         const app = document.getElementById('app');
@@ -809,7 +997,7 @@
                                 </div>
                             </div>
 
-                            <!-- Produtos (4 linhas) -->
+                            <!-- Produtos (4 linhas) com Desconto -->
                             <div id="produtosContainer">
                                 ${[1,2,3,4].map(i => `
                                     <div class="produto-item" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -822,6 +1010,17 @@
                                         <div style="flex:1; min-width:80px;">
                                             <label style="font-size:14px; color:#4a5568;">Qtd</label>
                                             <input type="number" id="qtd${i}" class="qtd-produto" min="0" value="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                                        </div>
+                                        <div style="flex:1.5; min-width:120px;">
+                                            <label style="font-size:14px; color:#4a5568;">Desconto</label>
+                                            <div style="display:flex; gap:5px; align-items:center;">
+                                                <input type="number" id="descValor${i}" class="desc-valor" min="0" step="0.01" placeholder="0" style="flex:1; min-width:60px; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                                                <select id="descTipo${i}" class="desc-tipo" style="padding:10px; border:2px solid #e2e8f0; border-radius:6px; background:white; width:65px;">
+                                                    <option value="%">%</option>
+                                                    <option value="R$">R$</option>
+                                                </select>
+                                            </div>
+                                            <span id="descAplicado${i}" style="font-size:12px; color:#e53e3e; display:block; min-height:18px;"></span>
                                         </div>
                                         <div style="flex:1; min-width:100px;">
                                             <label style="font-size:14px; color:#4a5568;">Subtotal</label>
@@ -849,7 +1048,12 @@
                                 </div>
                             </div>
 
-                            <button type="submit" style="margin-top:20px; background:#48bb78; color:white; border:none; padding:14px 24px; border-radius:8px; cursor:pointer; font-weight:500; width:100%; font-size:16px;">
+                            <!-- Botão para gerar QR Code ANTES de registrar -->
+                            <button type="button" onclick="gerarQrCodePixAntesDeRegistrar()" style="margin-top:10px; background:#1a73e8; color:white; border:none; padding:14px 24px; border-radius:8px; cursor:pointer; font-weight:500; width:100%; font-size:16px;">
+                                📱 Gerar QR Code Pix - R$ <span id="qrCodeValor">0,00</span>
+                            </button>
+
+                            <button type="submit" style="margin-top:10px; background:#48bb78; color:white; border:none; padding:14px 24px; border-radius:8px; cursor:pointer; font-weight:500; width:100%; font-size:16px;">
                                 💰 Registrar Venda
                             </button>
                         </form>
@@ -858,28 +1062,64 @@
                 </section>
             `;
 
+            // Função para calcular totais, subtotais e descontos
             function calcularTotais() {
                 let totalGeral = 0;
                 for (let i = 1; i <= 4; i++) {
                     const select = document.getElementById(`produto${i}`);
                     const qtdInput = document.getElementById(`qtd${i}`);
                     const subtotalSpan = document.getElementById(`subtotal${i}`);
+                    const descValorInput = document.getElementById(`descValor${i}`);
+                    const descTipoSelect = document.getElementById(`descTipo${i}`);
+                    const descAplicadoSpan = document.getElementById(`descAplicado${i}`);
+
                     const qtd = parseInt(qtdInput.value) || 0;
                     const option = select.options[select.selectedIndex];
                     let subtotal = 0;
-                    if (select.selectedIndex > 0 && option) {
+                    let descontoAplicado = 0;
+                    let descontoTexto = '';
+                    let subtotalFinal = 0;
+
+                    if (select.selectedIndex > 0 && option && qtd > 0) {
                         const preco = parseFloat(option.dataset.preco || 0);
                         subtotal = preco * qtd;
+
+                        const descValor = parseFloat(descValorInput.value) || 0;
+                        const descTipo = descTipoSelect.value;
+
+                        if (descValor > 0) {
+                            if (descTipo === '%') {
+                                descontoAplicado = (subtotal * descValor) / 100;
+                                if (descontoAplicado > subtotal) descontoAplicado = subtotal;
+                                descontoTexto = `-${descValor}% (R$ ${descontoAplicado.toFixed(2).replace('.', ',')})`;
+                            } else {
+                                descontoAplicado = Math.min(descValor, subtotal);
+                                descontoTexto = `- R$ ${descontoAplicado.toFixed(2).replace('.', ',')}`;
+                            }
+                        }
+                        subtotalFinal = subtotal - descontoAplicado;
+                    } else if (select.selectedIndex === 0 || !option) {
+                        subtotalFinal = 0;
+                        descontoTexto = '';
                     }
-                    subtotalSpan.textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
-                    totalGeral += subtotal;
+
+                    subtotalSpan.textContent = `R$ ${subtotalFinal.toFixed(2).replace('.', ',')}`;
+                    descAplicadoSpan.textContent = descontoTexto;
+                    if (descontoAplicado > 0) {
+                        descAplicadoSpan.style.color = '#e53e3e';
+                    } else {
+                        descAplicadoSpan.textContent = '';
+                    }
+
+                    totalGeral += subtotalFinal;
                 }
                 document.getElementById('totalVenda').textContent = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
-                
+                document.getElementById('qrCodeValor').textContent = totalGeral.toFixed(2).replace('.', ',');
+
                 const valorPago = parseFloat(document.getElementById('valorPago').value) || 0;
                 const troco = valorPago - totalGeral;
                 const trocoSpan = document.getElementById('trocoOuPendente');
-                
+
                 if (troco >= 0) {
                     trocoSpan.textContent = `R$ ${troco.toFixed(2).replace('.', ',')}`;
                     trocoSpan.style.color = '#38a169';
@@ -893,7 +1133,20 @@
                 }
             }
 
-            document.querySelectorAll('.produto-select, .qtd-produto').forEach(el => {
+            // Função para gerar QR Code antes de registrar
+            window.gerarQrCodePixAntesDeRegistrar = function() {
+                const totalSpan = document.getElementById('totalVenda');
+                const total = parseFloat(totalSpan.textContent.replace('R$ ', '').replace(',', '.')) || 0;
+                if (total <= 0) {
+                    mostrarToast('Adicione produtos para gerar o QR Code', 'warning');
+                    return;
+                }
+                const cliente = document.getElementById('clienteSelect').value || 'Cliente';
+                gerarQrCodePix(total, `Venda para ${cliente}`);
+            };
+
+            // Event listeners
+            document.querySelectorAll('.produto-select, .qtd-produto, .desc-valor, .desc-tipo').forEach(el => {
                 el.addEventListener('change', calcularTotais);
                 el.addEventListener('input', calcularTotais);
             });
@@ -906,23 +1159,6 @@
             app.innerHTML = `<section><h2>💰 Registrar Venda</h2><p style="color:red;">❌ Erro: ${error.message}</p></section>`;
         }
     }
-
-    window.cadastrarNovoCliente = function() {
-        const nome = prompt('Digite o nome do novo cliente:');
-        if (!nome || nome.trim() === '') {
-            mostrarToast('Nome inválido', 'warning');
-            return;
-        }
-        const select = document.getElementById('clienteSelect');
-        if (select) {
-            const option = document.createElement('option');
-            option.value = nome.trim();
-            option.textContent = nome.trim();
-            select.appendChild(option);
-            select.value = nome.trim();
-            mostrarToast(`Cliente "${nome.trim()}" adicionado!`, 'success');
-        }
-    };
 
     async function registrarVendaMultipla(e) {
         e.preventDefault();
@@ -938,22 +1174,59 @@
 
         const itens = [];
         let totalVenda = 0;
+        let resumoItens = [];
+
         for (let i = 1; i <= 4; i++) {
             const select = document.getElementById(`produto${i}`);
             const qtdInput = document.getElementById(`qtd${i}`);
+            const descValorInput = document.getElementById(`descValor${i}`);
+            const descTipoSelect = document.getElementById(`descTipo${i}`);
+
             const qtd = parseInt(qtdInput.value) || 0;
             if (qtd > 0 && select.selectedIndex > 0) {
                 const option = select.options[select.selectedIndex];
                 const produtoId = option.value;
-                const preco = parseFloat(option.dataset.preco || 0);
+                const precoOriginal = parseFloat(option.dataset.preco || 0);
                 const nomeProduto = option.dataset.nome || '';
                 const disponivel = parseInt(option.dataset.quantidade || 0);
+
                 if (qtd > disponivel) {
                     msg.innerHTML = `<div style="padding:12px;background:#fed7d7;color:#9b2c2c;border-radius:6px;">❌ Estoque insuficiente para "${nomeProduto}". Disponível: ${disponivel}</div>`;
                     return;
                 }
-                itens.push({ produtoId, quantidade: qtd, preco, nome: nomeProduto });
-                totalVenda += preco * qtd;
+
+                const subtotal = precoOriginal * qtd;
+                const descValor = parseFloat(descValorInput.value) || 0;
+                const descTipo = descTipoSelect.value;
+                let descontoAplicado = 0;
+
+                if (descValor > 0) {
+                    if (descTipo === '%') {
+                        descontoAplicado = (subtotal * descValor) / 100;
+                        if (descontoAplicado > subtotal) descontoAplicado = subtotal;
+                    } else {
+                        descontoAplicado = Math.min(descValor, subtotal);
+                    }
+                }
+
+                const precoUnitarioFinal = (subtotal - descontoAplicado) / qtd;
+                const totalItem = subtotal - descontoAplicado;
+
+                itens.push({
+                    produtoId,
+                    quantidade: qtd,
+                    precoUnitario: precoUnitarioFinal,
+                    desconto: descontoAplicado,
+                    descontoTipo: descTipo,
+                    descontoValor: descValor
+                });
+
+                totalVenda += totalItem;
+                if (descontoAplicado > 0) {
+                    resumoItens.push(`${qtd}x ${nomeProduto} (desc: ${descValor}${descTipo === '%' ? '%' : 'R$'})`);
+                } else {
+                    resumoItens.push(`${qtd}x ${nomeProduto}`);
+                }
             }
         }
 
@@ -965,9 +1238,9 @@
         const troco = valorPago - totalVenda;
         let mensagemConfirmacao;
         if (troco >= 0) {
-            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br><br>Itens: ${itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}<br><br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}`;
+            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br><br>Itens: ${resumoItens.join(', ')}<br><br>Total com desconto: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}`;
         } else {
-            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br><br>Itens: ${itens.map(item => `${item.quantidade}x ${item.nome}`).join(', ')}<br><br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`;
+            mensagemConfirmacao = `Confirmar venda para ${cliente}?<br><br>Itens: ${resumoItens.join(', ')}<br><br>Total com desconto: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`;
         }
 
         confirmarAcao(
@@ -1001,16 +1274,18 @@
                             produtoId: item.produtoId,
                             quantidade: item.quantidade,
                             cliente: cliente,
-                            valorPago: valorPago,
-                            totalVenda: totalVenda
+                            precoUnitario: item.precoUnitario,
+                            desconto: item.desconto,
+                            descontoTipo: item.descontoTipo,
+                            descontoValor: item.descontoValor
                         }, false);
                         if (!result.success) {
-                            mostrarToast(`Erro no item ${item.nome}: ${result.error}`, 'error');
+                            mostrarToast(`Erro no item: ${result.error}`, 'error');
                             todasOk = false;
                             break;
                         }
                     }
-                    
+
                     if (todasOk) {
                         if (valorPago > 0) {
                             await callAPI('registrarPagamento', {
@@ -1019,24 +1294,40 @@
                                 observacao: `Pagamento da venda de R$ ${totalVenda.toFixed(2)}`
                             }, false);
                         }
-                        
-                        let msgVenda = `<div style="padding:15px;background:#c6f6d5;color:#22543d;border-radius:6px; animation: slideInRight 0.3s ease;"><strong>✅ Venda registrada com sucesso!</strong><br>Cliente: ${cliente}<br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}`;
-                        if (troco >= 0) {
-                            msgVenda += `<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}`;
-                        } else {
-                            msgVenda += `<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`;
-                        }
-                        msgVenda += '</div>';
+
+                        let msgVenda = `
+                            <div style="padding:15px;background:#c6f6d5;color:#22543d;border-radius:6px; animation: slideInRight 0.3s ease;">
+                                <strong>✅ Venda registrada com sucesso!</strong><br>
+                                Cliente: ${cliente}<br>
+                                Total com descontos: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>
+                                Valor Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}
+                                ${troco >= 0 ? `<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}` : `<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`}
+                            </div>
+                            <div style="margin-top:15px; text-align:center; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+                                <button onclick="gerarQrCodePix(${totalVenda}, 'Venda para ${cliente}')" 
+                                        style="background:#1a73e8; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:500; font-size:14px; flex:1; min-width:200px;">
+                                    📱 Gerar QR Code Pix - R$ ${totalVenda.toFixed(2).replace('.', ',')}
+                                </button>
+                                <button onclick="document.getElementById('msgVenda').innerHTML=''" 
+                                        style="background:#667eea; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:500; font-size:14px; flex:1; min-width:200px;">
+                                    ✅ Nova Venda
+                                </button>
+                            </div>
+                        `;
                         msg.innerHTML = msgVenda;
                         mostrarToast(`Venda de R$ ${totalVenda.toFixed(2).replace('.', ',')} registrada!`, 'success');
-                        
+
                         document.querySelectorAll('.qtd-produto').forEach(el => el.value = 0);
                         document.querySelectorAll('.produto-select').forEach(el => el.selectedIndex = 0);
-                        document.getElementById('valorPago').value = '';
+                        document.querySelectorAll('.desc-valor').forEach(el => el.value = '');
+                        document.querySelectorAll('.desc-tipo').forEach(el => el.selectedIndex = 0);
                         document.querySelectorAll('#subtotal1, #subtotal2, #subtotal3, #subtotal4').forEach(el => el.textContent = 'R$ 0,00');
                         document.getElementById('totalVenda').textContent = 'R$ 0,00';
                         document.getElementById('trocoOuPendente').textContent = 'R$ 0,00';
-                        
+                        document.getElementById('valorPago').value = '';
+                        document.querySelectorAll('.desc-aplicado').forEach(el => el.textContent = '');
+                        document.getElementById('qrCodeValor').textContent = '0,00';
+
                         Cache.clear();
                         await carregarClientesDropdown();
                     }
@@ -1054,6 +1345,26 @@
             'Cancelar'
         );
     }
+
+    // ============================================================
+    // CADASTRAR NOVO CLIENTE (via prompt)
+    // ============================================================
+    window.cadastrarNovoCliente = function() {
+        const nome = prompt('Digite o nome do novo cliente:');
+        if (!nome || nome.trim() === '') {
+            mostrarToast('Nome inválido', 'warning');
+            return;
+        }
+        const select = document.getElementById('clienteSelect');
+        if (select) {
+            const option = document.createElement('option');
+            option.value = nome.trim();
+            option.textContent = nome.trim();
+            select.appendChild(option);
+            select.value = nome.trim();
+            mostrarToast(`Cliente "${nome.trim()}" adicionado!`, 'success');
+        }
+    };
 
     async function carregarClientesDropdown() {
         const select = document.getElementById('clienteSelect');
@@ -1082,7 +1393,7 @@
     }
 
     // ============================================================
-    // CLIENTES – COM COMPARTILHAMENTO VIA WHATSAPP
+    // CLIENTES – COM COMPARTILHAMENTO VIA WHATSAPP E PAGAMENTO PIX
     // ============================================================
     async function renderClientes() {
         const app = document.getElementById('app');
@@ -1181,7 +1492,7 @@
     window.carregarTabelaClientes = carregarTabelaClientes;
 
     // ============================================================
-    // DETALHES DO CLIENTE – COMPRAS + PAGAMENTOS + WHATSAPP
+    // DETALHES DO CLIENTE – COMPRAS + PAGAMENTOS + WHATSAPP + PIX
     // ============================================================
     window.mostrarDetalhesCliente = async function(nomeCliente) {
         const container = document.getElementById('detalhesCliente');
@@ -1214,24 +1525,37 @@
             const statusSaldo = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
             const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
 
+            // Histórico de compras com observação de desconto
             let comprasHtml = '';
             if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
                 comprasHtml = historicoCompras.historico.map(h => {
                     const data = h.data ? new Date(h.data) : new Date();
                     const dataFormatada = data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                    let nomeProduto = h.produto || '-';
+                    let observacao = '';
+                    const descRegex = /\(desc:\s*(.*?)\)/;
+                    const match = nomeProduto.match(descRegex);
+                    if (match) {
+                        observacao = match[1].trim();
+                        nomeProduto = nomeProduto.replace(descRegex, '').trim();
+                    }
+
                     return `
                         <tr>
                             <td>${dataFormatada}</td>
-                            <td>${h.produto || '-'}</td>
+                            <td>${nomeProduto}</td>
                             <td>${h.quantidade || 1}</td>
                             <td>R$ ${(parseFloat(h.total) || 0).toFixed(2).replace('.', ',')}</td>
+                            <td>${observacao || ''}</td>
                         </tr>
                     `;
                 }).join('');
             } else {
-                comprasHtml = `<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">Nenhuma compra encontrada</td></tr>`;
+                comprasHtml = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">Nenhuma compra encontrada</td></tr>`;
             }
 
+            // Histórico de pagamentos
             let pagamentosHtml = '';
             if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
                 pagamentosHtml = historicoPagamentos.pagamentos.map(p => {
@@ -1287,6 +1611,7 @@
                         </button>
                     </div>
 
+                    <!-- Abas Compras/Pagamentos -->
                     <div style="margin-bottom:15px;">
                         <button onclick="window.abrirAba('compras')" id="btnCompras" style="background:#667eea; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; margin-right:10px;">📦 Compras</button>
                         <button onclick="window.abrirAba('pagamentos')" id="btnPagamentos" style="background:#e2e8f0; color:#4a5568; border:none; padding:8px 20px; border-radius:6px; cursor:pointer;">💳 Pagamentos</button>
@@ -1302,6 +1627,7 @@
                                         <th style="padding:10px; text-align:left; color:white;">Produto</th>
                                         <th style="padding:10px; text-align:left; color:white;">Qtd</th>
                                         <th style="padding:10px; text-align:left; color:white;">Valor</th>
+                                        <th style="padding:10px; text-align:left; color:white;">Observação</th>
                                     </tr>
                                 </thead>
                                 <tbody>${comprasHtml}</tbody>
@@ -1325,8 +1651,9 @@
                         </div>
                     </div>
 
+                    <!-- Bloco 1: Registrar Pagamento (dinheiro/cartão) -->
                     <div style="padding:20px; background:#f7fafc; border-radius:8px; border:1px solid #e2e8f0; margin-top:20px;">
-                        <h4 style="margin:0 0 15px 0;">💳 Registrar Pagamento</h4>
+                        <h4 style="margin:0 0 15px 0;">💳 Registrar Pagamento (dinheiro/cartão)</h4>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
                             <input type="number" id="valorPagamentoDetalhe" placeholder="Valor do pagamento" min="0.01" step="0.01" style="flex:1; padding:12px; border:2px solid #e2e8f0; border-radius:6px; min-width:150px;">
                             <button onclick="window.registrarPagamentoClienteDetalhe('${nomeCliente.replace(/'/g, "\\'")}')" style="background:#48bb78; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:500; white-space:nowrap;">
@@ -1335,9 +1662,22 @@
                         </div>
                         <div id="msgPagamentoDetalhe" style="margin-top:15px;"></div>
                     </div>
+
+                    <!-- Bloco 2: Pagar via Pix (NOVO) -->
+                    <div style="padding:20px; background:#f0f4ff; border-radius:8px; border:1px solid #667eea; margin-top:20px;">
+                        <h4 style="margin:0 0 15px 0;">📱 Pagar via Pix</h4>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <input type="number" id="valorPixCliente" placeholder="Valor a pagar" min="0.01" step="0.01" style="flex:1; padding:12px; border:2px solid #667eea; border-radius:6px; min-width:150px;">
+                            <button onclick="window.gerarPixParaCliente('${nomeCliente.replace(/'/g, "\\'")}')" style="background:#1a73e8; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:500; white-space:nowrap;">
+                                📱 Gerar QR Code Pix
+                            </button>
+                        </div>
+                        <div id="msgPixCliente" style="margin-top:15px;"></div>
+                    </div>
                 </div>
             `;
 
+            // Função para alternar abas
             window.abrirAba = function(aba) {
                 document.getElementById('abaCompras').style.display = aba === 'compras' ? 'block' : 'none';
                 document.getElementById('abaPagamentos').style.display = aba === 'pagamentos' ? 'block' : 'none';
@@ -1351,6 +1691,24 @@
         } catch (error) {
             container.innerHTML = `<div style="background:white; padding:25px; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.1);"><p style="color:#e53e3e;">❌ Erro: ${error.message}</p><button onclick="document.getElementById('detalhesCliente').innerHTML=''" style="background:#e53e3e; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">✕ Fechar</button></div>`;
         }
+    };
+
+    // ============================================================
+    // GERAR PIX PARA CLIENTE (NOVA FUNÇÃO)
+    // ============================================================
+    window.gerarPixParaCliente = function(nomeCliente) {
+        const valorInput = document.getElementById('valorPixCliente');
+        const msgDiv = document.getElementById('msgPixCliente');
+        if (!valorInput || !msgDiv) return;
+
+        const valor = parseFloat(valorInput.value);
+        if (isNaN(valor) || valor <= 0) {
+            msgDiv.innerHTML = '<div style="padding:10px;background:#fed7d7;color:#9b2c2c;border-radius:4px;">❌ Informe um valor válido</div>';
+            return;
+        }
+
+        msgDiv.innerHTML = '';
+        gerarQrCodePix(valor, `Pagamento de ${nomeCliente}`);
     };
 
     // ============================================================
@@ -1459,6 +1817,8 @@
     window.confirmarExclusaoProduto = window.confirmarExclusaoProduto;
     window.registrarPagamentoClienteDetalhe = window.registrarPagamentoClienteDetalhe;
     window.compartilharExtrato = window.compartilharExtrato;
+    window.gerarQrCodePix = gerarQrCodePix;
+    window.gerarPixParaCliente = window.gerarPixParaCliente;
 
-    console.log('🚀 Sistema de Vendas v4.0 – Estoque com cadastro rápido, edição/exclusão no modal e extrato WhatsApp');
+    console.log('🚀 Sistema de Vendas v5.1 – Pix integrado na aba Clientes!');
 })();
