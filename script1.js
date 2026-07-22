@@ -927,7 +927,7 @@
     };
 
     // ============================================================
-    // VENDAS – COM DESCONTO POR PRODUTO E BOTÃO PAGAR COM PIX
+    // VENDAS – COM DESCONTO POR PRODUTO E BOTÃO PAGAR COM PIX (CORRIGIDO)
     // ============================================================
     async function renderVendas() {
         const app = document.getElementById('app');
@@ -1051,8 +1051,8 @@
                                     <label style="font-weight:500; color:#2d3748;">Valor a pagar via Pix</label>
                                     <input type="number" id="valorPixVenda" step="0.01" min="0" placeholder="Digite o valor" style="width:100%; padding:12px; border:2px solid #667eea; border-radius:6px; font-size:16px;">
                                     <div style="display:flex; gap:10px;">
-                                        <button id="btnGerarPix" style="flex:1; background:#48bb78; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:500;">📱 Gerar QR Code</button>
-                                        <button id="btnCancelarPix" style="flex:1; background:#e2e8f0; color:#4a5568; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:500;">Cancelar</button>
+                                        <button type="button" id="btnGerarPix" style="flex:1; background:#48bb78; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:500;">📱 Gerar QR Code</button>
+                                        <button type="button" id="btnCancelarPix" style="flex:1; background:#e2e8f0; color:#4a5568; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:500;">Cancelar</button>
                                     </div>
                                     <div id="msgPixVenda" style="margin-top:5px;"></div>
                                 </div>
@@ -1150,7 +1150,7 @@
             });
             document.getElementById('valorPago').addEventListener('input', calcularTotais);
 
-            // Lógica do botão Pagar com PIX
+            // Lógica do botão Pagar com PIX (CORRIGIDA)
             const btnMostrarPix = document.getElementById('btnMostrarPix');
             const pixBox = document.getElementById('pixBox');
             const btnGerarPix = document.getElementById('btnGerarPix');
@@ -1171,6 +1171,7 @@
                 }
             });
 
+            // Cancelar apenas fecha a box, sem qualquer confirmação
             btnCancelarPix.addEventListener('click', function() {
                 pixBox.style.display = 'none';
                 btnMostrarPix.textContent = '💳 Pagar com PIX';
@@ -1856,5 +1857,5 @@
     window.gerarQrCodePix = gerarQrCodePix;
     window.gerarPixParaCliente = window.gerarPixParaCliente;
 
-    console.log('🚀 Sistema de Vendas v5.2 – Pagamento Pix com botão e valor personalizado');
+    console.log('🚀 Sistema de Vendas v5.2 – Pagamento Pix com botão e valor personalizado (corrigido)');
 })();
