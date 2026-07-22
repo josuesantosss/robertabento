@@ -10,13 +10,8 @@
     // CONFIGURAÇÃO PIX – SUBSTITUA COM SEUS DADOS
     // ============================================================
     const PIX_CONFIG = {
-        // Chave Pix (CPF, CNPJ, e-mail, telefone ou chave aleatória)
-        chave: '27194177854', // ← SUBSTITUA AQUI
-        
-        // Nome do recebedor (opcional, até 25 caracteres)
+        chave: '27194177854',
         nomeRecebedor: 'Roberta Bento',
-        
-        // Cidade do recebedor (opcional, até 15 caracteres)
         cidade: 'Monte Azul Pta-SP'
     };
 
@@ -26,7 +21,6 @@
     const Cache = {
         data: {},
         timeout: 5 * 60 * 1000,
-
         async get(key, fetchFn) {
             const cached = this.data[key];
             if (cached && Date.now() - cached.timestamp < this.timeout) {
@@ -38,7 +32,6 @@
             this.data[key] = { data, timestamp: Date.now() };
             return data;
         },
-
         clear() {
             this.data = {};
             console.log('🗑️ Cache limpo');
@@ -310,9 +303,8 @@
     }
 
     // ============================================================
-    // QR CODE PIX – FUNÇÕES COMPLETAS
+    // QR CODE PIX – FUNÇÕES
     // ============================================================
-
     window.gerarQrCodePix = function(valor, descricao = 'Pagamento') {
         if (!valor || valor <= 0) {
             mostrarToast('Valor inválido para gerar QR Code', 'error');
@@ -935,7 +927,7 @@
     };
 
     // ============================================================
-    // VENDAS – COM DESCONTO POR PRODUTO (% ou R$) + QR CODE PIX
+    // VENDAS – COM DESCONTO POR PRODUTO E BOTÃO PAGAR COM PIX
     // ============================================================
     async function renderVendas() {
         const app = document.getElementById('app');
@@ -1048,10 +1040,23 @@
                                 </div>
                             </div>
 
-                            <!-- Botão para gerar QR Code ANTES de registrar -->
-                            <button type="button" onclick="gerarQrCodePixAntesDeRegistrar()" style="margin-top:10px; background:#1a73e8; color:white; border:none; padding:14px 24px; border-radius:8px; cursor:pointer; font-weight:500; width:100%; font-size:16px;">
-                                📱 Gerar QR Code Pix - R$ <span id="qrCodeValor">0,00</span>
+                            <!-- Botão Pagar com PIX -->
+                            <button type="button" id="btnMostrarPix" style="margin-top:10px; background:#1a73e8; color:white; border:none; padding:14px 24px; border-radius:8px; cursor:pointer; font-weight:500; width:100%; font-size:16px;">
+                                💳 Pagar com PIX
                             </button>
+
+                            <!-- Box de Pagamento PIX (inicialmente oculta) -->
+                            <div id="pixBox" style="display:none; margin-top:10px; padding:15px; background:#f0f4ff; border-radius:8px; border:2px solid #667eea;">
+                                <div style="display:flex; flex-direction:column; gap:10px;">
+                                    <label style="font-weight:500; color:#2d3748;">Valor a pagar via Pix</label>
+                                    <input type="number" id="valorPixVenda" step="0.01" min="0" placeholder="Digite o valor" style="width:100%; padding:12px; border:2px solid #667eea; border-radius:6px; font-size:16px;">
+                                    <div style="display:flex; gap:10px;">
+                                        <button id="btnGerarPix" style="flex:1; background:#48bb78; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:500;">📱 Gerar QR Code</button>
+                                        <button id="btnCancelarPix" style="flex:1; background:#e2e8f0; color:#4a5568; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:500;">Cancelar</button>
+                                    </div>
+                                    <div id="msgPixVenda" style="margin-top:5px;"></div>
+                                </div>
+                            </div>
 
                             <button type="submit" style="margin-top:10px; background:#48bb78; color:white; border:none; padding:14px 24px; border-radius:8px; cursor:pointer; font-weight:500; width:100%; font-size:16px;">
                                 💰 Registrar Venda
@@ -1114,7 +1119,12 @@
                     totalGeral += subtotalFinal;
                 }
                 document.getElementById('totalVenda').textContent = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
-                document.getElementById('qrCodeValor').textContent = totalGeral.toFixed(2).replace('.', ',');
+
+                // Atualiza campo de valor Pix com o total (sugestão)
+                const valorPixInput = document.getElementById('valorPixVenda');
+                if (valorPixInput && !valorPixInput.value) {
+                    valorPixInput.value = totalGeral.toFixed(2);
+                }
 
                 const valorPago = parseFloat(document.getElementById('valorPago').value) || 0;
                 const troco = valorPago - totalGeral;
@@ -1133,24 +1143,50 @@
                 }
             }
 
-            // Função para gerar QR Code antes de registrar
-            window.gerarQrCodePixAntesDeRegistrar = function() {
-                const totalSpan = document.getElementById('totalVenda');
-                const total = parseFloat(totalSpan.textContent.replace('R$ ', '').replace(',', '.')) || 0;
-                if (total <= 0) {
-                    mostrarToast('Adicione produtos para gerar o QR Code', 'warning');
-                    return;
-                }
-                const cliente = document.getElementById('clienteSelect').value || 'Cliente';
-                gerarQrCodePix(total, `Venda para ${cliente}`);
-            };
-
             // Event listeners
             document.querySelectorAll('.produto-select, .qtd-produto, .desc-valor, .desc-tipo').forEach(el => {
                 el.addEventListener('change', calcularTotais);
                 el.addEventListener('input', calcularTotais);
             });
             document.getElementById('valorPago').addEventListener('input', calcularTotais);
+
+            // Lógica do botão Pagar com PIX
+            const btnMostrarPix = document.getElementById('btnMostrarPix');
+            const pixBox = document.getElementById('pixBox');
+            const btnGerarPix = document.getElementById('btnGerarPix');
+            const btnCancelarPix = document.getElementById('btnCancelarPix');
+            const valorPixInput = document.getElementById('valorPixVenda');
+            const msgPixVenda = document.getElementById('msgPixVenda');
+
+            btnMostrarPix.addEventListener('click', function() {
+                if (pixBox.style.display === 'none') {
+                    const totalSpan = document.getElementById('totalVenda');
+                    const total = parseFloat(totalSpan.textContent.replace('R$ ', '').replace(',', '.')) || 0;
+                    valorPixInput.value = total.toFixed(2);
+                    pixBox.style.display = 'block';
+                    btnMostrarPix.textContent = 'Ocultar Pix';
+                } else {
+                    pixBox.style.display = 'none';
+                    btnMostrarPix.textContent = '💳 Pagar com PIX';
+                }
+            });
+
+            btnCancelarPix.addEventListener('click', function() {
+                pixBox.style.display = 'none';
+                btnMostrarPix.textContent = '💳 Pagar com PIX';
+                msgPixVenda.innerHTML = '';
+            });
+
+            btnGerarPix.addEventListener('click', function() {
+                const valor = parseFloat(valorPixInput.value);
+                if (isNaN(valor) || valor <= 0) {
+                    msgPixVenda.innerHTML = '<div style="color:#e53e3e;">Valor inválido</div>';
+                    return;
+                }
+                const cliente = document.getElementById('clienteSelect').value || 'Cliente';
+                msgPixVenda.innerHTML = '';
+                gerarQrCodePix(valor, `Venda para ${cliente}`);
+            });
 
             document.getElementById('formVendaMultipla').addEventListener('submit', registrarVendaMultipla);
             calcularTotais();
@@ -1160,6 +1196,9 @@
         }
     }
 
+    // ============================================================
+    // REGISTRAR VENDA MÚLTIPLA (com desconto por produto e QR Code)
+    // ============================================================
     async function registrarVendaMultipla(e) {
         e.preventDefault();
         const cliente = document.getElementById('clienteSelect').value;
@@ -1525,7 +1564,6 @@
             const statusSaldo = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
             const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
 
-            // Histórico de compras com observação de desconto
             let comprasHtml = '';
             if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
                 comprasHtml = historicoCompras.historico.map(h => {
@@ -1555,7 +1593,6 @@
                 comprasHtml = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">Nenhuma compra encontrada</td></tr>`;
             }
 
-            // Histórico de pagamentos
             let pagamentosHtml = '';
             if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
                 pagamentosHtml = historicoPagamentos.pagamentos.map(p => {
@@ -1611,7 +1648,7 @@
                         </button>
                     </div>
 
-                    <!-- Abas Compras/Pagamentos -->
+                    <!-- Abas -->
                     <div style="margin-bottom:15px;">
                         <button onclick="window.abrirAba('compras')" id="btnCompras" style="background:#667eea; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; margin-right:10px;">📦 Compras</button>
                         <button onclick="window.abrirAba('pagamentos')" id="btnPagamentos" style="background:#e2e8f0; color:#4a5568; border:none; padding:8px 20px; border-radius:6px; cursor:pointer;">💳 Pagamentos</button>
@@ -1651,7 +1688,7 @@
                         </div>
                     </div>
 
-                    <!-- Bloco 1: Registrar Pagamento (dinheiro/cartão) -->
+                    <!-- Bloco Registrar Pagamento -->
                     <div style="padding:20px; background:#f7fafc; border-radius:8px; border:1px solid #e2e8f0; margin-top:20px;">
                         <h4 style="margin:0 0 15px 0;">💳 Registrar Pagamento (dinheiro/cartão)</h4>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -1663,7 +1700,7 @@
                         <div id="msgPagamentoDetalhe" style="margin-top:15px;"></div>
                     </div>
 
-                    <!-- Bloco 2: Pagar via Pix (NOVO) -->
+                    <!-- Bloco Pagar via Pix -->
                     <div style="padding:20px; background:#f0f4ff; border-radius:8px; border:1px solid #667eea; margin-top:20px;">
                         <h4 style="margin:0 0 15px 0;">📱 Pagar via Pix</h4>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -1677,7 +1714,6 @@
                 </div>
             `;
 
-            // Função para alternar abas
             window.abrirAba = function(aba) {
                 document.getElementById('abaCompras').style.display = aba === 'compras' ? 'block' : 'none';
                 document.getElementById('abaPagamentos').style.display = aba === 'pagamentos' ? 'block' : 'none';
@@ -1694,7 +1730,7 @@
     };
 
     // ============================================================
-    // GERAR PIX PARA CLIENTE (NOVA FUNÇÃO)
+    // GERAR PIX PARA CLIENTE
     // ============================================================
     window.gerarPixParaCliente = function(nomeCliente) {
         const valorInput = document.getElementById('valorPixCliente');
@@ -1820,5 +1856,5 @@
     window.gerarQrCodePix = gerarQrCodePix;
     window.gerarPixParaCliente = window.gerarPixParaCliente;
 
-    console.log('🚀 Sistema de Vendas v5.1 – Pix integrado na aba Clientes!');
+    console.log('🚀 Sistema de Vendas v5.2 – Pagamento Pix com botão e valor personalizado');
 })();
