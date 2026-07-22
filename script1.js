@@ -745,7 +745,7 @@
                         <div style="overflow-x:auto;">
                             <table style="width:100%; border-collapse:collapse;">
                                 <thead>
-                                    <tr style="background:#f7fafc; border-bottom:2px solid #e2e8f0;">
+                                    <tr style="background:#3957ed; border-bottom:2px solid #e2e8f0;">
                                         <th style="padding:12px; text-align:left;">ID</th>
                                         <th style="padding:12px; text-align:left;">Produto</th>
                                         <th style="padding:12px; text-align:left;">Quantidade</th>
