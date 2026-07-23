@@ -976,11 +976,17 @@
                 });
             }
 
+            // ORDENAR CLIENTES EM ORDEM ALFABÉTICA
             let clientesOptions = '<option value="">Selecione um cliente...</option>';
             let clientes = [];
             if (clientesResult.success && clientesResult.clientes && clientesResult.clientes.length > 0) {
                 clientes = clientesResult.clientes.map(c => c.nome).filter(n => n && n !== 'Cliente não informado');
-                clientes.sort();
+                // Ordenar clientes em ordem alfabética
+                clientes.sort((a, b) => {
+                    const nomeA = a.toLowerCase().trim();
+                    const nomeB = b.toLowerCase().trim();
+                    return nomeA.localeCompare(nomeB, 'pt-BR');
+                });
                 clientes.forEach(nome => {
                     clientesOptions += `<option value="${nome}">${nome}</option>`;
                 });
@@ -1412,12 +1418,29 @@
         }
         const select = document.getElementById('clienteSelect');
         if (select) {
-            const option = document.createElement('option');
-            option.value = nome.trim();
-            option.textContent = nome.trim();
-            select.appendChild(option);
-            select.value = nome.trim();
-            mostrarToast(`Cliente "${nome.trim()}" adicionado!`, 'success');
+            // Inserir o novo cliente na posição correta (ordem alfabética)
+            const novoNome = nome.trim();
+            const options = Array.from(select.options).filter(opt => opt.value !== '');
+            options.push({ value: novoNome, textContent: novoNome });
+            
+            // Ordenar todas as opções (incluindo a nova)
+            options.sort((a, b) => {
+                const nomeA = (a.value || a.textContent || '').toLowerCase().trim();
+                const nomeB = (b.value || b.textContent || '').toLowerCase().trim();
+                return nomeA.localeCompare(nomeB, 'pt-BR');
+            });
+            
+            // Reconstruir o select mantendo a opção vazia primeiro
+            select.innerHTML = '<option value="">Selecione um cliente...</option>';
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value || opt.textContent;
+                option.textContent = opt.textContent || opt.value;
+                select.appendChild(option);
+            });
+            
+            select.value = novoNome;
+            mostrarToast(`Cliente "${novoNome}" adicionado!`, 'success');
         }
     };
 
@@ -1429,7 +1452,12 @@
             let clientes = [];
             if (result.success && result.clientes) {
                 clientes = result.clientes.map(c => c.nome).filter(n => n && n !== 'Cliente não informado');
-                clientes.sort();
+                // Ordenar clientes em ordem alfabética
+                clientes.sort((a, b) => {
+                    const nomeA = a.toLowerCase().trim();
+                    const nomeB = b.toLowerCase().trim();
+                    return nomeA.localeCompare(nomeB, 'pt-BR');
+                });
             }
             const currentValue = select.value;
             select.innerHTML = '<option value="">Selecione um cliente...</option>';
@@ -1498,7 +1526,13 @@
                     clientesFiltrados = clientesFiltrados.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()));
                 }
                 if (clientesFiltrados.length > 0) {
-                    clientesFiltrados.sort((a, b) => (parseFloat(b.totalGasto) || 0) - (parseFloat(a.totalGasto) || 0));
+                    // ORDENAR CLIENTES EM ORDEM ALFABÉTICA
+                    clientesFiltrados.sort((a, b) => {
+                        const nomeA = (a.nome || '').toLowerCase().trim();
+                        const nomeB = (b.nome || '').toLowerCase().trim();
+                        return nomeA.localeCompare(nomeB, 'pt-BR');
+                    });
+                    
                     clientesFiltrados.forEach(cliente => {
                         const totalGasto = parseFloat(cliente.totalGasto) || 0;
                         const totalPago = parseFloat(cliente.totalPago) || 0;
@@ -1526,7 +1560,7 @@
                     <table style="width:100%; border-collapse:collapse;">
                         <thead>
                             <tr style="background:#3957ed; border-bottom:2px solid #e2e8f0;">
-                                <th style="padding:12px; text-align:left; color:white;">Cliente</th>
+                                <th style="padding:12px; text-align:left; color:white;">Cliente 📋</th>
                                 <th style="padding:12px; text-align:left; color:white;">Total Gasto</th>
                                 <th style="padding:12px; text-align:left; color:white;">Total Pago</th>
                                 <th style="padding:12px; text-align:left; color:white;">Saldo</th>
@@ -1536,7 +1570,7 @@
                     </table>
                 </div>
                 <div style="margin-top:10px; padding:10px; background:#f7fafc; border-radius:6px; font-size:12px; color:#666;">
-                    🟢 Quitado | 🔴 Em débito | 🟡 Crédito | Clique no cliente para ver detalhes
+                    🟢 Quitado | 🔴 Em débito | 🟡 Crédito | 📋 Ordem Alfabética | Clique no cliente para ver detalhes
                 </div>
             `;
         } catch (error) {
@@ -1872,5 +1906,5 @@
     window.gerarQrCodePix = gerarQrCodePix;
     window.gerarPixParaCliente = window.gerarPixParaCliente;
 
-    console.log('🚀 Sistema de Vendas v5.3 – Produtos em ordem alfabética');
+    console.log('🚀 Sistema de Vendas v5.4 – Produtos e Clientes em ordem alfabética');
 })();
