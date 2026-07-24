@@ -1849,7 +1849,7 @@
     };
 
     // ============================================================
-    // VENDEDORA - EXTRATOS
+    // VENDEDORA - EXTRATOS COM QUANTIDADE DE ITENS
     // ============================================================
     async function renderVendedora() {
         const app = document.getElementById('app');
@@ -1867,7 +1867,7 @@
                 <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
                         <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 32px; flex-shrink: 0;">
-                                            <img src="img/face.png" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            👩‍💼
                         </div>
                         <div>
                             <p style="margin: 0; font-size: 14px; opacity: 0.9;">Bem-vinda,</p>
@@ -1911,7 +1911,7 @@
 
                     <div style="margin-top: 20px; padding: 15px; background: #fff9e6; border-radius: 8px; border-left: 4px solid #f6c23e;">
                         <p style="margin: 0; font-size: 13px; color: #856404;">
-                            💡 Os extratos mostram o total de vendas, número de transações, ticket médio e os produtos mais vendidos no período selecionado.
+                            💡 Os extratos mostram o total de vendas, quantidade de itens, ticket médio e os produtos mais vendidos no período selecionado.
                         </p>
                     </div>
                 </div>
@@ -1932,6 +1932,9 @@
         if (conteudo) conteudo.innerHTML = '';
     };
 
+    // ============================================================
+    // GERAR EXTRATO COM QUANTIDADE DE ITENS
+    // ============================================================
     window.gerarExtrato = async function(periodo) {
         const resultadoDiv = document.getElementById('resultadoExtrato');
         const conteudoDiv = document.getElementById('conteudoExtrato');
@@ -2013,6 +2016,7 @@
             }
 
             let totalVendas = 0;
+            let totalItens = 0;
             let maiorVenda = 0;
             let menorVenda = Infinity;
             let totalClientes = new Set();
@@ -2020,7 +2024,9 @@
             
             vendasFiltradas.forEach(v => {
                 const valor = parseFloat(v.total) || 0;
+                const quantidade = parseInt(v.quantidade) || 0;
                 totalVendas += valor;
+                totalItens += quantidade;
                 if (valor > maiorVenda) maiorVenda = valor;
                 if (valor < menorVenda && valor > 0) menorVenda = valor;
                 if (v.cliente) totalClientes.add(v.cliente);
@@ -2029,7 +2035,7 @@
                 if (!produtos[nomeProduto]) {
                     produtos[nomeProduto] = { quantidade: 0, total: 0 };
                 }
-                produtos[nomeProduto].quantidade += parseInt(v.quantidade) || 0;
+                produtos[nomeProduto].quantidade += quantidade;
                 produtos[nomeProduto].total += valor;
             });
 
@@ -2040,10 +2046,11 @@
                 const data = new Date(v.data);
                 const dataStr = data.toLocaleDateString('pt-BR');
                 if (!vendasPorDia[dataStr]) {
-                    vendasPorDia[dataStr] = { total: 0, count: 0 };
+                    vendasPorDia[dataStr] = { total: 0, count: 0, itens: 0 };
                 }
                 vendasPorDia[dataStr].total += parseFloat(v.total) || 0;
                 vendasPorDia[dataStr].count += 1;
+                vendasPorDia[dataStr].itens += parseInt(v.quantidade) || 0;
             });
 
             const diasOrdenados = Object.keys(vendasPorDia).sort((a, b) => {
@@ -2058,22 +2065,40 @@
 
             let html = `
                 <div style="margin-bottom: 20px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
                         <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <p style="margin: 0; font-size: 11px; color: #718096; text-transform: uppercase; font-weight: 600;">Total de Vendas</p>
-                            <p style="margin: 6px 0 0; font-size: 24px; font-weight: bold; color: #667eea;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
+                            <p style="margin: 6px 0 0; font-size: 22px; font-weight: bold; color: #667eea;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
                         </div>
                         <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <p style="margin: 0; font-size: 11px; color: #718096; text-transform: uppercase; font-weight: 600;">Nº de Vendas</p>
-                            <p style="margin: 6px 0 0; font-size: 24px; font-weight: bold; color: #4facfe;">${vendasFiltradas.length}</p>
+                            <p style="margin: 6px 0 0; font-size: 22px; font-weight: bold; color: #4facfe;">${vendasFiltradas.length}</p>
                         </div>
                         <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <p style="margin: 0; font-size: 11px; color: #718096; text-transform: uppercase; font-weight: 600;">Ticket Médio</p>
-                            <p style="margin: 6px 0 0; font-size: 20px; font-weight: bold; color: #f093fb;">R$ ${(totalVendas / vendasFiltradas.length).toFixed(2).replace('.', ',')}</p>
+                            <p style="margin: 0; font-size: 11px; color: #718096; text-transform: uppercase; font-weight: 600;">Total de Itens</p>
+                            <p style="margin: 6px 0 0; font-size: 22px; font-weight: bold; color: #f093fb;">${totalItens}</p>
                         </div>
                         <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <p style="margin: 0; font-size: 11px; color: #718096; text-transform: uppercase; font-weight: 600;">Clientes</p>
                             <p style="margin: 6px 0 0; font-size: 20px; font-weight: bold; color: #43e97b;">${totalClientes.size}</p>
+                        </div>
+                    </div>
+
+                    <!-- BLOCO DESTAQUE: TOTAL E ITENS LADO A LADO -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 15px; color: white;">
+                        <div style="text-align: center;">
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">💰 TOTAL EM VENDAS</p>
+                            <p style="margin: 5px 0 0; font-size: 32px; font-weight: bold;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div style="width: 1px; height: 50px; background: rgba(255,255,255,0.3);"></div>
+                        <div style="text-align: center;">
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">📦 QUANTIDADE DE ITENS</p>
+                            <p style="margin: 5px 0 0; font-size: 32px; font-weight: bold;">${totalItens}</p>
+                        </div>
+                        <div style="width: 1px; height: 50px; background: rgba(255,255,255,0.3);"></div>
+                        <div style="text-align: center;">
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">📊 TICKET MÉDIO</p>
+                            <p style="margin: 5px 0 0; font-size: 24px; font-weight: bold;">R$ ${(totalVendas / vendasFiltradas.length).toFixed(2).replace('.', ',')}</p>
                         </div>
                     </div>
 
@@ -2087,7 +2112,7 @@
                                     <div style="margin-bottom: 6px;">
                                         <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 2px;">
                                             <span>${dia}</span>
-                                            <span>${dados.count} venda${dados.count > 1 ? 's' : ''}</span>
+                                            <span>${dados.count} venda${dados.count > 1 ? 's' : ''} • ${dados.itens} itens</span>
                                             <span style="font-weight: bold; color: #667eea;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
                                         </div>
                                         <div style="background: #edf2f7; border-radius: 4px; height: 6px; overflow: hidden;">
@@ -2115,7 +2140,7 @@
 
                 <div style="font-size: 12px; color: #a0aec0; text-align: center; padding: 10px; background: white; border-radius: 8px;">
                     📅 Período: ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
-                    <span style="margin-left: 15px;">📦 Total de itens: ${vendasFiltradas.reduce((acc, v) => acc + (parseInt(v.quantidade) || 0), 0)}</span>
+                    <span style="margin-left: 15px;">📦 Total de itens: ${totalItens}</span>
                 </div>
             `;
 
@@ -2131,7 +2156,7 @@
             btnWhatsApp.innerHTML = '📱 Compartilhar Extrato via WhatsApp';
             btnWhatsApp.onmouseover = () => { btnWhatsApp.style.transform = 'scale(1.02)'; };
             btnWhatsApp.onmouseout = () => { btnWhatsApp.style.transform = 'scale(1)'; };
-            btnWhatsApp.onclick = () => window.compartilharExtratoVendedora(vendasFiltradas, totalVendas, periodo);
+            btnWhatsApp.onclick = () => window.compartilharExtratoVendedora(vendasFiltradas, totalVendas, totalItens, periodo);
             btnContainer.appendChild(btnWhatsApp);
 
             const btnImprimir = document.createElement('button');
@@ -2161,7 +2186,10 @@
         }
     };
 
-    window.compartilharExtratoVendedora = function(vendas, total, periodo) {
+    // ============================================================
+    // COMPARTILHAR EXTRATO VENDEDORA COM ITENS
+    // ============================================================
+    window.compartilharExtratoVendedora = function(vendas, total, totalItens, periodo) {
         const periodos = {
             semanal: 'Semana',
             mensal: 'Mês',
@@ -2173,7 +2201,8 @@
         texto += `👩‍💼 Vendedora: Roberta Bento\n`;
         texto += `📅 Período: ${periodos[periodo] || 'Período'}\n`;
         texto += `💰 Total de Vendas: R$ ${total.toFixed(2).replace('.', ',')}\n`;
-        texto += `📦 Nº de Vendas: ${vendas.length}\n`;
+        texto += `📦 Total de Itens: ${totalItens}\n`;
+        texto += `📊 Nº de Vendas: ${vendas.length}\n`;
         texto += `📊 Ticket Médio: R$ ${(total / vendas.length).toFixed(2).replace('.', ',')}\n\n`;
         texto += `🛒 DETALHES POR DIA:\n`;
         
@@ -2182,21 +2211,25 @@
             const data = new Date(v.data);
             const dataStr = data.toLocaleDateString('pt-BR');
             if (!vendasPorDia[dataStr]) {
-                vendasPorDia[dataStr] = { total: 0, count: 0 };
+                vendasPorDia[dataStr] = { total: 0, count: 0, itens: 0 };
             }
             vendasPorDia[dataStr].total += parseFloat(v.total) || 0;
             vendasPorDia[dataStr].count += 1;
+            vendasPorDia[dataStr].itens += parseInt(v.quantidade) || 0;
         });
         
         Object.keys(vendasPorDia).sort().forEach(dia => {
             const dados = vendasPorDia[dia];
-            texto += `- ${dia}: ${dados.count} venda(s) = R$ ${dados.total.toFixed(2).replace('.', ',')}\n`;
+            texto += `- ${dia}: ${dados.count} venda(s) • ${dados.itens} itens = R$ ${dados.total.toFixed(2).replace('.', ',')}\n`;
         });
 
         const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
         window.open(url, '_blank');
     };
 
+    // ============================================================
+    // IMPRIMIR EXTRATO
+    // ============================================================
     window.imprimirExtrato = function() {
         const conteudo = document.getElementById('conteudoExtrato');
         if (!conteudo) return;
@@ -2267,5 +2300,5 @@
     window.imprimirExtrato = window.imprimirExtrato;
     window.atualizarVendedora = window.atualizarVendedora;
 
-    console.log('🚀 Sistema de Vendas v5.5 - Com Área da Vendedora');
+    console.log('🚀 Sistema de Vendas v5.5 - Com Área da Vendedora e Total de Itens');
 })();
