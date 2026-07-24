@@ -1849,7 +1849,7 @@
     };
 
     // ============================================================
-    // VENDEDORA - EXTRATOS COM QUANTIDADE DE ITENS
+    // VENDEDORA - EXTRATOS
     // ============================================================
     async function renderVendedora() {
         const app = document.getElementById('app');
@@ -1867,7 +1867,7 @@
                 <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
                         <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 32px; flex-shrink: 0;">
-                            <img src="img/face.png" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            👩‍💼
                         </div>
                         <div>
                             <p style="margin: 0; font-size: 14px; opacity: 0.9;">Bem-vinda,</p>
@@ -1933,7 +1933,7 @@
     };
 
     // ============================================================
-    // GERAR EXTRATO COM QUANTIDADE DE ITENS
+    // GERAR EXTRATO
     // ============================================================
     window.gerarExtrato = async function(periodo) {
         const resultadoDiv = document.getElementById('resultadoExtrato');
@@ -2046,11 +2046,10 @@
                 const data = new Date(v.data);
                 const dataStr = data.toLocaleDateString('pt-BR');
                 if (!vendasPorDia[dataStr]) {
-                    vendasPorDia[dataStr] = { total: 0, count: 0, itens: 0 };
+                    vendasPorDia[dataStr] = { total: 0, count: 0 };
                 }
                 vendasPorDia[dataStr].total += parseFloat(v.total) || 0;
                 vendasPorDia[dataStr].count += 1;
-                vendasPorDia[dataStr].itens += parseInt(v.quantidade) || 0;
             });
 
             const diasOrdenados = Object.keys(vendasPorDia).sort((a, b) => {
@@ -2102,6 +2101,7 @@
                         </div>
                     </div>
 
+                    <!-- VENDAS POR DIA - APENAS VENDAS -->
                     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px;">
                         <p style="margin: 0 0 12px 0; font-weight: 600; color: #2d3748; font-size: 14px;">📊 Vendas por Dia</p>
                         <div style="max-height: 200px; overflow-y: auto;">
@@ -2112,7 +2112,7 @@
                                     <div style="margin-bottom: 6px;">
                                         <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 2px;">
                                             <span>${dia}</span>
-                                            <span>${dados.count} venda${dados.count > 1 ? 's' : ''} • ${dados.itens} itens</span>
+                                            <span>${dados.count} venda${dados.count > 1 ? 's' : ''}</span>
                                             <span style="font-weight: bold; color: #667eea;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
                                         </div>
                                         <div style="background: #edf2f7; border-radius: 4px; height: 6px; overflow: hidden;">
@@ -2124,14 +2124,15 @@
                         </div>
                     </div>
 
+                    <!-- PRODUTOS MAIS VENDIDOS - UNIDADES ALINHADAS À DIREITA -->
                     ${top5.length > 0 ? `
                     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <p style="margin: 0 0 12px 0; font-weight: 600; color: #2d3748; font-size: 14px;">🏆 Produtos Mais Vendidos</p>
                         ${top5.map(([nome, dados], index) => `
-                            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #edf2f7; font-size: 13px;">
-                                <span>${index + 1}. ${nome}</span>
-                                <span>${dados.quantidade} unid.</span>
-                                <span style="font-weight: bold; color: #4facfe;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #edf2f7; font-size: 13px;">
+                                <span style="flex: 1;">${index + 1}. ${nome}</span>
+                                <span style="text-align: right; min-width: 80px; color: #718096;">${dados.quantidade} unid.</span>
+                                <span style="text-align: right; min-width: 100px; font-weight: bold; color: #4facfe;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -2187,7 +2188,7 @@
     };
 
     // ============================================================
-    // COMPARTILHAR EXTRATO VENDEDORA COM ITENS
+    // COMPARTILHAR EXTRATO VENDEDORA
     // ============================================================
     window.compartilharExtratoVendedora = function(vendas, total, totalItens, periodo) {
         const periodos = {
@@ -2211,16 +2212,15 @@
             const data = new Date(v.data);
             const dataStr = data.toLocaleDateString('pt-BR');
             if (!vendasPorDia[dataStr]) {
-                vendasPorDia[dataStr] = { total: 0, count: 0, itens: 0 };
+                vendasPorDia[dataStr] = { total: 0, count: 0 };
             }
             vendasPorDia[dataStr].total += parseFloat(v.total) || 0;
             vendasPorDia[dataStr].count += 1;
-            vendasPorDia[dataStr].itens += parseInt(v.quantidade) || 0;
         });
         
         Object.keys(vendasPorDia).sort().forEach(dia => {
             const dados = vendasPorDia[dia];
-            texto += `- ${dia}: ${dados.count} venda(s) • ${dados.itens} itens = R$ ${dados.total.toFixed(2).replace('.', ',')}\n`;
+            texto += `- ${dia}: ${dados.count} venda(s) = R$ ${dados.total.toFixed(2).replace('.', ',')}\n`;
         });
 
         const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
