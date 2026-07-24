@@ -1886,6 +1886,377 @@
             'Cancelar'
         );
     };
+    
+    // ============================================================
+// FUNÇÕES DE EXTRATO DA VENDEDORA - PARA INTEGRAÇÃO NO HTML
+// ============================================================
+
+/**
+ * Abre o modal da vendedora com as opções de extrato
+ * Chame esta função no onclick do seu botão HTML
+ * Exemplo: <button onclick="abrirModalVendedora()">Área da Vendedora</button>
+ */
+function abrirModalVendedora() {
+    const modalAnterior = document.getElementById('modalVendedora');
+    if (modalAnterior) modalAnterior.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'modalVendedora';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 10002;
+        animation: fadeIn 0.3s ease;
+        padding: 20px;
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: white; border-radius: 16px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: scaleIn 0.3s ease; position: relative;">
+            <button onclick="this.closest('#modalVendedora').remove()" style="position: absolute; top: 12px; right: 15px; background: transparent; border: none; font-size: 24px; cursor: pointer; color: #999;">✕</button>
+            
+            <div style="text-align: center; margin-bottom: 25px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <span style="font-size: 36px;">👩‍💼</span>
+                </div>
+                <h2 style="margin: 0; color: #2d3748;">Área da Vendedora</h2>
+                <p style="color: #718096; font-size: 14px; margin: 5px 0 0;">Roberta Bento</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                <button onclick="window.gerarExtrato('semanal')" class="btn-extrato" style="background: #667eea; color: white; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">
+                    <span style="font-size: 20px; display: block; margin-bottom: 4px;">📅</span>
+                    Semanal
+                </button>
+                <button onclick="window.gerarExtrato('mensal')" class="btn-extrato" style="background: #4facfe; color: white; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">
+                    <span style="font-size: 20px; display: block; margin-bottom: 4px;">📆</span>
+                    Mensal
+                </button>
+                <button onclick="window.gerarExtrato('semestral')" class="btn-extrato" style="background: #f093fb; color: white; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">
+                    <span style="font-size: 20px; display: block; margin-bottom: 4px;">📊</span>
+                    Semestral
+                </button>
+                <button onclick="window.gerarExtrato('anual')" class="btn-extrato" style="background: #43e97b; color: #1a202c; border: none; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">
+                    <span style="font-size: 20px; display: block; margin-bottom: 4px;">📈</span>
+                    Anual
+                </button>
+            </div>
+
+            <div id="resultadoExtrato" style="margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 10px; max-height: 300px; overflow-y: auto; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 id="tituloExtrato" style="margin: 0; color: #2d3748;">📊 Extrato</h4>
+                    <button onclick="window.fecharResultadoExtrato()" style="background: #e2e8f0; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">✕ Fechar</button>
+                </div>
+                <div id="conteudoExtrato" style="font-size: 14px; color: #4a5568;"></div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: #fff9e6; border-radius: 8px; border-left: 4px solid #f6c23e;">
+                <p style="margin: 0; font-size: 12px; color: #856404; text-align: center;">
+                    💡 Os extratos mostram o total de vendas e número de transações no período selecionado.
+                </p>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+/**
+ * Fecha o resultado do extrato
+ */
+window.fecharResultadoExtrato = function() {
+    const resultado = document.getElementById('resultadoExtrato');
+    if (resultado) resultado.style.display = 'none';
+};
+
+/**
+ * Gera o extrato baseado no período selecionado
+ * @param {string} periodo - 'semanal', 'mensal', 'semestral' ou 'anual'
+ */
+window.gerarExtrato = async function(periodo) {
+    const resultadoDiv = document.getElementById('resultadoExtrato');
+    const conteudoDiv = document.getElementById('conteudoExtrato');
+    const tituloDiv = document.getElementById('tituloExtrato');
+    
+    if (!resultadoDiv || !conteudoDiv) {
+        mostrarToast('Erro: Modal não encontrado', 'error');
+        return;
+    }
+
+    // Mostrar loading
+    resultadoDiv.style.display = 'block';
+    conteudoDiv.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <span class="loading-spinner" style="font-size: 24px;">⏳</span>
+            <p style="color: #667eea; margin-top: 10px;">Carregando dados...</p>
+        </div>
+    `;
+
+    const titulos = {
+        semanal: '📅 Extrato Semanal',
+        mensal: '📆 Extrato Mensal',
+        semestral: '📊 Extrato Semestral',
+        anual: '📈 Extrato Anual'
+    };
+    tituloDiv.textContent = titulos[periodo] || '📊 Extrato';
+
+    try {
+        // Buscar dados das vendas
+        const result = await callAPI('listarVendas', null, false);
+        
+        if (!result.success || !result.vendas || result.vendas.length === 0) {
+            conteudoDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #718096;">
+                    <span style="font-size: 48px;">📭</span>
+                    <p style="margin: 10px 0 0;">Nenhuma venda encontrada</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Filtrar vendas pelo período
+        const agora = new Date();
+        let dataInicio = new Date();
+        
+        switch(periodo) {
+            case 'semanal':
+                dataInicio.setDate(agora.getDate() - 7);
+                break;
+            case 'mensal':
+                dataInicio.setMonth(agora.getMonth() - 1);
+                break;
+            case 'semestral':
+                dataInicio.setMonth(agora.getMonth() - 6);
+                break;
+            case 'anual':
+                dataInicio.setFullYear(agora.getFullYear() - 1);
+                break;
+            default:
+                dataInicio.setDate(agora.getDate() - 7);
+        }
+
+        const vendasFiltradas = result.vendas.filter(v => {
+            const dataVenda = new Date(v.data);
+            return dataVenda >= dataInicio && dataVenda <= agora;
+        });
+
+        if (vendasFiltradas.length === 0) {
+            const periodoTexto = {
+                semanal: 'semana',
+                mensal: 'mês',
+                semestral: 'semestre',
+                anual: 'ano'
+            };
+            conteudoDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #718096;">
+                    <span style="font-size: 48px;">🔍</span>
+                    <p style="margin: 10px 0 0;">Nenhuma venda no ${periodoTexto[periodo] || 'período'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Calcular totais
+        let totalVendas = 0;
+        let totalItens = 0;
+        let maiorVenda = 0;
+        let menorVenda = Infinity;
+        let totalClientes = new Set();
+        
+        vendasFiltradas.forEach(v => {
+            const valor = parseFloat(v.total) || 0;
+            totalVendas += valor;
+            totalItens += parseInt(v.quantidade) || 0;
+            if (valor > maiorVenda) maiorVenda = valor;
+            if (valor < menorVenda && valor > 0) menorVenda = valor;
+            if (v.cliente) totalClientes.add(v.cliente);
+        });
+
+        if (menorVenda === Infinity) menorVenda = 0;
+
+        // Contar por dia
+        const vendasPorDia = {};
+        vendasFiltradas.forEach(v => {
+            const data = new Date(v.data);
+            const dataStr = data.toLocaleDateString('pt-BR');
+            if (!vendasPorDia[dataStr]) {
+                vendasPorDia[dataStr] = { total: 0, count: 0 };
+            }
+            vendasPorDia[dataStr].total += parseFloat(v.total) || 0;
+            vendasPorDia[dataStr].count += 1;
+        });
+
+        const diasOrdenados = Object.keys(vendasPorDia).sort((a, b) => {
+            const da = a.split('/');
+            const db = b.split('/');
+            return new Date(da[2], da[1]-1, da[0]) - new Date(db[2], db[1]-1, db[0]);
+        });
+
+        // Construir HTML do extrato
+        let html = `
+            <div style="margin-bottom: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div style="background: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin: 0; font-size: 11px; color: #718096;">Total de Vendas</p>
+                        <p style="margin: 4px 0 0; font-size: 22px; font-weight: bold; color: #667eea;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin: 0; font-size: 11px; color: #718096;">Nº de Vendas</p>
+                        <p style="margin: 4px 0 0; font-size: 22px; font-weight: bold; color: #4facfe;">${vendasFiltradas.length}</p>
+                    </div>
+                    <div style="background: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin: 0; font-size: 11px; color: #718096;">Ticket Médio</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: bold; color: #f093fb;">R$ ${(totalVendas / vendasFiltradas.length).toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin: 0; font-size: 11px; color: #718096;">Clientes</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: bold; color: #43e97b;">${totalClientes.size}</p>
+                    </div>
+                </div>
+
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <p style="margin: 0 0 10px 0; font-weight: 600; color: #2d3748; font-size: 13px;">📊 Vendas por Dia</p>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${diasOrdenados.map(dia => {
+                            const dados = vendasPorDia[dia];
+                            return `
+                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #edf2f7; font-size: 13px;">
+                                    <span>${dia}</span>
+                                    <span>${dados.count} venda${dados.count > 1 ? 's' : ''}</span>
+                                    <span style="font-weight: bold; color: #667eea;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Top 5 produtos -->
+                ${await gerarTopProdutos(vendasFiltradas)}
+            </div>
+            <div style="font-size: 11px; color: #a0aec0; text-align: center; margin-top: 10px;">
+                Período: ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
+            </div>
+        `;
+
+        conteudoDiv.innerHTML = html;
+
+        // Adicionar botão de compartilhar WhatsApp
+        const btnWhatsApp = document.createElement('button');
+        btnWhatsApp.style.cssText = `
+            width: 100%; margin-top: 10px; background: #25D366; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;
+        `;
+        btnWhatsApp.innerHTML = '📱 Compartilhar Extrato via WhatsApp';
+        btnWhatsApp.onclick = () => window.compartilharExtratoVendedora(vendasFiltradas, totalVendas, periodo);
+        conteudoDiv.appendChild(btnWhatsApp);
+
+    } catch (error) {
+        conteudoDiv.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #e53e3e;">
+                <span style="font-size: 48px;">❌</span>
+                <p style="margin: 10px 0 0;">Erro ao carregar extrato: ${error.message}</p>
+            </div>
+        `;
+    }
+};
+
+/**
+ * Gera o ranking dos 5 produtos mais vendidos
+ */
+async function gerarTopProdutos(vendas) {
+    const produtos = {};
+    vendas.forEach(v => {
+        const nome = v.produto || 'Produto';
+        if (!produtos[nome]) {
+            produtos[nome] = { quantidade: 0, total: 0 };
+        }
+        produtos[nome].quantidade += parseInt(v.quantidade) || 0;
+        produtos[nome].total += parseFloat(v.total) || 0;
+    });
+
+    const top5 = Object.entries(produtos)
+        .sort((a, b) => b[1].quantidade - a[1].quantidade)
+        .slice(0, 5);
+
+    if (top5.length === 0) return '';
+
+    return `
+        <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 10px;">
+            <p style="margin: 0 0 10px 0; font-weight: 600; color: #2d3748; font-size: 13px;">🏆 Produtos Mais Vendidos</p>
+            ${top5.map(([nome, dados], index) => `
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #edf2f7; font-size: 13px;">
+                    <span>${index + 1}. ${nome}</span>
+                    <span>${dados.quantidade} unid.</span>
+                    <span style="font-weight: bold; color: #4facfe;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Compartilha o extrato via WhatsApp
+ */
+window.compartilharExtratoVendedora = function(vendas, total, periodo) {
+    const periodos = {
+        semanal: 'Semana',
+        mensal: 'Mês',
+        semestral: 'Semestre',
+        anual: 'Ano'
+    };
+    
+    let texto = `📊 EXTRATO DA VENDEDORA - ${periodos[periodo] || 'Período'}\n\n`;
+    texto += `👩‍💼 Vendedora: Roberta Bento\n`;
+    texto += `📅 Período: ${periodos[periodo] || 'Período'}\n`;
+    texto += `💰 Total de Vendas: R$ ${total.toFixed(2).replace('.', ',')}\n`;
+    texto += `📦 Nº de Vendas: ${vendas.length}\n`;
+    texto += `📊 Ticket Médio: R$ ${(total / vendas.length).toFixed(2).replace('.', ',')}\n\n`;
+    texto += `🛒 DETALHES POR DIA:\n`;
+    
+    // Agrupar por dia
+    const vendasPorDia = {};
+    vendas.forEach(v => {
+        const data = new Date(v.data);
+        const dataStr = data.toLocaleDateString('pt-BR');
+        if (!vendasPorDia[dataStr]) {
+            vendasPorDia[dataStr] = { total: 0, count: 0 };
+        }
+        vendasPorDia[dataStr].total += parseFloat(v.total) || 0;
+        vendasPorDia[dataStr].count += 1;
+    });
+    
+    Object.keys(vendasPorDia).sort().forEach(dia => {
+        const dados = vendasPorDia[dia];
+        texto += `- ${dia}: ${dados.count} venda(s) = R$ ${dados.total.toFixed(2).replace('.', ',')}\n`;
+    });
+
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url, '_blank');
+};
+
+/**
+ * Estilos para os botões de extrato (adicione no CSS ou aqui)
+ */
+const styleExtrato = document.createElement('style');
+styleExtrato.textContent = `
+    .btn-extrato:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .btn-extrato:active {
+        transform: translateY(0);
+    }
+`;
+document.head.appendChild(styleExtrato);
+
+// ============================================================
+// EXPORTA FUNÇÕES PARA USO GLOBAL
+// ============================================================
+
+window.abrirModalVendedora = abrirModalVendedora;
+window.gerarExtrato = window.gerarExtrato;
+window.fecharResultadoExtrato = window.fecharResultadoExtrato;
+window.compartilharExtratoVendedora = window.compartilharExtratoVendedora;
+
 
     // ============================================================
     // EXPORTA FUNÇÕES GLOBAIS
