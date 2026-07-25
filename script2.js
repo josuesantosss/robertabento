@@ -2258,10 +2258,12 @@
                     </style>
                 </head>
                 <body>
-                           <h1>     <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
-                                    <img src="img/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                                Extrato da Vendedora</h1>
-                                </div>
+                          <div style="display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 10px;">
+  <div style="border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+    <img src="img/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+  </div>
+  <h1 style="margin: 0; font-size: 28px; color: #fff;">Extrato de Vendas</h1>
+</div>
                                 
                             
                     <p><strong>Roberta Bento</strong> - ${new Date().toLocaleDateString('pt-BR')}</p>
