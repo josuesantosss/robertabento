@@ -2263,7 +2263,7 @@
                                 
                                 </div>
                                 Extrato de Vendas</h1>
-<p><strong>Roberta Bento</strong> - ${new Date().toLocaleDateString('pt-BR')}</p>
+<strong>Roberta Bento</strong> - ${new Date().toLocaleDateString('pt-BR')}
 <div id="printContent">
     ${conteudo.innerHTML.replace(/<button[^>]*>.*?<\/button>/g, '')}
 </div>
