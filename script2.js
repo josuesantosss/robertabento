@@ -2258,9 +2258,7 @@
                     </style>
                 </head>
                 <body>
-                
-                                    <img src="img/face.png" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                    <h1>👩‍💼 Extrato da Vendedora</h1>
+                    <h1><img src="img/face.png" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">👩‍💼 Extrato da Vendedora</h1>
                     <p><strong>Roberta Bento</strong> - ${new Date().toLocaleDateString('pt-BR')}</p>
                     <div id="printContent">
                         ${conteudo.innerHTML.replace(/<button[^>]*>.*?<\/button>/g, '')}
