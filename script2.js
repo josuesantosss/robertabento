@@ -2258,7 +2258,11 @@
                     </style>
                 </head>
                 <body>
-                    <h1><img src="img/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">👩‍💼 Extrato da Vendedora</h1>
+                                <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                    <img src="img/face.png" alt="Face" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                </div>
+                                
+                                👩‍💼 Extrato da Vendedora</h1>
                     <p><strong>Roberta Bento</strong> - ${new Date().toLocaleDateString('pt-BR')}</p>
                     <div id="printContent">
                         ${conteudo.innerHTML.replace(/<button[^>]*>.*?<\/button>/g, '')}
