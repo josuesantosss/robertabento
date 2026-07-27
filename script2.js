@@ -16,6 +16,12 @@
     };
 
     // ============================================================
+    // MARCAS E CATEGORIAS (para cadastro de produtos)
+    // ============================================================
+    const MARCAS = ['Natura', 'Mary Kay', 'Eudora', 'Boticário', 'Outra'];
+    const CATEGORIAS = ['Perfumaria', 'Maquiagem', 'Cuidados com a Pele', 'Cuidados com o Corpo', 'Cabelos', 'Infantil', 'Masculina', 'Outra'];
+
+    // ============================================================
     // SISTEMA DE CACHE
     // ============================================================
     const Cache = {
@@ -701,7 +707,7 @@
     };
 
     // ============================================================
-    // ESTOQUE
+    // ESTOQUE (com Marca e Categoria)
     // ============================================================
     async function renderEstoque() {
         const app = document.getElementById('app');
@@ -710,22 +716,38 @@
                 <h2>📦 Estoque</h2>
                 <div style="background:#f0f4ff; padding:20px; border-radius:12px; margin-bottom:20px; border:2px dashed #667eea;">
                     <h3 style="margin:0 0 15px 0; color:#667eea;">➕ Cadastrar Novo Produto</h3>
-                    <form id="formCadastroRapido" style="display:flex; gap:15px; flex-wrap:wrap; align-items:flex-end;">
-                        <div style="flex:2; min-width:150px;">
-                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Nome</label>
+                    <form id="formCadastroRapido" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:15px;">
+                        <div>
+                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Nome *</label>
                             <input type="text" id="nomeRapido" placeholder="Nome do produto" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
                         </div>
-                        <div style="flex:1; min-width:100px;">
-                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Preço (R$)</label>
+                        <div>
+                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Preço (R$) *</label>
                             <input type="number" id="precoRapido" step="0.01" placeholder="0,00" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
                         </div>
-                        <div style="flex:1; min-width:100px;">
-                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Quantidade</label>
+                        <div>
+                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Quantidade *</label>
                             <input type="number" id="qtdRapido" placeholder="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
                         </div>
-                        <button type="submit" style="background:#667eea; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:500; height:42px;">
-                            ✅ Cadastrar
-                        </button>
+                        <div>
+                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Marca</label>
+                            <select id="marcaRapido" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                                <option value="">Selecione</option>
+                                ${MARCAS.map(m => `<option value="${m}">${m}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Categoria</label>
+                            <select id="categoriaRapido" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                                <option value="">Selecione</option>
+                                ${CATEGORIAS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div style="display:flex; align-items:flex-end;">
+                            <button type="submit" style="width:100%; background:#667eea; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:500; height:42px;">
+                                ✅ Cadastrar
+                            </button>
+                        </div>
                     </form>
                     <div id="msgCadastroRapido" style="margin-top:10px;"></div>
                 </div>
@@ -754,15 +776,17 @@
                     const status = qtd === 0 ? '🔴' : qtd <= 5 ? '🟡' : '🟢';
                     const statusTexto = qtd === 0 ? 'Esgotado' : qtd <= 5 ? 'Baixo' : 'Normal';
                     html += `
-                        <tr onclick="window.abrirEdicaoProduto(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${preco}, ${qtd})" style="cursor:pointer; ${qtd === 0 ? 'background:#fff5f5;' : ''}">
+                        <tr onclick="window.abrirEdicaoProduto(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${preco}, ${qtd}, '${(p.marca||'').replace(/'/g, "\\'")}', '${(p.categoria||'').replace(/'/g, "\\'")}')" style="cursor:pointer; ${qtd === 0 ? 'background:#fff5f5;' : ''}">
                             <td><strong>${p.nome}</strong></td>
                             <td>R$ ${preco.toFixed(2).replace('.', ',')}</td>
                             <td>${status} ${qtd} <small style="color:#666;">(${statusTexto})</small></td>
+                            <td>${p.marca || '-'}</td>
+                            <td>${p.categoria || '-'}</td>
                         </tr>
                     `;
                 });
             } else {
-                html = `<tr><td colspan="3" style="text-align:center; padding:40px;"><p style="font-size:48px;">📭</p><p style="color:#666;">Nenhum produto cadastrado</p></td></tr>`;
+                html = `<tr><td colspan="5" style="text-align:center; padding:40px;"><p style="font-size:48px;">📭</p><p style="color:#666;">Nenhum produto cadastrado</p></td></tr>`;
             }
 
             app.innerHTML = `
@@ -770,22 +794,38 @@
                     <h2>📦 Estoque</h2>
                     <div style="background:#f0f4ff; padding:20px; border-radius:12px; margin-bottom:20px; border:2px dashed #667eea;">
                         <h3 style="margin:0 0 15px 0; color:#667eea;">➕ Cadastrar Novo Produto</h3>
-                        <form id="formCadastroRapido" style="display:flex; gap:15px; flex-wrap:wrap; align-items:flex-end;">
-                            <div style="flex:2; min-width:150px;">
-                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Nome</label>
+                        <form id="formCadastroRapido" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:15px;">
+                            <div>
+                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Nome *</label>
                                 <input type="text" id="nomeRapido" placeholder="Nome do produto" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
                             </div>
-                            <div style="flex:1; min-width:100px;">
-                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Preço (R$)</label>
+                            <div>
+                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Preço (R$) *</label>
                                 <input type="number" id="precoRapido" step="0.01" placeholder="0,00" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
                             </div>
-                            <div style="flex:1; min-width:100px;">
-                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Quantidade</label>
+                            <div>
+                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Quantidade *</label>
                                 <input type="number" id="qtdRapido" placeholder="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
                             </div>
-                            <button type="submit" style="background:#667eea; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:500; height:42px;">
-                                ✅ Cadastrar
-                            </button>
+                            <div>
+                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Marca</label>
+                                <select id="marcaRapido" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                                    <option value="">Selecione</option>
+                                    ${MARCAS.map(m => `<option value="${m}">${m}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Categoria</label>
+                                <select id="categoriaRapido" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                                    <option value="">Selecione</option>
+                                    ${CATEGORIAS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:flex-end;">
+                                <button type="submit" style="width:100%; background:#667eea; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:500; height:42px;">
+                                    ✅ Cadastrar
+                                </button>
+                            </div>
                         </form>
                         <div id="msgCadastroRapido" style="margin-top:10px;"></div>
                     </div>
@@ -807,6 +847,8 @@
                                         <th style="padding:12px; text-align:left; color:white;">Produto 📋</th>
                                         <th style="padding:12px; text-align:left; color:white;">Preço (R$)</th>
                                         <th style="padding:12px; text-align:left; color:white;">Quantidade</th>
+                                        <th style="padding:12px; text-align:left; color:white;">Marca</th>
+                                        <th style="padding:12px; text-align:left; color:white;">Categoria</th>
                                     </tr>
                                 </thead>
                                 <tbody>${html}</tbody>
@@ -828,7 +870,10 @@
         const nome = document.getElementById('nomeRapido').value.trim();
         const preco = parseFloat(document.getElementById('precoRapido').value);
         const quantidade = parseInt(document.getElementById('qtdRapido').value);
+        const marca = document.getElementById('marcaRapido').value;
+        const categoria = document.getElementById('categoriaRapido').value;
         const msg = document.getElementById('msgCadastroRapido');
+
         if (!nome) {
             msg.innerHTML = '<div style="color:#e53e3e;">Nome obrigatório</div>';
             return;
@@ -841,7 +886,15 @@
             msg.innerHTML = '<div style="color:#e53e3e;">Quantidade inválida</div>';
             return;
         }
-        const result = await callAPI('cadastrarProduto', { nome, preco, quantidade }, false);
+
+        const result = await callAPI('cadastrarProduto', {
+            nome,
+            preco,
+            quantidade,
+            marca: marca || '',
+            categoria: categoria || ''
+        }, false);
+
         if (result.success) {
             msg.innerHTML = '<div style="color:#38a169;">✅ Produto cadastrado!</div>';
             mostrarToast(`Produto "${nome}" cadastrado!`, 'success');
@@ -853,7 +906,7 @@
         }
     }
 
-    window.abrirEdicaoProduto = function(id, nome, preco, quantidade) {
+    window.abrirEdicaoProduto = function(id, nome, preco, quantidade, marca = '', categoria = '') {
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; top:0; left:0; right:0; bottom:0;
@@ -861,7 +914,7 @@
             z-index: 9999; animation: fadeIn 0.2s ease;
         `;
         overlay.innerHTML = `
-            <div class="edit-modal" style="background:white; padding:30px; border-radius:12px; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2); animation: scaleIn 0.2s ease;">
+            <div class="edit-modal" style="background:white; padding:30px; border-radius:12px; max-width:500px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2); animation: scaleIn 0.2s ease;">
                 <h3 style="margin-top:0;">✏️ Editar Produto</h3>
                 <p><strong>${nome}</strong> (ID: ${id})</p>
                 <div style="margin-bottom:15px;">
@@ -871,6 +924,20 @@
                 <div style="margin-bottom:15px;">
                     <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Quantidade</label>
                     <input type="number" id="editQuantidade" value="${quantidade}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Marca</label>
+                    <select id="editMarca" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                        <option value="">Selecione</option>
+                        ${MARCAS.map(m => `<option value="${m}" ${m === marca ? 'selected' : ''}>${m}</option>`).join('')}
+                    </select>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; margin-bottom:5px; color:#4a5568; font-weight:500;">Categoria</label>
+                    <select id="editCategoria" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:6px;">
+                        <option value="">Selecione</option>
+                        ${CATEGORIAS.map(c => `<option value="${c}" ${c === categoria ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button id="btnSalvarEdicao" style="flex:1; background:#48bb78; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:500;">💾 Salvar</button>
@@ -885,6 +952,8 @@
         overlay.querySelector('#btnSalvarEdicao').onclick = async () => {
             const novoPreco = parseFloat(overlay.querySelector('#editPreco').value);
             const novaQuantidade = parseInt(overlay.querySelector('#editQuantidade').value);
+            const novaMarca = overlay.querySelector('#editMarca').value;
+            const novaCategoria = overlay.querySelector('#editCategoria').value;
             if (isNaN(novoPreco) || novoPreco < 0) {
                 overlay.querySelector('#msgEdicao').innerHTML = '<div style="color:#e53e3e;">Preço inválido</div>';
                 return;
@@ -893,7 +962,13 @@
                 overlay.querySelector('#msgEdicao').innerHTML = '<div style="color:#e53e3e;">Quantidade inválida</div>';
                 return;
             }
-            const result = await callAPI('atualizarProduto', { id, preco: novoPreco, quantidade: novaQuantidade }, false);
+            const result = await callAPI('atualizarProduto', {
+                id,
+                preco: novoPreco,
+                quantidade: novaQuantidade,
+                marca: novaMarca || '',
+                categoria: novaCategoria || ''
+            }, false);
             if (result.success) {
                 mostrarToast(`Produto "${nome}" atualizado!`, 'success');
                 overlay.remove();
@@ -1945,7 +2020,7 @@
     }
 
     // ============================================================
-    // GERAR EXTRATO DE VENDAS (já existente)
+    // GERAR EXTRATO DE VENDAS
     // ============================================================
     window.gerarExtrato = async function(periodo) {
         const resultadoDiv = document.getElementById('resultadoExtrato');
@@ -2095,7 +2170,6 @@
                         </div>
                     </div>
 
-                    <!-- BLOCO DESTAQUE: TOTAL E ITENS LADO A LADO -->
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 15px; color: white;">
                         <div style="text-align: center;">
                             <p style="margin: 0; font-size: 12px; opacity: 0.8;">💰 TOTAL EM VENDAS</p>
@@ -2113,7 +2187,6 @@
                         </div>
                     </div>
 
-                    <!-- VENDAS POR DIA -->
                     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px;">
                         <p style="margin: 0 0 12px 0; font-weight: 600; color: #2d3748; font-size: 14px;">📊 Vendas por Dia</p>
                         <div style="max-height: 200px; overflow-y: auto;">
@@ -2136,7 +2209,6 @@
                         </div>
                     </div>
 
-                    <!-- PRODUTOS MAIS VENDIDOS -->
                     ${top5.length > 0 ? `
                     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <p style="margin: 0 0 12px 0; font-weight: 600; color: #2d3748; font-size: 14px;">🏆 Produtos Mais Vendidos</p>
@@ -2200,7 +2272,7 @@
     };
 
     // ============================================================
-    // GERAR EXTRATO DE PAGAMENTOS (NOVO)
+    // GERAR EXTRATO DE PAGAMENTOS
     // ============================================================
     window.gerarExtratoPagamentos = async function(periodo) {
         const resultadoDiv = document.getElementById('resultadoExtrato');
@@ -2228,7 +2300,6 @@
         tituloDiv.textContent = titulos[periodo] || '💳 Pagamentos Recebidos';
 
         try {
-            // Chama a API para listar todos os pagamentos
             const result = await callAPI('listarPagamentos', null, false);
             
             if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
@@ -2279,7 +2350,6 @@
                 return;
             }
 
-            // Totais
             let totalGeral = 0;
             const pagamentosPorDia = {};
             const porCliente = {};
@@ -2312,7 +2382,6 @@
                 return new Date(da[2], da[1]-1, da[0]) - new Date(db[2], db[1]-1, db[0]);
             });
 
-            // Monta HTML
             let html = `
                 <div style="margin-bottom: 20px;">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px;">
@@ -2334,7 +2403,6 @@
                         </div>
                     </div>
 
-                    <!-- Lista de pagamentos por cliente -->
                     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px;">
                         <p style="margin: 0 0 12px 0; font-weight: 600; color: #2d3748; font-size: 14px;">👤 Pagamentos por Cliente</p>
                         <div style="max-height: 250px; overflow-y: auto;">
@@ -2348,13 +2416,11 @@
                         </div>
                     </div>
 
-                    <!-- Detalhamento por dia (com nomes) -->
                     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <p style="margin: 0 0 12px 0; font-weight: 600; color: #2d3748; font-size: 14px;">📅 Detalhamento Diário</p>
                         <div style="max-height: 300px; overflow-y: auto;">
                             ${diasOrdenados.map(dia => {
                                 const diaData = pagamentosPorDia[dia];
-                                // Filtra os pagamentos desse dia
                                 const pagamentosDia = pagamentosFiltrados.filter(p => {
                                     const data = new Date(p.data);
                                     return data.toLocaleDateString('pt-BR') === dia;
@@ -2387,7 +2453,6 @@
 
             conteudoDiv.innerHTML = html;
 
-            // Botões para compartilhar/imprimir (apenas para pagamentos)
             const btnContainer = document.createElement('div');
             btnContainer.style.cssText = 'margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
             
@@ -2609,5 +2674,5 @@
     window.imprimirExtrato = window.imprimirExtrato;
     window.atualizarVendedora = window.atualizarVendedora;
 
-    console.log('🚀 Sistema de Vendas v6.0 - Com Extrato de Pagamentos e Estoque Otimizado');
+    console.log('🚀 Sistema de Vendas v6.0 - Com Marca/Categoria e Extrato de Pagamentos');
 })();
