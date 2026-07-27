@@ -2675,4 +2675,4 @@
     window.atualizarVendedora = window.atualizarVendedora;
 
     console.log('🚀 Sistema de Vendas v6.0 - Com Marca/Categoria e Extrato de Pagamentos');
-})();
+})(); 
