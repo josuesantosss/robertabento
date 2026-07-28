@@ -507,26 +507,26 @@
         const clienteStr = String(cliente || 'Cliente');
         const whatsappStr = String(whatsapp || '');
         const valorNum = parseFloat(valor) || 0;
-        
+
         const mensagem = `Olá amiga, ${clienteStr}! 👋\n\n` +
                          `Lembrando do pagamento da sua conta no valor de R$ ${valorNum.toFixed(2).replace('.', ',')}.\n\n` +
                          `Segue minha chave Pix: ${PIX_CONFIG.chave}\n\n` +
                          `_Me envie o comprovante após o pagamento_ ❤️`;
 
         let url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
-        
+
         if (whatsappStr) {
             const numero = whatsappStr.replace(/\D/g, '');
             if (numero.length >= 10) {
                 url = `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
             }
         }
-        
+
         window.open(url, '_blank');
     };
 
     // ============================================================
-    // HOME / DASHBOARD
+    // HOME / DASHBOARD (AGORA APENAS COM CARDS DE STATUS)
     // ============================================================
     async function renderHome() {
         const app = document.getElementById('app');
@@ -604,18 +604,17 @@
 
             if (promessasResult.success && promessasResult.promessas) {
                 promessasResult.promessas.forEach(p => {
-                    // Garantir que os campos sejam strings
                     const cliente = String(p.cliente || '');
                     const whatsapp = String(p.whatsapp || '');
                     const observacao = String(p.observacao || '');
                     const status = String(p.status || 'pendente');
                     const saldo = parseFloat(p.saldo) || 0;
-                    
+
                     let dataPagamento = new Date();
                     if (p.dataPagamento) {
                         dataPagamento = new Date(p.dataPagamento);
                     }
-                    
+
                     const promessa = {
                         cliente: cliente,
                         whatsapp: whatsapp,
@@ -624,9 +623,9 @@
                         saldo: saldo,
                         dataPagamento: dataPagamento
                     };
-                    
+
                     const dataPromessaStr = dataPagamento.toDateString();
-                    
+
                     if (dataPromessaStr === hojeStr && saldo > 0 && status !== 'pago') {
                         promessasHoje.push(promessa);
                     } else if (dataPagamento < hoje && saldo > 0 && status !== 'pago') {
@@ -681,80 +680,43 @@
                 `;
             }
 
-            let promessasHojeHTML = '';
+            // --- NOVOS CARDS DE STATUS (APENAS ALERTAS) ---
+            let statusHojeHTML = '';
             if (promessasHoje.length > 0) {
-                promessasHojeHTML = `
-                    <div style="background:white; padding:15px; border-radius:8px; border-left:4px solid #48bb78; margin-bottom:10px;">
-                        <div style="max-height:300px; overflow-y:auto;">
-                            ${promessasHoje.map(p => {
-                                const clienteSafe = String(p.cliente || '').replace(/'/g, "\\'");
-                                const whatsappSafe = String(p.whatsapp || '').replace(/'/g, "\\'");
-                                return `
-                                    <div class="promessa-card" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #edf2f7;">
-                                        <div>
-                                            <strong>${p.cliente}</strong>
-                                            ${p.whatsapp ? `<span style="font-size:11px; color:#25D366;"> 📱${p.whatsapp}</span>` : ''}
-                                            <div style="font-size:12px; color:#666;">Prometeu pagar hoje</div>
-                                        </div>
-                                        <div style="text-align:right;">
-                                            <span style="font-weight:bold; color:#48bb78;">R$ ${p.saldo.toFixed(2).replace('.', ',')}</span>
-                                            <button onclick="window.enviarCobranca('${clienteSafe}', ${p.saldo}, '${whatsappSafe}')" 
-                                                    class="btn-cobrar" 
-                                                    style="display:block; margin-top:5px; background:#25D366; color:white; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:11px; width:100%;">
-                                                💬 Cobrar
-                                            </button>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
+                statusHojeHTML = `
+                    <div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
+                        <span style="font-size:32px;">⚠️</span>
+                        <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos pendentes para hoje</p>
+                        <p style="color:#e53e3e; margin:0;">${promessasHoje.length} cliente(s) com pagamento prometido</p>
                     </div>
                 `;
             } else {
-                promessasHojeHTML = `
-                    <div style="background:#f0f4ff; padding:15px; border-radius:8px; text-align:center; color:#718096;">
-                        ✅ Nenhuma promessa de pagamento para hoje
+                statusHojeHTML = `
+                    <div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
+                        <span style="font-size:32px;">✅</span>
+                        <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento pendente para hoje</p>
                     </div>
                 `;
             }
 
-            let promessasAtrasoHTML = '';
+            let statusAtrasoHTML = '';
             if (promessasAtraso.length > 0) {
-                promessasAtrasoHTML = `
-                    <div style="background:white; padding:15px; border-radius:8px; border-left:4px solid #e53e3e; margin-bottom:10px;">
-                        <div style="max-height:300px; overflow-y:auto;">
-                            ${promessasAtraso.map(p => {
-                                const diasAtraso = Math.floor((hoje - p.dataPagamento) / (1000 * 60 * 60 * 24));
-                                const clienteSafe = String(p.cliente || '').replace(/'/g, "\\'");
-                                const whatsappSafe = String(p.whatsapp || '').replace(/'/g, "\\'");
-                                return `
-                                    <div class="promessa-card" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #edf2f7;">
-                                        <div>
-                                            <strong>${p.cliente}</strong>
-                                            ${p.whatsapp ? `<span style="font-size:11px; color:#25D366;"> 📱${p.whatsapp}</span>` : ''}
-                                            <div style="font-size:12px; color:#e53e3e;">⚠️ ${diasAtraso} dia(s) em atraso</div>
-                                        </div>
-                                        <div style="text-align:right;">
-                                            <span style="font-weight:bold; color:#e53e3e;">R$ ${p.saldo.toFixed(2).replace('.', ',')}</span>
-                                            <button onclick="window.enviarCobranca('${clienteSafe}', ${p.saldo}, '${whatsappSafe}')" 
-                                                    class="btn-cobrar" 
-                                                    style="display:block; margin-top:5px; background:#25D366; color:white; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:11px; width:100%;">
-                                                💬 Cobrar
-                                            </button>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
+                statusAtrasoHTML = `
+                    <div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
+                        <span style="font-size:32px;">🔴</span>
+                        <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos em atraso</p>
+                        <p style="color:#e53e3e; margin:0;">${promessasAtraso.length} cliente(s) com pagamento atrasado</p>
                     </div>
                 `;
             } else {
-                promessasAtrasoHTML = `
-                    <div style="background:#f0f4ff; padding:15px; border-radius:8px; text-align:center; color:#718096;">
-                        ✅ Nenhum pagamento em atraso
+                statusAtrasoHTML = `
+                    <div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
+                        <span style="font-size:32px;">✅</span>
+                        <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento em atraso</p>
                     </div>
                 `;
             }
+            // --- FIM DOS CARDS DE STATUS ---
 
             app.innerHTML = `
                 <section>
@@ -787,14 +749,15 @@
                         </div>
                     </div>
 
+                    <!-- CARDS DE STATUS DAS PROMESSAS -->
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
                         <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                            <h4 style="margin:0 0 15px 0; color:#48bb78;">📅 Pagamentos Prometidos para Hoje</h4>
-                            ${promessasHojeHTML}
+                            <h4 style="margin:0 0 15px 0; color:#e53e3e;">📅 Pagamentos Pendentes para Hoje</h4>
+                            ${statusHojeHTML}
                         </div>
                         <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
                             <h4 style="margin:0 0 15px 0; color:#e53e3e;">⚠️ Pagamentos em Atraso</h4>
-                            ${promessasAtrasoHTML}
+                            ${statusAtrasoHTML}
                         </div>
                     </div>
 
@@ -926,7 +889,7 @@
                     const nomeB = (b.nome || '').toLowerCase().trim();
                     return nomeA.localeCompare(nomeB, 'pt-BR');
                 });
-                
+
                 produtosOrdenados.forEach(p => {
                     const qtd = parseInt(p.quantidade) || 0;
                     const preco = parseFloat(p.preco) || 0;
@@ -1197,7 +1160,7 @@
                     const nomeB = (b.nome || '').toLowerCase().trim();
                     return nomeA.localeCompare(nomeB, 'pt-BR');
                 });
-                
+
                 produtosOrdenados.forEach(p => {
                     const qtd = parseInt(p.quantidade) || 0;
                     const preco = parseFloat(p.preco) || 0;
@@ -1673,13 +1636,13 @@
             const novoNome = nome.trim();
             const options = Array.from(select.options).filter(opt => opt.value !== '');
             options.push({ value: novoNome, textContent: novoNome });
-            
+
             options.sort((a, b) => {
                 const nomeA = (a.value || a.textContent || '').toLowerCase().trim();
                 const nomeB = (b.value || b.textContent || '').toLowerCase().trim();
                 return nomeA.localeCompare(nomeB, 'pt-BR');
             });
-            
+
             select.innerHTML = '<option value="">Selecione um cliente...</option>';
             options.forEach(opt => {
                 const option = document.createElement('option');
@@ -1687,7 +1650,7 @@
                 option.textContent = opt.textContent || opt.value;
                 select.appendChild(option);
             });
-            
+
             select.value = novoNome;
             mostrarToast(`Cliente "${novoNome}" adicionado!`, 'success');
         }
@@ -1779,7 +1742,7 @@
                         const nomeB = (b.nome || '').toLowerCase().trim();
                         return nomeA.localeCompare(nomeB, 'pt-BR');
                     });
-                    
+
                     clientesFiltrados.forEach(cliente => {
                         const totalGasto = parseFloat(cliente.totalGasto) || 0;
                         const totalPago = parseFloat(cliente.totalPago) || 0;
@@ -2123,7 +2086,7 @@
     };
 
     // ============================================================
-    // VENDEDORA
+    // VENDEDORA (TÍTULO ALTERADO E LISTA DETALHADA MANTIDA)
     // ============================================================
     async function renderVendedora() {
         const app = document.getElementById('app');
@@ -2150,8 +2113,9 @@
                         </div>
                     </div>
 
+                    <!-- TÍTULO ALTERADO PARA "Clientes com Pagamento Pendente" -->
                     <div style="margin-bottom: 25px;">
-                        <h4 style="color: #2d3748; margin-bottom: 10px;">📅 Clientes com Pagamento Prometido para Hoje</h4>
+                        <h4 style="color: #2d3748; margin-bottom: 10px;">📅 Clientes com Pagamento Pendente</h4>
                         <div id="promessasHojeContainer">
                             <div style="text-align:center; padding:20px;">
                                 <div class="loading-spinner" style="font-size:24px;">⏳</div>
@@ -2236,7 +2200,7 @@
 
         try {
             const result = await callAPI('listarPromessasPagamento', null, false);
-            
+
             if (!result.success || !result.promessas || result.promessas.length === 0) {
                 container.innerHTML = `
                     <div style="background:#f0f4ff; padding:20px; border-radius:8px; text-align:center; color:#718096;">
@@ -2248,19 +2212,19 @@
 
             const hoje = new Date();
             const hojeStr = hoje.toDateString();
-            
+
             const promessasHoje = result.promessas.filter(p => {
                 const cliente = String(p.cliente || '');
                 const whatsapp = String(p.whatsapp || '');
                 const observacao = String(p.observacao || '');
                 const status = String(p.status || 'pendente');
                 const saldo = parseFloat(p.saldo) || 0;
-                
+
                 let dataPagamento = new Date();
                 if (p.dataPagamento) {
                     dataPagamento = new Date(p.dataPagamento);
                 }
-                
+
                 return dataPagamento.toDateString() === hojeStr && saldo > 0 && status !== 'pago';
             });
 
@@ -2296,7 +2260,7 @@
                 const observacao = String(p.observacao || '');
                 const clienteSafe = cliente.replace(/'/g, "\\'");
                 const whatsappSafe = whatsapp.replace(/'/g, "\\'");
-                
+
                 html += `
                     <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; align-items:center; padding:12px 15px; border-bottom:1px solid #edf2f7;">
                         <div>
@@ -2322,7 +2286,7 @@
                     </div>
                 </div>
                 <div style="margin-top:10px; text-align:center; font-size:12px; color:#666;">
-                    Total de ${promessasHoje.length} cliente(s) com pagamento prometido para hoje
+                    Total de ${promessasHoje.length} cliente(s) com pagamento pendente hoje
                 </div>
             `;
 
@@ -2347,7 +2311,7 @@
         const resultadoDiv = document.getElementById('resultadoExtrato');
         const conteudoDiv = document.getElementById('conteudoExtrato');
         const tituloDiv = document.getElementById('tituloExtrato');
-        
+
         if (!resultadoDiv || !conteudoDiv) {
             mostrarToast('Erro: Elemento não encontrado', 'error');
             return;
@@ -2371,7 +2335,7 @@
 
         try {
             const result = await callAPI('listarVendas', null, false);
-            
+
             if (!result.success || !result.vendas || result.vendas.length === 0) {
                 conteudoDiv.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #718096;">
@@ -2384,7 +2348,7 @@
 
             const agora = new Date();
             let dataInicio = new Date();
-            
+
             switch(periodo) {
                 case 'semanal':
                     dataInicio.setDate(agora.getDate() - 7);
@@ -2427,14 +2391,14 @@
             let totalItens = 0;
             let totalClientes = new Set();
             const produtos = {};
-            
+
             vendasFiltradas.forEach(v => {
                 const valor = parseFloat(v.total) || 0;
                 const quantidade = parseInt(v.quantidade) || 0;
                 totalVendas += valor;
                 totalItens += quantidade;
                 if (v.cliente) totalClientes.add(v.cliente);
-                
+
                 const nomeProduto = v.produto || 'Produto';
                 if (!produtos[nomeProduto]) {
                     produtos[nomeProduto] = { quantidade: 0, total: 0 };
@@ -2548,7 +2512,7 @@
 
             const btnContainer = document.createElement('div');
             btnContainer.style.cssText = 'margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
-            
+
             const btnWhatsApp = document.createElement('button');
             btnWhatsApp.style.cssText = `
                 flex: 1; min-width: 200px; background: #25D366; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s ease;
@@ -2586,7 +2550,7 @@
         const resultadoDiv = document.getElementById('resultadoExtrato');
         const conteudoDiv = document.getElementById('conteudoExtrato');
         const tituloDiv = document.getElementById('tituloExtrato');
-        
+
         if (!resultadoDiv || !conteudoDiv) {
             mostrarToast('Erro: Elemento não encontrado', 'error');
             return;
@@ -2609,7 +2573,7 @@
 
         try {
             const result = await callAPI('listarPagamentos', null, false);
-            
+
             if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
                 conteudoDiv.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #718096;">
@@ -2623,7 +2587,7 @@
 
             const agora = new Date();
             let dataInicio = new Date();
-            
+
             switch(periodo) {
                 case 'semanal':
                     dataInicio.setDate(agora.getDate() - 7);
@@ -2763,7 +2727,7 @@
 
             const btnContainer = document.createElement('div');
             btnContainer.style.cssText = 'margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;';
-            
+
             const btnWhatsApp = document.createElement('button');
             btnWhatsApp.style.cssText = `
                 flex: 1; min-width: 200px; background: #25D366; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s ease;
@@ -2805,7 +2769,7 @@
             semestral: 'Semestre',
             anual: 'Ano'
         };
-        
+
         let texto = `📊 EXTRATO DA VENDEDORA - ${periodos[periodo] || 'Período'}\n\n`;
         texto += `👩‍💼 Vendedora: Roberta Bento\n`;
         texto += `📅 Período: ${periodos[periodo] || 'Período'}\n`;
@@ -2814,7 +2778,7 @@
         texto += `📊 Nº de Vendas: ${vendas.length}\n`;
         texto += `📊 Ticket Médio: R$ ${(total / vendas.length).toFixed(2).replace('.', ',')}\n\n`;
         texto += `🛒 DETALHES POR DIA:\n`;
-        
+
         const vendasPorDia = {};
         vendas.forEach(v => {
             const data = new Date(v.data);
@@ -2825,7 +2789,7 @@
             vendasPorDia[dataStr].total += parseFloat(v.total) || 0;
             vendasPorDia[dataStr].count += 1;
         });
-        
+
         Object.keys(vendasPorDia).sort().forEach(dia => {
             const dados = vendasPorDia[dia];
             texto += `- ${dia}: ${dados.count} venda(s) = R$ ${dados.total.toFixed(2).replace('.', ',')}\n`;
@@ -2841,14 +2805,14 @@
             mensal: 'Mês',
             anual: 'Ano'
         };
-        
+
         let texto = `💳 EXTRATO DE PAGAMENTOS - ${periodos[periodo] || 'Período'}\n\n`;
         texto += `👩‍💼 Vendedora: Roberta Bento\n`;
         texto += `📅 Período: ${periodos[periodo] || 'Período'}\n`;
         texto += `💰 Total Recebido: R$ ${total.toFixed(2).replace('.', ',')}\n`;
         texto += `📊 Nº de Pagamentos: ${pagamentos.length}\n\n`;
         texto += `👤 DETALHES POR CLIENTE:\n`;
-        
+
         const porCliente = {};
         pagamentos.forEach(p => {
             const cliente = p.cliente || 'Cliente não informado';
@@ -2856,11 +2820,11 @@
             if (!porCliente[cliente]) porCliente[cliente] = 0;
             porCliente[cliente] += valor;
         });
-        
+
         Object.entries(porCliente).sort((a,b) => b[1] - a[1]).forEach(([cliente, valor]) => {
             texto += `- ${cliente}: R$ ${valor.toFixed(2).replace('.', ',')}\n`;
         });
-        
+
         texto += `\n📅 DETALHES POR DIA:\n`;
         const porDia = {};
         pagamentos.forEach(p => {
@@ -2869,7 +2833,7 @@
             if (!porDia[dataStr]) porDia[dataStr] = [];
             porDia[dataStr].push(p);
         });
-        
+
         Object.keys(porDia).sort().forEach(dia => {
             const lista = porDia[dia];
             let totalDia = 0;
@@ -2887,7 +2851,7 @@
     window.imprimirExtrato = function() {
         const conteudo = document.getElementById('conteudoExtrato');
         if (!conteudo) return;
-        
+
         const printWindow = window.open('', '_blank', 'width=800,height=600');
         printWindow.document.write(`
             <html>
