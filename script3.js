@@ -504,19 +504,17 @@
     // FUNÇÃO PARA ENVIAR COBRANÇA VIA WHATSAPP
     // ============================================================
     window.enviarCobranca = function(cliente, valor, whatsapp) {
-        const clienteStr = String(cliente || 'Cliente');
-        const whatsappStr = String(whatsapp || '');
-        const valorNum = parseFloat(valor) || 0;
-        
-        const mensagem = `Olá amiga, ${clienteStr}! 👋\n\n` +
-                         `Lembrando do pagamento da sua conta no valor de R$ ${valorNum.toFixed(2).replace('.', ',')}.\n\n` +
-                         `Segue minha chave Pix: ${PIX_CONFIG.chave}\n\n` +
-                         `_Me envie o comprovante após o pagamento_ ❤️`;
+        const mensagem = `Olá, ${cliente}! Tudo bem? 💕\n\n` +
+                 `Passando rapidinho para te lembrar do vencimento da sua parcela hoje!\n` +
+                 `Assim você garante seus atendimentos e novidades sem preocupação! 😉🥰\n\n` +
+                 `📲 Chave Pix: ${PIX_CONFIG.chave}\n\n` +
+                 `📄 Comprovante: Pode me enviar por aqui mesmo!\n\n` +
+                 `Agradeço demais a sua confiança e preferência de sempre! 🌷`;
 
         let url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
         
-        if (whatsappStr) {
-            const numero = whatsappStr.replace(/\D/g, '');
+        if (whatsapp) {
+            const numero = whatsapp.replace(/\D/g, '');
             if (numero.length >= 10) {
                 url = `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
             }
@@ -604,38 +602,20 @@
 
             if (promessasResult.success && promessasResult.promessas) {
                 promessasResult.promessas.forEach(p => {
-                    const cliente = String(p.cliente || '');
-                    const whatsapp = String(p.whatsapp || '');
-                    const observacao = String(p.observacao || '');
-                    const status = String(p.status || 'pendente');
+                    const dataPromessa = new Date(p.dataPagamento);
+                    const dataPromessaStr = dataPromessa.toDateString();
                     const saldo = parseFloat(p.saldo) || 0;
                     
-                    let dataPagamento = new Date();
-                    if (p.dataPagamento) {
-                        dataPagamento = new Date(p.dataPagamento);
-                    }
-                    
-                    const promessa = {
-                        cliente: cliente,
-                        whatsapp: whatsapp,
-                        observacao: observacao,
-                        status: status,
-                        saldo: saldo,
-                        dataPagamento: dataPagamento
-                    };
-                    
-                    const dataPromessaStr = dataPagamento.toDateString();
-                    
-                    if (dataPromessaStr === hojeStr && saldo > 0 && status !== 'pago') {
-                        promessasHoje.push(promessa);
-                    } else if (dataPagamento < hoje && saldo > 0 && status !== 'pago') {
-                        promessasAtraso.push(promessa);
+                    if (dataPromessaStr === hojeStr && saldo > 0 && p.status !== 'pago') {
+                        promessasHoje.push(p);
+                    } else if (dataPromessa < hoje && saldo > 0 && p.status !== 'pago') {
+                        promessasAtraso.push(p);
                     }
                 });
             }
 
-            promessasHoje.sort((a, b) => b.saldo - a.saldo);
-            promessasAtraso.sort((a, b) => b.saldo - a.saldo);
+            promessasHoje.sort((a, b) => parseFloat(b.saldo) - parseFloat(a.saldo));
+            promessasAtraso.sort((a, b) => parseFloat(b.saldo) - parseFloat(a.saldo));
 
             let graficoHTML = '';
             if (vendasResult.success && vendasResult.vendas && vendasResult.vendas.length > 0) {
@@ -693,8 +673,8 @@
                                         <div style="font-size:12px; color:#666;">Prometeu pagar hoje</div>
                                     </div>
                                     <div style="text-align:right;">
-                                        <span style="font-weight:bold; color:#48bb78;">R$ ${p.saldo.toFixed(2).replace('.', ',')}</span>
-                                        <button onclick="window.enviarCobranca('${p.cliente.replace(/'/g, "\\'")}', ${p.saldo}, '${p.whatsapp}')" 
+                                        <span style="font-weight:bold; color:#48bb78;">R$ ${(parseFloat(p.saldo)||0).toFixed(2).replace('.', ',')}</span>
+                                        <button onclick="window.enviarCobranca('${p.cliente.replace(/'/g, "\\'")}', ${parseFloat(p.saldo)||0}, '${(p.whatsapp||'').replace(/'/g, "\\'")}')" 
                                                 class="btn-cobrar" 
                                                 style="display:block; margin-top:5px; background:#25D366; color:white; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:11px; width:100%;">
                                             💬 Cobrar
@@ -719,7 +699,8 @@
                     <div style="background:white; padding:15px; border-radius:8px; border-left:4px solid #e53e3e; margin-bottom:10px;">
                         <div style="max-height:300px; overflow-y:auto;">
                             ${promessasAtraso.map(p => {
-                                const diasAtraso = Math.floor((hoje - p.dataPagamento) / (1000 * 60 * 60 * 24));
+                                const dataPromessa = new Date(p.dataPagamento);
+                                const diasAtraso = Math.floor((hoje - dataPromessa) / (1000 * 60 * 60 * 24));
                                 return `
                                     <div class="promessa-card" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #edf2f7;">
                                         <div>
@@ -728,8 +709,8 @@
                                             <div style="font-size:12px; color:#e53e3e;">⚠️ ${diasAtraso} dia(s) em atraso</div>
                                         </div>
                                         <div style="text-align:right;">
-                                            <span style="font-weight:bold; color:#e53e3e;">R$ ${p.saldo.toFixed(2).replace('.', ',')}</span>
-                                            <button onclick="window.enviarCobranca('${p.cliente.replace(/'/g, "\\'")}', ${p.saldo}, '${p.whatsapp}')" 
+                                            <span style="font-weight:bold; color:#e53e3e;">R$ ${(parseFloat(p.saldo)||0).toFixed(2).replace('.', ',')}</span>
+                                            <button onclick="window.enviarCobranca('${p.cliente.replace(/'/g, "\\'")}', ${parseFloat(p.saldo)||0}, '${(p.whatsapp||'').replace(/'/g, "\\'")}')" 
                                                     class="btn-cobrar" 
                                                     style="display:block; margin-top:5px; background:#25D366; color:white; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:11px; width:100%;">
                                                 💬 Cobrar
@@ -926,7 +907,7 @@
                     const status = qtd === 0 ? '🔴' : qtd <= 5 ? '🟡' : '🟢';
                     const statusTexto = qtd === 0 ? 'Esgotado' : qtd <= 5 ? 'Baixo' : 'Normal';
                     html += `
-                        <tr onclick="window.abrirEdicaoProduto(${p.id}, '${String(p.nome).replace(/'/g, "\\'")}', ${preco}, ${qtd}, '${String(p.marca || '').replace(/'/g, "\\'")}', '${String(p.categoria || '').replace(/'/g, "\\'")}')" style="cursor:pointer; ${qtd === 0 ? 'background:#fff5f5;' : ''}">
+                        <tr onclick="window.abrirEdicaoProduto(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${preco}, ${qtd}, '${(p.marca||'').replace(/'/g, "\\'")}', '${(p.categoria||'').replace(/'/g, "\\'")}')" style="cursor:pointer; ${qtd === 0 ? 'background:#fff5f5;' : ''}">
                             <td><strong>${p.nome}</strong></td>
                             <td>R$ ${preco.toFixed(2).replace('.', ',')}</td>
                             <td>${status} ${qtd} <small style="color:#666;">(${statusTexto})</small></td>
@@ -1777,7 +1758,7 @@
                         const statusSaldo = saldo > 0.01 ? '🔴' : saldo < -0.01 ? '🟡' : '🟢';
                         const statusTexto = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
                         html += `
-                            <tr onclick="window.mostrarDetalhesCliente('${String(cliente.nome).replace(/'/g, "\\'")}')" style="cursor:pointer;" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='white'">
+                            <tr onclick="window.mostrarDetalhesCliente('${cliente.nome.replace(/'/g, "\\'")}')" style="cursor:pointer;" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='white'">
                                 <td><strong>${cliente.nome}</strong></td>
                                 <td>R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                                 <td>R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
@@ -1929,7 +1910,7 @@
                     </div>
 
                     <div style="margin-bottom:15px;">
-                        <button onclick="window.compartilharExtrato('${String(nomeCliente).replace(/'/g, "\\'")}')" style="background:#25D366; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:500; width:100%;">
+                        <button onclick="window.compartilharExtrato('${nomeCliente.replace(/'/g, "\\'")}')" style="background:#25D366; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:500; width:100%;">
                             📱 Compartilhar Extrato via WhatsApp
                         </button>
                     </div>
@@ -1977,7 +1958,7 @@
                         <h4 style="margin:0 0 15px 0;">💳 Registrar Pagamento (dinheiro/cartão)</h4>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
                             <input type="number" id="valorPagamentoDetalhe" placeholder="Valor do pagamento" min="0.01" step="0.01" style="flex:1; padding:12px; border:2px solid #e2e8f0; border-radius:6px; min-width:150px;">
-                            <button onclick="window.registrarPagamentoClienteDetalhe('${String(nomeCliente).replace(/'/g, "\\'")}')" style="background:#48bb78; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:500; white-space:nowrap;">
+                            <button onclick="window.registrarPagamentoClienteDetalhe('${nomeCliente.replace(/'/g, "\\'")}')" style="background:#48bb78; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:500; white-space:nowrap;">
                                 💵 Registrar Pagamento
                             </button>
                         </div>
@@ -1988,7 +1969,7 @@
                         <h4 style="margin:0 0 15px 0;">📱 Pagar via Pix</h4>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
                             <input type="number" id="valorPixCliente" placeholder="Valor a pagar" min="0.01" step="0.01" style="flex:1; padding:12px; border:2px solid #667eea; border-radius:6px; min-width:150px;">
-                            <button onclick="window.gerarPixParaCliente('${String(nomeCliente).replace(/'/g, "\\'")}')" style="background:#1a73e8; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:500; white-space:nowrap;">
+                            <button onclick="window.gerarPixParaCliente('${nomeCliente.replace(/'/g, "\\'")}')" style="background:#1a73e8; color:white; border:none; padding:12px 24px; border-radius:6px; cursor:pointer; font-weight:500; white-space:nowrap;">
                                 📱 Gerar QR Code Pix
                             </button>
                         </div>
@@ -2239,18 +2220,8 @@
             const hojeStr = hoje.toDateString();
             
             const promessasHoje = result.promessas.filter(p => {
-                const cliente = String(p.cliente || '');
-                const whatsapp = String(p.whatsapp || '');
-                const observacao = String(p.observacao || '');
-                const status = String(p.status || 'pendente');
-                const saldo = parseFloat(p.saldo) || 0;
-                
-                let dataPagamento = new Date();
-                if (p.dataPagamento) {
-                    dataPagamento = new Date(p.dataPagamento);
-                }
-                
-                return dataPagamento.toDateString() === hojeStr && saldo > 0 && status !== 'pago';
+                const dataPromessa = new Date(p.dataPagamento);
+                return dataPromessa.toDateString() === hojeStr && parseFloat(p.saldo) > 0 && p.status !== 'pago';
             });
 
             if (promessasHoje.length === 0) {
@@ -2262,11 +2233,7 @@
                 return;
             }
 
-            promessasHoje.sort((a, b) => {
-                const saldoA = parseFloat(a.saldo) || 0;
-                const saldoB = parseFloat(b.saldo) || 0;
-                return saldoB - saldoA;
-            });
+            promessasHoje.sort((a, b) => parseFloat(b.saldo) - parseFloat(a.saldo));
 
             let html = `
                 <div style="background:white; border-radius:8px; border:2px solid #48bb78; overflow:hidden;">
@@ -2279,23 +2246,20 @@
             `;
 
             promessasHoje.forEach(p => {
-                const cliente = String(p.cliente || '');
-                const whatsapp = String(p.whatsapp || '');
                 const valor = parseFloat(p.saldo) || 0;
-                const observacao = String(p.observacao || '');
-                
+                const whatsapp = p.whatsapp || '';
                 html += `
                     <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; align-items:center; padding:12px 15px; border-bottom:1px solid #edf2f7;">
                         <div>
-                            <strong>${cliente}</strong>
+                            <strong>${p.cliente}</strong>
                             ${whatsapp ? `<span style="font-size:11px; color:#25D366; display:block;">📱 ${whatsapp}</span>` : ''}
-                            ${observacao ? `<div style="font-size:11px; color:#666;">${observacao}</div>` : ''}
+                            ${p.observacao ? `<div style="font-size:11px; color:#666;">${p.observacao}</div>` : ''}
                         </div>
                         <div style="text-align:center; font-weight:bold; color:#48bb78;">
                             R$ ${valor.toFixed(2).replace('.', ',')}
                         </div>
                         <div style="text-align:center;">
-                            <button onclick="window.enviarCobranca('${cliente.replace(/'/g, "\\'")}', ${valor}, '${whatsapp}')" 
+                            <button onclick="window.enviarCobranca('${p.cliente.replace(/'/g, "\\'")}', ${valor}, '${whatsapp}')" 
                                     class="btn-cobrar" 
                                     style="background:#25D366; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; width:100%;">
                                 💬 Cobrar
