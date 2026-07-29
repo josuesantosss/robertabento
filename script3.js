@@ -511,10 +511,12 @@
         const whatsappStr = String(whatsapp || '');
         const valorNum = parseFloat(valor) || 0;
 
-        const mensagem = `Olá amiga, ${clienteStr}! 👋\n\n` +
-                         `Lembrando do pagamento da sua conta no valor de R$ ${valorNum.toFixed(2).replace('.', ',')}.\n\n` +
-                         `Segue minha chave Pix: ${PIX_CONFIG.chave}\n\n` +
-                         `_Me envie o comprovante após o pagamento_ ❤️`;
+        const mensagem = `Olá, querida! Tudo bem? 💕\n\n` +
+                 `Passando rapidinho para te lembrar do vencimento da sua parcela hoje!\n` +
+                 `Assim você garante seus atendimentos e novidades sem preocupação! 😉🥰\n\n` +
+                 `📲 Chave Pix: ${PIX_CONFIG.chave}\n\n` +
+                 `📄 Comprovante: Pode me enviar por aqui mesmo!\n\n` +
+                 `Agradeço demais a sua confiança e preferência de sempre! 🌷`;
 
         let url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
 
