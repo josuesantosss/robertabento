@@ -2215,7 +2215,7 @@
             if (!result.success || !result.promessas || result.promessas.length === 0) {
                 container.innerHTML = `
                     <div style="background:#f0f4ff; padding:20px; border-radius:8px; text-align:center; color:#718096;">
-                        ✅ Nenhuma promessa de pagamento registrada
+                        ✅ Nenhum pagamento pendente
                     </div>
                 `;
                 return;
