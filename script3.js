@@ -19,7 +19,7 @@
     // MARCAS E CATEGORIAS (para cadastro de produtos)
     // ============================================================
     const MARCAS = ['Natura', 'Mary Kay', 'Eudora', 'Boticário', 'Outra'];
-    const CATEGORIAS = ['Perfumaria', 'Maquiagem', 'Cuidados com a Pele', 'Cuidados com o Corpo', 'Cabelos', 'Infantil', 'Masculina', 'Outra'];
+    const CATEGORIAS = ['Perfumaria', 'Maquiagem', 'Cuidados com a Pele', 'Cuidados com o Corpo', 'Cabelos', 'Infantil', 'Masculina', 'Kit', 'Outra'];
 
     // ============================================================
     // SISTEMA DE CACHE
