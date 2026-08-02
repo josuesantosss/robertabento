@@ -1,11 +1,11 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO MOBILE OTIMIZADA V11.1
+// SISTEMA DE VENDAS - VERSÃO MOBILE OTIMIZADA V11.2
 // ============================================================
 
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V11.1...');
+    console.log('🚀 Iniciando Sistema de Vendas V11.2...');
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -143,47 +143,99 @@
             .btn-cobrar:hover{transform:scale(1.05)}
             
             .cliente-detalhe-row td{padding:0 !important}
-            .cliente-detalhe-content{padding:15px;background:#f7fafc;border-radius:0 0 8px 8px;animation:fadeIn 0.3s ease}
+            .cliente-detalhe-content{padding:0 !important;background:transparent;border-radius:0;animation:fadeIn 0.3s ease}
+            
+            /* REMOVIDO O FUNDO BRANCO DOS DETALHES */
+            .cliente-detalhe-content .detalhes-card {
+                background: transparent !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
             
             @media (max-width: 768px) {
                 .clientes-table thead { display: none; }
                 .clientes-table tbody tr {
-                    display: block; margin-bottom: 12px; border: 1px solid #e2e8f0;
-                    border-radius: 10px; padding: 12px 15px; background: white;
+                    display: block;
+                    margin-bottom: 12px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 12px 15px;
+                    background: white;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.06);
                 }
                 .clientes-table tbody tr:not(.cliente-detalhe-row) td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0 !important;
-    border-bottom: 1px solid #f0f0f0;
-    font-size: 14px;
-}
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 0 !important;
+                    border-bottom: 1px solid #f0f0f0;
+                    font-size: 14px;
+                }
                 .clientes-table tbody tr td:last-child { border-bottom: none; }
                 .clientes-table tbody tr td::before {
-                    content: attr(data-label); font-weight: 600; color: #4a5568; font-size: 13px;
+                    content: attr(data-label);
+                    font-weight: 600;
+                    color: #4a5568;
+                    font-size: 13px;
                 }
                 .clientes-table tbody tr td:first-child {
-                    font-weight: 600; font-size: 16px; color: #2d3748;
-                    border-bottom: 2px solid #e2e8f0; padding-bottom: 10px !important; margin-bottom: 4px;
+                    font-weight: 600;
+                    font-size: 16px;
+                    color: #2d3748;
+                    border-bottom: 2px solid #e2e8f0;
+                    padding-bottom: 10px !important;
+                    margin-bottom: 4px;
                 }
                 .clientes-table tbody tr td:first-child::before { content: "👤 Cliente"; font-weight: 700; }
                 .clientes-table tbody tr td:nth-child(2)::before { content: "💰 Total Gasto"; }
                 .clientes-table tbody tr td:nth-child(3)::before { content: "💵 Total Pago"; }
                 .clientes-table tbody tr td:nth-child(4)::before { content: "📊 Saldo"; }
                 
-                .cliente-detalhe-content { padding: 12px !important; }
+                /* DETALHES SEM BORDA E SEM FUNDO BRANCO */
                 .cliente-detalhe-content .detalhes-grid {
-                    display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 6px !important;
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important;
+                    gap: 8px !important;
+                    margin-top: 10px !important;
                 }
-                .cliente-detalhe-content .detalhes-grid div { padding: 8px !important; font-size: 12px !important; }
+                .cliente-detalhe-content .detalhes-grid div {
+                    padding: 10px !important;
+                    font-size: 13px !important;
+                    background: #f7fafc !important;
+                    border-radius: 6px !important;
+                    border: 1px solid #edf2f7 !important;
+                }
                 .cliente-detalhe-content .acoes-grid {
-                    display: grid !important; grid-template-columns: 1fr !important; gap: 8px !important;
+                    display: grid !important;
+                    grid-template-columns: 1fr !important;
+                    gap: 8px !important;
+                    margin-top: 10px !important;
                 }
-                .cliente-detalhe-content table { font-size: 11px !important; }
-                .cliente-detalhe-content table td, .cliente-detalhe-content table th { padding: 4px 6px !important; }
-                .cliente-detalhe-content .btn-acao { width: 100% !important; justify-content: center !important; }
+                .cliente-detalhe-content table {
+                    font-size: 11px !important;
+                    width: 100% !important;
+                    background: #f7fafc !important;
+                    border-radius: 6px !important;
+                    overflow: hidden !important;
+                }
+                .cliente-detalhe-content table td,
+                .cliente-detalhe-content table th {
+                    padding: 6px 8px !important;
+                }
+                .cliente-detalhe-content .btn-acao {
+                    width: 100% !important;
+                    justify-content: center !important;
+                }
+                /* REMOVER ALTURA MÁXIMA E BARRA DE ROLAGEM */
+                .cliente-detalhe-content .tab-content {
+                    max-height: none !important;
+                    overflow-y: visible !important;
+                    height: auto !important;
+                }
+                .cliente-detalhe-content .btn-compartilhar {
+                    width: 100% !important;
+                }
             }
             
             @media (min-width: 769px) {
@@ -631,7 +683,7 @@
     }
 
     // ============================================================
-    // CLIENTES
+    // CLIENTES - SEM QUADRO BRANCO E SEM BARRA DE ROLAGEM
     // ============================================================
     async function renderClientes() {
         const app = document.getElementById('app');
@@ -669,7 +721,7 @@
                             <tr class="cliente-detalhe-row">
                                 <td colspan="4" style="padding:0 !important;">
                                     <div class="cliente-detalhe-content" id="detalhe-${cliente.nome.replace(/[^a-zA-Z0-9]/g, '')}">
-                                        <div style="text-align:center;padding:8px;"><div class="loading-spinner" style="font-size:16px;">⏳</div><p style="color:#667eea;font-size:12px;">Carregando...</p></div>
+                                        <div style="text-align:center;padding:8px;"><div class="loading-spinner" style="font-size:16px;">⏳</div></div>
                                     </div>
                                 </td>
                             </tr>
@@ -783,6 +835,9 @@
         await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
     };
 
+    // ============================================================
+    // CARREGAR DETALHES DO CLIENTE - SEM QUADRO BRANCO
+    // ============================================================
     async function carregarDetalhesCliente(nomeCliente, container) {
         if (!container) return;
 
@@ -826,31 +881,106 @@
             const nomeSafe = nomeCliente.replace(/'/g, "\\'");
             const isMobileDevice = isMobile();
 
+            // SEM QUADRO BRANCO E SEM BARRA DE ROLAGEM
             container.innerHTML = `
-                <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <h4 style="margin:0;font-size:16px;">${nomeCliente}</h4>
-                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;">✕ Fechar</button>
+                <div style="background:transparent;padding:10px 0;">
+                    <!-- Cabeçalho com nome do cliente e botão fechar -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <h4 style="margin:0;font-size:16px;color:#2d3748;">${nomeCliente}</h4>
+                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;">✕ Fechar</button>
                     </div>
-                    <div class="detalhes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr 1fr' : 'repeat(auto-fit,minmax(120px,1fr))'};gap:8px;margin-bottom:12px;">
-                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;"><p style="margin:0;font-size:10px;">TOTAL GASTO</p><p style="font-size:18px;font-weight:bold;margin:4px 0 0;color:#667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p></div>
-                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;"><p style="margin:0;font-size:10px;">TOTAL PAGO</p><p style="font-size:18px;font-weight:bold;margin:4px 0 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p></div>
+                    
+                    <!-- Grid de Totais - Sem fundo branco -->
+                    <div class="detalhes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr 1fr' : 'repeat(auto-fit,minmax(120px,1fr))'};gap:8px;margin-bottom:10px;">
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Compras</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#667eea;">${historicoCompras.historico ? historicoCompras.historico.length : 0}</p>
+                        </div>
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Total Gasto</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Total Pago</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:10px;border-radius:6px;text-align:center;border:1px solid ${corSaldo};">
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Saldo</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
+                            <small style="color:${corSaldo};font-size:10px;font-weight:500;">${statusSaldo}</small>
+                        </div>
                     </div>
-                    <div style="margin-bottom:10px;"><button onclick="window.compartilharExtrato('${nomeSafe}')" style="background:#25D366;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;width:100%;">📱 Compartilhar Extrato</button></div>
+                    
+                    <!-- Botão compartilhar -->
+                    <div style="margin-bottom:10px;">
+                        <button onclick="window.compartilharExtrato('${nomeSafe}')" style="background:#25D366;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;width:100%;">📱 Compartilhar Extrato</button>
+                    </div>
+                    
+                    <!-- Abas Compras / Pagamentos -->
                     <div style="margin-bottom:10px;display:flex;gap:6px;">
-                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='block';document.getElementById('abaPagamentos-${idSufixo}').style.display='none';" style="flex:1;background:#667eea;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-size:12px;">📦 Compras</button>
-                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='none';document.getElementById('abaPagamentos-${idSufixo}').style.display='block';" style="flex:1;background:#e2e8f0;color:#4a5568;border:none;padding:8px;border-radius:6px;cursor:pointer;font-size:12px;">💳 Pagamentos</button>
+                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='block';document.getElementById('abaPagamentos-${idSufixo}').style.display='none';this.style.background='#667eea';this.style.color='#fff';document.getElementById('btnPagamentos-${idSufixo}').style.background='#e2e8f0';document.getElementById('btnPagamentos-${idSufixo}').style.color='#4a5568';" 
+                                id="btnCompras-${idSufixo}" 
+                                style="flex:1;background:#667eea;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">📦 Compras</button>
+                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='none';document.getElementById('abaPagamentos-${idSufixo}').style.display='block';this.style.background='#667eea';this.style.color='#fff';document.getElementById('btnCompras-${idSufixo}').style.background='#e2e8f0';document.getElementById('btnCompras-${idSufixo}').style.color='#4a5568';" 
+                                id="btnPagamentos-${idSufixo}" 
+                                style="flex:1;background:#e2e8f0;color:#4a5568;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">💳 Pagamentos</button>
                     </div>
-                    <div id="abaCompras-${idSufixo}" style="margin-bottom:10px;max-height:130px;overflow-y:auto;"><table style="width:100%;font-size:11px;"><thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>${comprasHtml}</tbody></table></div>
-                    <div id="abaPagamentos-${idSufixo}" style="display:none;margin-bottom:10px;max-height:130px;overflow-y:auto;"><table style="width:100%;font-size:11px;"><thead><tr><th>Data</th><th>Valor</th><th>Obs</th></tr></thead><tbody>${pagamentosHtml}</tbody></table></div>
-                    <div class="acoes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr' : '1fr 1fr'};gap:8px;">
-                        <div style="background:#f7fafc;padding:10px;border-radius:6px;"><input type="number" id="valorPagamentoDetalhe-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="width:100%;padding:6px;margin-bottom:6px;"><button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" style="background:#48bb78;color:#fff;border:none;padding:6px;border-radius:4px;width:100%;">💵 Pagar</button><div id="msgPagamentoInline-${idSufixo}"></div></div>
-                        <div style="background:#f0f4ff;padding:10px;border-radius:6px;"><input type="number" id="valorPixInline-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="width:100%;padding:6px;margin-bottom:6px;"><button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" style="background:#1a73e8;color:#fff;border:none;padding:6px;border-radius:4px;width:100%;">📱 Pix</button><div id="msgPixInline-${idSufixo}"></div></div>
+                    
+                    <!-- Conteúdo das abas - SEM BARRA DE ROLAGEM -->
+                    <div id="abaCompras-${idSufixo}" class="tab-content" style="margin-bottom:10px;max-height:none;overflow-y:visible;">
+                        <div style="overflow-x:auto;background:#f7fafc;border-radius:6px;border:1px solid #edf2f7;">
+                            <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
+                                <thead>
+                                    <tr style="background:#edf2f7;">
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Data</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Produto</th>
+                                        <th style="padding:6px 8px;text-align:center;font-weight:600;color:#4a5568;">Qtd</th>
+                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${comprasHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div id="abaPagamentos-${idSufixo}" class="tab-content" style="display:none;margin-bottom:10px;max-height:none;overflow-y:visible;">
+                        <div style="overflow-x:auto;background:#f7fafc;border-radius:6px;border:1px solid #edf2f7;">
+                            <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
+                                <thead>
+                                    <tr style="background:#edf2f7;">
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Data</th>
+                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">Valor</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Observação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${pagamentosHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Ações - Pagamento e Pix -->
+                    <div class="acoes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr' : '1fr 1fr'};gap:8px;margin-top:4px;">
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;border:1px solid #e2e8f0;">
+                            <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#4a5568;">💳 Registrar Pagamento</p>
+                            <div style="display:flex;gap:6px;">
+                                <input type="number" id="valorPagamentoDetalhe-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
+                                <button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" style="background:#48bb78;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">💵 Pagar</button>
+                            </div>
+                            <div id="msgPagamentoInline-${idSufixo}" style="font-size:11px;margin-top:6px;"></div>
+                        </div>
+                        <div style="background:#f0f4ff;padding:10px;border-radius:6px;border:1px solid #667eea;">
+                            <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#4a5568;">📱 Pagar com Pix</p>
+                            <div style="display:flex;gap:6px;">
+                                <input type="number" id="valorPixInline-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:8px;border:2px solid #667eea;border-radius:6px;font-size:13px;">
+                                <button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" style="background:#1a73e8;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">📱 Pix</button>
+                            </div>
+                            <div id="msgPixInline-${idSufixo}" style="font-size:11px;margin-top:6px;"></div>
+                        </div>
                     </div>
                 </div>
             `;
         } catch (error) {
-            container.innerHTML = `<div style="padding:12px;color:#e53e3e;">❌ Erro ao carregar detalhes</div>`;
+            container.innerHTML = `<div style="padding:12px;color:#e53e3e;text-align:center;">❌ Erro ao carregar detalhes</div>`;
         }
     }
 
