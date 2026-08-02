@@ -824,7 +824,7 @@
 
                     html += `
                         <tr onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="cursor:pointer;${isExpanded ? 'background:#f7fafc;' : ''}">
-                            <td data-label="👤 Cliente 2" style="padding:8px;"><strong>${cliente.nome}</strong></td>
+                            <td data-label="👤 Cliente" style="padding:8px;"><strong>${cliente.nome}</strong></td>
                             <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                             <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
                             <td data-label="📊 Saldo" style="padding:8px;">${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small></td>
@@ -861,7 +861,7 @@
                             <table class="clientes-table" style="width:100%;border-collapse:collapse;font-size:13px;">
                                 <thead>
                                     <tr style="background:#3957ed;">
-                                        <th style="padding:10px;text-align:left;color:#fff;">👤 Cliente 3</th>
+                                        <th style="padding:10px;text-align:left;color:#fff;">👤 Cliente</th>
                                         <th style="padding:10px;text-align:left;color:#fff;">💰 Total Gasto</th>
                                         <th style="padding:10px;text-align:left;color:#fff;">💵 Total Pago</th>
                                         <th style="padding:10px;text-align:left;color:#fff;">📊 Saldo</th>
@@ -939,7 +939,7 @@
 
                     html += `
                         <tr onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="cursor:pointer;${isExpanded ? 'background:#f7fafc;' : ''}">
-                            <td data-label="👤 Cliente 4" style="padding:8px;"><strong>${cliente.nome}</strong></td>
+                            <td data-label="👤 Cliente" style="padding:8px;"><strong>${cliente.nome}</strong></td>
                             <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                             <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
                             <td data-label="📊 Saldo" style="padding:8px;">${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small></td>
