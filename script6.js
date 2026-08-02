@@ -152,10 +152,14 @@
                     border-radius: 10px; padding: 12px 15px; background: white;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.06);
                 }
-                .clientes-table tbody tr td {
-                    display: flex; justify-content: space-between; align-items: center;
-                    padding: 8px 0 !important; border-bottom: 1px solid #f0f0f0; font-size: 14px;
-                }
+                .clientes-table tbody tr:not(.cliente-detalhe-row) td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0 !important;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+}
                 .clientes-table tbody tr td:last-child { border-bottom: none; }
                 .clientes-table tbody tr td::before {
                     content: attr(data-label); font-weight: 600; color: #4a5568; font-size: 13px;
