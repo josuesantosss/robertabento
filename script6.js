@@ -188,7 +188,7 @@
                     margin-bottom: 4px;
                 }
                 .clientes-table tbody tr td:first-child::before {
-                    content: "👤 Cliente 1";
+                    content: "👤 Cliente";
                     font-weight: 700;
                 }
                 .clientes-table tbody tr td:nth-child(2)::before {
@@ -1049,7 +1049,7 @@
             container.innerHTML = `
                 <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);animation:slideDown 0.3s ease;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <h4 style="margin:0;color:#2d3748;font-size:${isMobileDevice ? '15px' : '16px'};">📋 ${nomeCliente}</h4>
+                        <h4 style="margin:0;color:#2d3748;font-size:${isMobileDevice ? '15px' : '16px'};">${nomeCliente}</h4>
                         <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;">✕ Fechar</button>
                     </div>
                     
