@@ -188,7 +188,7 @@
                     margin-bottom: 4px;
                 }
                 .clientes-table tbody tr td:first-child::before {
-                    content: "👤 Cliente";
+                    content: "";
                     font-weight: 700;
                 }
                 .clientes-table tbody tr td:nth-child(2)::before {
