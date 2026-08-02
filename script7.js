@@ -1826,6 +1826,7 @@
             callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }, false),
             callAPI('listarVendasPorCliente', null, false)
         ]);
+        
         let totalGasto = 0, totalPago = 0;
         if (resumoCliente.success && resumoCliente.clientes) {
             const cliente = resumoCliente.clientes.find(c => c.nome.toLowerCase() === nomeCliente.toLowerCase());
@@ -1834,32 +1835,41 @@
                 totalPago = parseFloat(cliente.totalPago) || 0;
             }
         }
+        
         const saldo = totalGasto - totalPago;
-        let texto = `📋 EXTRATO DO CLIENTE\n\n`;
+        let texto = `EXTRATO DO CLIENTE\n\n`;
         texto += `👤 Nome: ${nomeCliente}\n`;
         texto += `💰 Total Gasto: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
         texto += `💵 Total Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
         texto += `📊 Saldo: R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} (${saldo > 0 ? 'A pagar' : saldo < 0 ? 'Crédito' : 'Quitado'})\n\n`;
         texto += `🛒 COMPRAS:\n`;
+        
         if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
             historicoCompras.historico.forEach(h => {
                 const data = h.data ? new Date(h.data) : new Date();
                 const dataStr = data.toLocaleDateString('pt-BR');
-                texto += `- ${dataStr}: ${h.produto} (${h.quantidade}x) = R$ ${(parseFloat(h.total)||0).toFixed(2).replace('.', ',')}\n`;
+                const nomeProduto = h.produto || 'Produto';
+                const quantidade = h.quantidade || 1;
+                const total = parseFloat(h.total) || 0;
+                texto += `- ${dataStr}: ${nomeProduto} (${quantidade}x) = R$ ${total.toFixed(2).replace('.', ',')}\n`;
             });
         } else {
             texto += `Nenhuma compra encontrada.\n`;
         }
+        
         texto += `\n💳 PAGAMENTOS:\n`;
         if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
             historicoPagamentos.pagamentos.forEach(p => {
                 const data = p.data ? new Date(p.data) : new Date();
                 const dataStr = data.toLocaleDateString('pt-BR');
-                texto += `- ${dataStr}: R$ ${(parseFloat(p.valor)||0).toFixed(2).replace('.', ',')} (${p.observacao || '-'})\n`;
+                const valor = parseFloat(p.valor) || 0;
+                const observacao = p.observacao || '-';
+                texto += `- ${dataStr}: R$ ${valor.toFixed(2).replace('.', ',')} (${observacao})\n`;
             });
         } else {
             texto += `Nenhum pagamento encontrado.\n`;
         }
+        
         const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
         window.open(url, '_blank');
     } catch (error) {
