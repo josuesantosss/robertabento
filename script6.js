@@ -1,6 +1,6 @@
 // ============================================================
 // SISTEMA DE VENDAS - VERSÃO OTIMIZADA V8.0
-// Carregamento Rápido com Lazy Loading e Cache Eficiente
+// Carregamento Rápido
 // ============================================================
 
 (function() {
@@ -11,8 +11,8 @@
     // ============================================================
     const CONFIG = {
         API_URL: 'https://script.google.com/macros/s/AKfycbzDoNt-58HOvCOqCr2xuXGVuFs4AFjJAiAwuEO3kF82dEmzt8_fq2NNgRPeEbHix2Q-2A/exec',
-        CACHE_TIMEOUT: 30000, // 30 segundos
-        API_TIMEOUT: 8000, // 8 segundos
+        CACHE_TIMEOUT: 30000,
+        API_TIMEOUT: 8000,
         PIX: {
             chave: '27194177854',
             nomeRecebedor: 'Roberta Bento',
@@ -23,7 +23,7 @@
     };
 
     // ============================================================
-    // CACHE OTIMIZADO
+    // CACHE
     // ============================================================
     const Cache = {
         data: {},
@@ -56,7 +56,7 @@
     }
 
     // ============================================================
-    // API CALL OTIMIZADA COM TIMEOUT E RETRY
+    // API CALL
     // ============================================================
     async function callAPI(action, data = null, useCache = true) {
         let url = `${CONFIG.API_URL}?action=${action}`;
@@ -96,7 +96,7 @@
     }
 
     // ============================================================
-    // NOTIFICAÇÕES OTIMIZADAS
+    // TOAST
     // ============================================================
     function mostrarToast(mensagem, tipo = 'success') {
         const cores = { success: '#48bb78', error: '#e53e3e', warning: '#ed8936', info: '#4299e1' };
@@ -127,7 +127,7 @@
     }
 
     // ============================================================
-    // CONFIRMAÇÃO OTIMIZADA
+    // CONFIRMAÇÃO
     // ============================================================
     function confirmarAcao(mensagem, callback, textoConfirmar = 'Confirmar', textoCancelar = 'Cancelar') {
         const overlay = document.createElement('div');
@@ -167,7 +167,7 @@
     }
 
     // ============================================================
-    // ESTILOS CSS OTIMIZADOS (inline compacto)
+    // ESTILOS CSS
     // ============================================================
     function adicionarEstilosCSS() {
         const style = document.createElement('style');
@@ -200,13 +200,9 @@
     }
 
     // ============================================================
-    // BLOQUEAR ZOOM (leve)
+    // BLOQUEAR ZOOM
     // ============================================================
     function bloquearZoom() {
-        const meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-        document.head.appendChild(meta);
         document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
         document.addEventListener('keydown', e => {
             if (e.ctrlKey && ['+','-','=','_','0'].includes(e.key)) e.preventDefault();
@@ -230,7 +226,7 @@
     };
 
     // ============================================================
-    // NAVEGAÇÃO RÁPIDA
+    // NAVEGAÇÃO
     // ============================================================
     function inicializarNavegacao() {
         const navButtons = document.querySelectorAll('.nav-btn');
@@ -269,7 +265,7 @@
     }
 
     // ============================================================
-    // PIX - FUNÇÕES OTIMIZADAS
+    // PIX
     // ============================================================
     window.gerarQrCodePix = function(valor, descricao = 'Pagamento') {
         if (!valor || valor <= 0) {
@@ -424,14 +420,13 @@
     };
 
     // ============================================================
-    // HOME - RENDERIZAÇÃO RÁPIDA
+    // HOME
     // ============================================================
     async function renderHome() {
         const app = document.getElementById('app');
         if (!app) return;
         const { saudacao, horario } = obterSaudacao();
 
-        // Renderizar placeholder imediatamente
         app.innerHTML = `
             <section>
                 <h2>🏠 Dashboard</h2>
@@ -464,7 +459,6 @@
             </section>
         `;
 
-        // Carregar dados em segundo plano
         try {
             const [produtosResult, vendasResult, promessasResult] = await Promise.all([
                 callAPI('listarProdutos', null, false),
@@ -472,7 +466,6 @@
                 callAPI('listarPromessasPagamento', null, false)
             ]);
 
-            // Processar dados
             let totalProdutos = 0, valorTotalEstoque = 0, produtosBaixoEstoque = 0, produtosEsgotados = 0;
             if (produtosResult.success && produtosResult.produtos) {
                 totalProdutos = produtosResult.produtos.length;
@@ -499,7 +492,6 @@
                 });
             }
 
-            // Renderizar resultado final
             app.innerHTML = `
                 <section>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -593,7 +585,7 @@
     };
 
     // ============================================================
-    // ESTOQUE - RENDERIZAÇÃO RÁPIDA
+    // ESTOQUE
     // ============================================================
     async function renderEstoque() {
         const app = document.getElementById('app');
@@ -756,7 +748,7 @@
     }
 
     // ============================================================
-    // EDIÇÃO DE PRODUTO (OTIMIZADA)
+    // EDIÇÃO DE PRODUTO
     // ============================================================
     window.abrirEdicaoProduto = function(id, nome, preco, quantidade, marca = '', categoria = '') {
         const overlay = document.createElement('div');
@@ -856,7 +848,7 @@
     };
 
     // ============================================================
-    // VENDAS - VERSÃO RESUMIDA (mantida funcional)
+    // VENDAS
     // ============================================================
     async function renderVendas() {
         const app = document.getElementById('app');
@@ -993,7 +985,6 @@
                 </section>
             `;
 
-            // Função de cálculo (mantida)
             function calcularTotais() {
                 let totalGeral = 0;
                 for (let i = 1; i <= 4; i++) {
@@ -1048,7 +1039,6 @@
             });
             document.getElementById('valorPago').addEventListener('input', calcularTotais);
 
-            // Pix handlers
             const btnMostrarPix = document.getElementById('btnMostrarPix');
             const pixBox = document.getElementById('pixBox');
             document.getElementById('btnCancelarPix').addEventListener('click', function() {
@@ -1282,7 +1272,7 @@
     }
 
     // ============================================================
-    // CLIENTES - COM DETALHES ABAIXO (OTIMIZADO)
+    // CLIENTES
     // ============================================================
     async function renderClientes() {
         const app = document.getElementById('app');
@@ -1386,7 +1376,6 @@
                 </div>
             `;
 
-            // Carregar detalhes se houver cliente expandido
             const expandido = StateManager.getClienteExpandido();
             if (expandido) {
                 const safeNome = expandido.replace(/[^a-zA-Z0-9]/g, '');
@@ -1628,7 +1617,7 @@
     };
 
     // ============================================================
-    // VENDEDORA - RÁPIDA
+    // VENDEDORA
     // ============================================================
     async function renderVendedora() {
         const app = document.getElementById('app');
@@ -1692,7 +1681,7 @@
     }
 
     // ============================================================
-    // PROMESSAS DE PAGAMENTO
+    // PROMESSAS
     // ============================================================
     async function carregarPromessasHoje() {
         const container = document.getElementById('promessasHojeContainer');
