@@ -1,11 +1,11 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO CORRIGIDA V9.0
+// SISTEMA DE VENDAS - VERSÃO MOBILE OTIMIZADA V10.0
 // ============================================================
 
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V9.0...');
+    console.log('🚀 Iniciando Sistema de Vendas V10.0...');
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -22,6 +22,13 @@
     };
 
     // ============================================================
+    // DETECTAR DISPOSITIVO MÓVEL
+    // ============================================================
+    function isMobile() {
+        return window.innerWidth <= 768;
+    }
+
+    // ============================================================
     // API CALL COM LOGS
     // ============================================================
     async function callAPI(action, data = null) {
@@ -31,26 +38,16 @@
             url += `&${params.toString()}`;
         }
 
-        console.log(`📤 Chamando API: ${action}`, url);
+        console.log(`📤 Chamando API: ${action}`);
 
         try {
             const response = await fetch(url);
-            console.log(`📥 Status da resposta: ${response.status}`);
-            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
             const result = await response.json();
             console.log(`📥 Dados recebidos (${action}):`, result);
-            
-            // Verificar se a resposta tem a estrutura esperada
-            if (result && typeof result === 'object') {
-                return result;
-            } else {
-                console.warn(`⚠️ Resposta inesperada para ${action}:`, result);
-                return { success: false, error: 'Resposta inválida da API' };
-            }
+            return result;
         } catch (error) {
             console.error(`❌ Erro na API (${action}):`, error);
             return { success: false, error: error.message };
@@ -127,20 +124,112 @@
         const style = document.createElement('style');
         style.textContent = `
             @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+            @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+            @keyframes slideDown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+            
             .loading-spinner{animation:spin .8s linear infinite;display:inline-block}
             .card-dashboard{transition:all .2s ease}
             .card-dashboard:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,0.15)}
             .btn-primary{transition:all .15s ease;cursor:pointer}
             .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,0.1)}
-            table tbody tr{transition:background .15s ease;cursor:pointer}
-            table tbody tr:hover{background:#f7fafc !important}
+            
             .badge-hoje{background:#48bb78;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;display:inline-block}
             .badge-atraso{background:#e53e3e;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;display:inline-block}
             .badge-futuro{background:#ed8936;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;display:inline-block}
+            
             .btn-extrato{transition:all .2s ease;cursor:pointer}
             .btn-extrato:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.15)}
             .btn-cobrar{transition:all .2s ease;cursor:pointer}
             .btn-cobrar:hover{transform:scale(1.05)}
+            
+            .cliente-detalhe-row td{padding:0 !important}
+            .cliente-detalhe-content{padding:15px;background:#f7fafc;border-radius:0 0 8px 8px;animation:fadeIn 0.3s ease}
+            
+            /* ============================================================ */
+            /* ESTILOS RESPONSIVOS PARA CLIENTES - MOBILE */
+            /* ============================================================ */
+            @media (max-width: 768px) {
+                .clientes-table thead {
+                    display: none;
+                }
+                .clientes-table tbody tr {
+                    display: block;
+                    margin-bottom: 10px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 10px;
+                    background: white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                }
+                .clientes-table tbody tr td {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 6px 0 !important;
+                    border-bottom: 1px solid #f0f0f0;
+                    font-size: 13px;
+                }
+                .clientes-table tbody tr td:last-child {
+                    border-bottom: none;
+                }
+                .clientes-table tbody tr td::before {
+                    content: attr(data-label);
+                    font-weight: 600;
+                    color: #4a5568;
+                    font-size: 12px;
+                    flex: 0 0 100px;
+                }
+                .clientes-table tbody tr td:first-child {
+                    font-weight: 600;
+                    font-size: 15px;
+                    color: #2d3748;
+                }
+                .clientes-table tbody tr td:first-child::before {
+                    content: "👤 Cliente";
+                }
+                .clientes-table tbody tr td:nth-child(2)::before {
+                    content: "💰 Total Gasto";
+                }
+                .clientes-table tbody tr td:nth-child(3)::before {
+                    content: "💵 Total Pago";
+                }
+                .clientes-table tbody tr td:nth-child(4)::before {
+                    content: "📊 Saldo";
+                }
+                
+                /* Detalhes do cliente em mobile */
+                .cliente-detalhe-content {
+                    padding: 10px !important;
+                }
+                .cliente-detalhe-content .detalhes-grid {
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important;
+                    gap: 6px !important;
+                }
+                .cliente-detalhe-content .detalhes-grid div {
+                    padding: 6px !important;
+                    font-size: 12px !important;
+                }
+                .cliente-detalhe-content .acoes-grid {
+                    display: grid !important;
+                    grid-template-columns: 1fr !important;
+                    gap: 6px !important;
+                }
+                .cliente-detalhe-content table {
+                    font-size: 11px !important;
+                }
+                .cliente-detalhe-content table td,
+                .cliente-detalhe-content table th {
+                    padding: 4px !important;
+                }
+            }
+            
+            /* Estilos para desktop (mantido) */
+            @media (min-width: 769px) {
+                .clientes-table tbody tr td::before {
+                    display: none;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -161,11 +250,16 @@
     // ============================================================
     const StateManager = {
         currentPage: 'home',
-        setPage(page) { this.currentPage = page; }
+        clienteExpandido: null,
+        loading: false,
+        setPage(page) { this.currentPage = page; },
+        setClienteExpandido(nome) { this.clienteExpandido = nome; },
+        getClienteExpandido() { return this.clienteExpandido; },
+        setLoading(status) { this.loading = status; }
     };
 
     // ============================================================
-    // NAVEGAÇÃO
+    // NAVEGAÇÃO COM LOADING SUAVE
     // ============================================================
     function inicializarNavegacao() {
         const navButtons = document.querySelectorAll('.nav-btn');
@@ -189,10 +283,46 @@
                 console.log(`📄 Navegando para: ${page}`);
                 if (pageMap[page]) {
                     StateManager.setPage(page);
-                    setTimeout(() => pageMap[page](), 50);
+                    // Mostrar loading antes de carregar
+                    mostrarLoading(page);
+                    setTimeout(() => pageMap[page](), 100);
                 }
             });
         });
+    }
+
+    // ============================================================
+    // MOSTRAR LOADING SUAVE
+    // ============================================================
+    function mostrarLoading(page) {
+        const app = document.getElementById('app');
+        if (!app) return;
+        
+        const nomes = {
+            'home': 'Dashboard',
+            'estoque': 'Estoque',
+            'vendas': 'Vendas',
+            'clientes': 'Clientes',
+            'vendedora': 'Área da Vendedora'
+        };
+        
+        const icones = {
+            'home': '🏠',
+            'estoque': '📦',
+            'vendas': '💰',
+            'clientes': '👥',
+            'vendedora': '👩‍💼'
+        };
+        
+        app.innerHTML = `
+            <section style="animation:fadeIn 0.3s ease;">
+                <h2>${icones[page] || '📄'} ${nomes[page] || page}</h2>
+                <div style="text-align:center;padding:40px 20px;">
+                    <div class="loading-spinner" style="font-size:32px;">⏳</div>
+                    <p style="color:#667eea;margin-top:12px;font-size:15px;">Carregando ${nomes[page] || page}...</p>
+                </div>
+            </section>
+        `;
     }
 
     // ============================================================
@@ -208,44 +338,10 @@
 
         const { saudacao, horario } = obterSaudacao();
 
-        app.innerHTML = `
-            <section>
-                <h2>🏠 Dashboard</h2>
-                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:28px;">👩</div>
-                            <div>
-                                <p style="font-size:14px;margin:0;opacity:0.9;">${saudacao},</p>
-                                <p style="font-size:28px;margin:2px 0 0 0;font-weight:700;">Roberta! 👋</p>
-                            </div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="background:rgba(255,255,255,0.15);padding:12px 16px;border-radius:10px;">
-                                <p style="font-size:10px;margin:0;opacity:0.8;">Agora são</p>
-                                <p style="font-size:24px;margin:0;font-weight:700;">${horario}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div style="text-align:center;padding:20px;">
-                    <div class="loading-spinner" style="font-size:24px;">⏳</div>
-                    <p style="color:#667eea;">Carregando dados...</p>
-                </div>
-            </section>
-        `;
+        // Mostrar loading imediato
+        mostrarLoading('home');
 
         try {
-            // Testar conexão com a API
-            console.log('📡 Testando conexão com a API...');
-            const testResult = await callAPI('listarProdutos');
-            console.log('📡 Resultado do teste:', testResult);
-
-            if (!testResult.success) {
-                throw new Error(`Erro na API: ${testResult.error || 'Resposta inválida'}`);
-            }
-
-            // Buscar dados
             const [produtosResult, vendasResult] = await Promise.all([
                 callAPI('listarProdutos'),
                 callAPI('listarVendas')
@@ -257,7 +353,6 @@
             let totalProdutos = 0;
             let valorTotalEstoque = 0;
 
-            // Verificar estrutura dos produtos
             if (produtosResult.success && produtosResult.produtos) {
                 const produtos = Array.isArray(produtosResult.produtos) ? produtosResult.produtos : [];
                 totalProdutos = produtos.length;
@@ -277,12 +372,12 @@
             }
 
             app.innerHTML = `
-                <section>
+                <section style="animation:fadeIn 0.4s ease;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                         <h2>🏠 Dashboard</h2>
                         <button onclick="window.renderHome()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;">🔄 Atualizar</button>
                     </div>
-                    <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px;">
+                    <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px;box-shadow:0 4px 15px rgba(102,126,234,0.3);">
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                             <div style="display:flex;align-items:center;gap:12px;">
                                 <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:28px;">👩</div>
@@ -299,7 +394,7 @@
                             </div>
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;">
                         <div class="card-dashboard" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;border-radius:12px;">
                             <h3 style="margin:0 0 8px 0;font-size:12px;opacity:0.9;">📦 Total Produtos</h3>
                             <p style="font-size:32px;font-weight:bold;margin:0;">${totalProdutos}</p>
@@ -323,19 +418,16 @@
                 </section>
             `;
 
-            mostrarToast('Dashboard carregado com sucesso!', 'success');
-
         } catch (error) {
             console.error('❌ Erro no renderHome:', error);
             app.innerHTML = `
-                <section>
+                <section style="animation:fadeIn 0.4s ease;">
                     <h2>🏠 Dashboard</h2>
                     <div style="text-align:center;padding:30px;color:#e53e3e;">
                         <p style="font-size:40px;">😕</p>
                         <p><strong>Erro ao carregar dados</strong></p>
                         <p style="font-size:14px;color:#666;">${error.message}</p>
                         <button onclick="window.renderHome()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;margin-top:10px;">🔄 Tentar novamente</button>
-                        <p style="font-size:12px;color:#999;margin-top:10px;">Verifique o console (F12) para mais detalhes</p>
                     </div>
                 </section>
             `;
@@ -350,52 +442,7 @@
         const app = document.getElementById('app');
         if (!app) return;
 
-        app.innerHTML = `
-            <section>
-                <h2>📦 Estoque</h2>
-                <div style="background:#f0f4ff;padding:15px;border-radius:12px;margin-bottom:15px;border:2px dashed #667eea;">
-                    <h3 style="margin:0 0 12px 0;color:#667eea;font-size:16px;">➕ Cadastrar Produto</h3>
-                    <form id="formCadastroRapido" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
-                        <div>
-                            <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Nome *</label>
-                            <input type="text" id="nomeRapido" placeholder="Nome" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Preço *</label>
-                            <input type="number" id="precoRapido" step="0.01" placeholder="0,00" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Qtd *</label>
-                            <input type="number" id="qtdRapido" placeholder="0" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Marca</label>
-                            <select id="marcaRapido" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                                <option value="">Selecione</option>
-                                ${CONFIG.MARCAS.map(m => `<option value="${m}">${m}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Categoria</label>
-                            <select id="categoriaRapido" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                                <option value="">Selecione</option>
-                                ${CONFIG.CATEGORIAS.map(c => `<option value="${c}">${c}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div style="display:flex;align-items:flex-end;">
-                            <button type="submit" style="width:100%;background:#667eea;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px;">✅ Cadastrar</button>
-                        </div>
-                    </form>
-                    <div id="msgCadastroRapido" style="margin-top:8px;font-size:13px;"></div>
-                </div>
-                <div style="text-align:center;padding:15px;">
-                    <div class="loading-spinner" style="font-size:24px;">⏳</div>
-                    <p style="color:#667eea;font-size:14px;">Carregando produtos...</p>
-                </div>
-            </section>
-        `;
-
-        document.getElementById('formCadastroRapido').addEventListener('submit', cadastrarProdutoRapido);
+        mostrarLoading('estoque');
 
         try {
             const result = await callAPI('listarProdutos');
@@ -428,7 +475,7 @@
             }
 
             app.innerHTML = `
-                <section>
+                <section style="animation:fadeIn 0.4s ease;">
                     <h2>📦 Estoque</h2>
                     <div style="background:#f0f4ff;padding:15px;border-radius:12px;margin-bottom:15px;border:2px dashed #667eea;">
                         <h3 style="margin:0 0 12px 0;color:#667eea;font-size:16px;">➕ Cadastrar Produto</h3>
@@ -484,7 +531,7 @@
 
         } catch (error) {
             console.error('❌ Erro no renderEstoque:', error);
-            app.innerHTML = `<section><h2>📦 Estoque</h2><p style="color:red;">❌ Erro: ${error.message}</p></section>`;
+            app.innerHTML = `<section style="animation:fadeIn 0.4s ease;"><h2>📦 Estoque</h2><p style="color:red;">❌ Erro: ${error.message}</p></section>`;
         }
     }
 
@@ -518,20 +565,12 @@
     }
 
     // ============================================================
-    // VENDAS (SIMPLIFICADA)
+    // VENDAS
     // ============================================================
     async function renderVendas() {
         console.log('💰 Renderizando Vendas...');
         const app = document.getElementById('app');
-        app.innerHTML = `
-            <section>
-                <h2>💰 Vendas</h2>
-                <div style="text-align:center;padding:20px;">
-                    <div class="loading-spinner" style="font-size:24px;">⏳</div>
-                    <p style="color:#667eea;">Carregando dados...</p>
-                </div>
-            </section>
-        `;
+        mostrarLoading('vendas');
 
         try {
             const [produtosResult, clientesResult] = await Promise.all([
@@ -568,7 +607,7 @@
             }
 
             app.innerHTML = `
-                <section>
+                <section style="animation:fadeIn 0.4s ease;">
                     <h2>💰 Registrar Venda</h2>
                     <div style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
                         <form id="formVendaMultipla">
@@ -661,7 +700,7 @@
 
         } catch (error) {
             console.error('❌ Erro no renderVendas:', error);
-            app.innerHTML = `<section><h2>💰 Vendas</h2><p style="color:red;">❌ Erro: ${error.message}</p></section>`;
+            app.innerHTML = `<section style="animation:fadeIn 0.4s ease;"><h2>💰 Vendas</h2><p style="color:red;">❌ Erro: ${error.message}</p></section>`;
         }
     }
 
@@ -733,7 +772,7 @@
             }
 
             msg.innerHTML = `
-                <div style="padding:12px;background:#c6f6d5;color:#22543d;border-radius:6px;">
+                <div style="padding:12px;background:#c6f6d5;color:#22543d;border-radius:6px;animation:fadeIn 0.3s ease;">
                     ✅ Venda registrada! Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}
                 </div>
             `;
@@ -755,100 +794,465 @@
     }
 
     // ============================================================
-    // CLIENTES
+    // CLIENTES - COM LAYOUT RESPONSIVO E LOADING SUAVE
     // ============================================================
     async function renderClientes() {
         console.log('👥 Renderizando Clientes...');
         const app = document.getElementById('app');
-        app.innerHTML = `
-            <section>
-                <h2>👥 Clientes</h2>
-                <div style="background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                    <div style="margin-bottom:12px;">
-                        <div style="display:flex;gap:8px;align-items:center;">
-                            <input type="text" id="buscaCliente" placeholder="🔍 Buscar cliente..." style="flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                            <button onclick="document.getElementById('buscaCliente').value=''; window.carregarTabelaClientes();" style="background:#e2e8f0;color:#4a5568;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;">✕</button>
-                        </div>
-                    </div>
-                    <div id="tabelaClientes">
-                        <div style="text-align:center;padding:15px;">
-                            <div class="loading-spinner" style="font-size:20px;">⏳</div>
-                            <p style="color:#667eea;font-size:13px;">Carregando clientes...</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        `;
-
-        await carregarTabelaClientes();
-    }
-
-    async function carregarTabelaClientes(filtro = '') {
-        const container = document.getElementById('tabelaClientes');
-        if (!container) return;
+        
+        // Mostrar loading suave
+        mostrarLoading('clientes');
 
         try {
             const result = await callAPI('listarVendasPorCliente');
             console.log('👥 Resultado clientes:', result);
 
-            let html = '';
+            // Preparar dados
+            let clientes = [];
             if (result.success && result.clientes) {
-                let clientes = Array.isArray(result.clientes) ? result.clientes : [];
+                clientes = Array.isArray(result.clientes) ? result.clientes : [];
                 clientes = clientes.filter(c => c.nome && c.nome !== 'Cliente não informado');
-                
-                if (filtro) {
-                    clientes = clientes.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()));
-                }
+                clientes.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            }
 
-                if (clientes.length > 0) {
-                    clientes.forEach(c => {
-                        const totalGasto = parseFloat(c.totalGasto) || 0;
-                        const totalPago = parseFloat(c.totalPago) || 0;
-                        const saldo = totalGasto - totalPago;
-                        const statusSaldo = saldo > 0.01 ? '🔴' : saldo < -0.01 ? '🟡' : '🟢';
-                        const statusTexto = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
-                        html += `
-                            <tr>
-                                <td style="padding:8px;"><strong>${c.nome}</strong></td>
-                                <td style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
-                                <td style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
-                                <td style="padding:8px;">${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small></td>
+            const isMobileDevice = isMobile();
+
+            // Construir HTML da tabela
+            let html = '';
+            if (clientes.length > 0) {
+                clientes.forEach(cliente => {
+                    const totalGasto = parseFloat(cliente.totalGasto) || 0;
+                    const totalPago = parseFloat(cliente.totalPago) || 0;
+                    const saldo = totalGasto - totalPago;
+                    const statusSaldo = saldo > 0.01 ? '🔴' : saldo < -0.01 ? '🟡' : '🟢';
+                    const statusTexto = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
+                    const nomeSafe = String(cliente.nome || '').replace(/'/g, "\\'");
+                    const isExpanded = StateManager.getClienteExpandido() === cliente.nome;
+
+                    html += `
+                        <tr onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="cursor:pointer;${isExpanded ? 'background:#f7fafc;' : ''}">
+                            <td data-label="👤 Cliente" style="padding:8px;"><strong>${cliente.nome}</strong></td>
+                            <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
+                            <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
+                            <td data-label="📊 Saldo" style="padding:8px;">${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small></td>
+                        </tr>
+                        ${isExpanded ? `
+                            <tr class="cliente-detalhe-row">
+                                <td colspan="4" style="padding:0 !important;">
+                                    <div class="cliente-detalhe-content" id="detalhe-${cliente.nome.replace(/[^a-zA-Z0-9]/g, '')}">
+                                        <div style="text-align:center;padding:8px;">
+                                            <div class="loading-spinner" style="font-size:16px;">⏳</div>
+                                            <p style="color:#667eea;font-size:12px;">Carregando detalhes...</p>
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
-                        `;
-                    });
-                } else {
-                    html = `<tr><td colspan="4" style="text-align:center;padding:30px;"><p style="font-size:32px;">🔍</p><p style="color:#666;">Nenhum cliente encontrado</p></td></tr>`;
-                }
+                        ` : ''}
+                    `;
+                });
             } else {
                 html = `<tr><td colspan="4" style="text-align:center;padding:30px;"><p style="font-size:32px;">📭</p><p style="color:#666;">Nenhum cliente cadastrado</p></td></tr>`;
             }
 
-            container.innerHTML = `
-                <div style="overflow-x:auto;">
-                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                        <thead>
-                            <tr style="background:#3957ed;">
-                                <th style="padding:10px;text-align:left;color:#fff;">Cliente</th>
-                                <th style="padding:10px;text-align:left;color:#fff;">Total Gasto</th>
-                                <th style="padding:10px;text-align:left;color:#fff;">Total Pago</th>
-                                <th style="padding:10px;text-align:left;color:#fff;">Saldo</th>
-                            </tr>
-                        </thead>
-                        <tbody>${html}</tbody>
-                    </table>
-                </div>
-                <div style="margin-top:8px;padding:8px;background:#f7fafc;border-radius:6px;font-size:11px;color:#666;">
-                    🟢 Quitado | 🔴 Em débito | 🟡 Crédito
-                </div>
+            // Montar página com tabela responsiva
+            app.innerHTML = `
+                <section style="animation:fadeIn 0.4s ease;">
+                    <h2>👥 Clientes</h2>
+                    <div style="background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="margin-bottom:12px;">
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="text" id="buscaCliente" placeholder="🔍 Buscar cliente..." style="flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
+                                <button onclick="document.getElementById('buscaCliente').value=''; window.carregarTabelaClientes();" style="background:#e2e8f0;color:#4a5568;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;">✕</button>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="clientes-table" style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead>
+                                    <tr style="background:#3957ed;">
+                                        <th style="padding:10px;text-align:left;color:#fff;">👤 Cliente</th>
+                                        <th style="padding:10px;text-align:left;color:#fff;">💰 Total Gasto</th>
+                                        <th style="padding:10px;text-align:left;color:#fff;">💵 Total Pago</th>
+                                        <th style="padding:10px;text-align:left;color:#fff;">📊 Saldo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${html}</tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top:8px;padding:8px;background:#f7fafc;border-radius:6px;font-size:11px;color:#666;text-align:center;">
+                            🟢 Quitado | 🔴 Em débito | 🟡 Crédito | 💡 Clique no cliente para ver detalhes
+                        </div>
+                    </div>
+                </section>
             `;
+
+            // Adicionar evento de busca
+            document.getElementById('buscaCliente').addEventListener('input', (e) => {
+                const filtro = e.target.value;
+                carregarTabelaClientes(filtro);
+            });
+
+            // Carregar detalhes do cliente expandido
+            const expandido = StateManager.getClienteExpandido();
+            if (expandido) {
+                const safeNome = expandido.replace(/[^a-zA-Z0-9]/g, '');
+                const detalheContainer = document.getElementById(`detalhe-${safeNome}`);
+                if (detalheContainer) {
+                    await carregarDetalhesCliente(expandido, detalheContainer);
+                }
+            }
 
         } catch (error) {
             console.error('❌ Erro ao carregar clientes:', error);
-            container.innerHTML = `<div style="text-align:center;padding:15px;color:#e53e3e;"><p>❌ Erro: ${error.message}</p><button onclick="carregarTabelaClientes()" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;">🔄 Tentar</button></div>`;
+            app.innerHTML = `
+                <section style="animation:fadeIn 0.4s ease;">
+                    <h2>👥 Clientes</h2>
+                    <div style="text-align:center;padding:30px;color:#e53e3e;">
+                        <p style="font-size:40px;">😕</p>
+                        <p><strong>Erro ao carregar clientes</strong></p>
+                        <p style="font-size:14px;color:#666;">${error.message}</p>
+                        <button onclick="window.renderClientes()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;margin-top:10px;">🔄 Tentar novamente</button>
+                    </div>
+                </section>
+            `;
+        }
+    }
+
+    // ============================================================
+    // CARREGAR TABELA DE CLIENTES COM FILTRO
+    // ============================================================
+    async function carregarTabelaClientes(filtro = '') {
+        try {
+            const result = await callAPI('listarVendasPorCliente');
+            let clientes = [];
+            if (result.success && result.clientes) {
+                clientes = Array.isArray(result.clientes) ? result.clientes : [];
+                clientes = clientes.filter(c => c.nome && c.nome !== 'Cliente não informado');
+                if (filtro) {
+                    clientes = clientes.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()));
+                }
+                clientes.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            }
+
+            const tbody = document.querySelector('.clientes-table tbody');
+            if (!tbody) return;
+
+            if (clientes.length > 0) {
+                let html = '';
+                clientes.forEach(cliente => {
+                    const totalGasto = parseFloat(cliente.totalGasto) || 0;
+                    const totalPago = parseFloat(cliente.totalPago) || 0;
+                    const saldo = totalGasto - totalPago;
+                    const statusSaldo = saldo > 0.01 ? '🔴' : saldo < -0.01 ? '🟡' : '🟢';
+                    const statusTexto = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
+                    const nomeSafe = String(cliente.nome || '').replace(/'/g, "\\'");
+                    const isExpanded = StateManager.getClienteExpandido() === cliente.nome;
+
+                    html += `
+                        <tr onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="cursor:pointer;${isExpanded ? 'background:#f7fafc;' : ''}">
+                            <td data-label="👤 Cliente" style="padding:8px;"><strong>${cliente.nome}</strong></td>
+                            <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
+                            <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
+                            <td data-label="📊 Saldo" style="padding:8px;">${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small></td>
+                        </tr>
+                        ${isExpanded ? `
+                            <tr class="cliente-detalhe-row">
+                                <td colspan="4" style="padding:0 !important;">
+                                    <div class="cliente-detalhe-content" id="detalhe-${cliente.nome.replace(/[^a-zA-Z0-9]/g, '')}">
+                                        <div style="text-align:center;padding:8px;">
+                                            <div class="loading-spinner" style="font-size:16px;">⏳</div>
+                                            <p style="color:#667eea;font-size:12px;">Carregando detalhes...</p>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        ` : ''}
+                    `;
+                });
+                tbody.innerHTML = html;
+
+                // Recarregar detalhes do cliente expandido
+                const expandido = StateManager.getClienteExpandido();
+                if (expandido) {
+                    const safeNome = expandido.replace(/[^a-zA-Z0-9]/g, '');
+                    const detalheContainer = document.getElementById(`detalhe-${safeNome}`);
+                    if (detalheContainer) {
+                        await carregarDetalhesCliente(expandido, detalheContainer);
+                    }
+                }
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:30px;"><p style="font-size:32px;">🔍</p><p style="color:#666;">Nenhum cliente encontrado</p></td></tr>`;
+            }
+
+        } catch (error) {
+            console.error('❌ Erro ao filtrar clientes:', error);
         }
     }
 
     window.carregarTabelaClientes = carregarTabelaClientes;
+
+    // ============================================================
+    // ALTERNAR DETALHES DO CLIENTE
+    // ============================================================
+    window.toggleDetalhesCliente = async function(nomeCliente) {
+        const current = StateManager.getClienteExpandido();
+        if (current === nomeCliente) {
+            StateManager.setClienteExpandido(null);
+        } else {
+            StateManager.setClienteExpandido(nomeCliente);
+        }
+        await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
+    };
+
+    // ============================================================
+    // CARREGAR DETALHES DO CLIENTE (RESPONSIVO)
+    // ============================================================
+    async function carregarDetalhesCliente(nomeCliente, container) {
+        if (!container) return;
+
+        try {
+            const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
+                callAPI('listarDetalhesCliente', { cliente: nomeCliente }),
+                callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }),
+                callAPI('listarVendasPorCliente')
+            ]);
+
+            let totalGasto = 0, totalPago = 0;
+            if (resumoCliente.success && resumoCliente.clientes) {
+                const cliente = resumoCliente.clientes.find(c => c.nome?.toLowerCase() === nomeCliente.toLowerCase());
+                if (cliente) {
+                    totalGasto = parseFloat(cliente.totalGasto) || 0;
+                    totalPago = parseFloat(cliente.totalPago) || 0;
+                }
+            }
+
+            const saldo = totalGasto - totalPago;
+            const statusSaldo = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
+            const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
+
+            // Preparar histórico de compras
+            let comprasHtml = '';
+            if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
+                comprasHtml = historicoCompras.historico.map(h => {
+                    const data = h.data ? new Date(h.data) : new Date();
+                    const dataFormatada = data.toLocaleDateString('pt-BR');
+                    const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    return `<tr><td>${dataFormatada} ${horaFormatada}</td><td>${h.produto || '-'}</td><td>${h.quantidade || 1}</td><td>R$ ${(parseFloat(h.total) || 0).toFixed(2).replace('.', ',')}</td></tr>`;
+                }).join('');
+            } else {
+                comprasHtml = `<tr><td colspan="4" style="text-align:center;padding:15px;color:#666;">Nenhuma compra</td></tr>`;
+            }
+
+            // Preparar histórico de pagamentos
+            let pagamentosHtml = '';
+            if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
+                pagamentosHtml = historicoPagamentos.pagamentos.map(p => {
+                    const data = p.data ? new Date(p.data) : new Date();
+                    const dataFormatada = data.toLocaleDateString('pt-BR');
+                    const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    return `<tr><td>${dataFormatada} ${horaFormatada}</td><td>R$ ${(parseFloat(p.valor) || 0).toFixed(2).replace('.', ',')}</td><td>${p.observacao || '-'}</td></tr>`;
+                }).join('');
+            } else {
+                pagamentosHtml = `<tr><td colspan="3" style="text-align:center;padding:15px;color:#666;">Nenhum pagamento</td></tr>`;
+            }
+
+            const idSufixo = nomeCliente.replace(/[^a-zA-Z0-9]/g, '');
+            const nomeSafe = nomeCliente.replace(/'/g, "\\'");
+            const isMobileDevice = isMobile();
+
+            container.innerHTML = `
+                <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);animation:slideDown 0.3s ease;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <h4 style="margin:0;color:#2d3748;font-size:${isMobileDevice ? '14px' : '16px'};">📋 ${nomeCliente}</h4>
+                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+                    </div>
+                    
+                    <!-- Resumo em grid responsivo -->
+                    <div class="detalhes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr 1fr' : 'repeat(auto-fit,minmax(120px,1fr))'};gap:8px;margin-bottom:10px;">
+                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
+                            <p style="color:#666;margin:0;font-size:10px;">Compras</p>
+                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:#667eea;">${historicoCompras.historico ? historicoCompras.historico.length : 0}</p>
+                        </div>
+                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
+                            <p style="color:#666;margin:0;font-size:10px;">Total Gasto</p>
+                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:#667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
+                            <p style="color:#666;margin:0;font-size:10px;">Total Pago</p>
+                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:8px;border-radius:4px;text-align:center;">
+                            <p style="color:#666;margin:0;font-size:10px;">Saldo</p>
+                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
+                            <small style="color:${corSaldo};font-size:9px;">${statusSaldo}</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Botão compartilhar -->
+                    <div style="margin-bottom:8px;">
+                        <button onclick="window.compartilharExtrato('${nomeSafe}')" style="background:#25D366;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:500;font-size:11px;width:100%;">📱 Compartilhar Extrato</button>
+                    </div>
+                    
+                    <!-- Abas -->
+                    <div style="margin-bottom:8px;">
+                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='block';document.getElementById('abaPagamentos-${idSufixo}').style.display='none';" 
+                                id="btnCompras-${idSufixo}" 
+                                style="background:#667eea;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;margin-right:6px;font-size:11px;">📦 Compras</button>
+                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='none';document.getElementById('abaPagamentos-${idSufixo}').style.display='block';" 
+                                id="btnPagamentos-${idSufixo}" 
+                                style="background:#e2e8f0;color:#4a5568;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">💳 Pagamentos</button>
+                    </div>
+                    
+                    <!-- Histórico de Compras -->
+                    <div id="abaCompras-${idSufixo}" style="margin-bottom:8px;">
+                        <div style="overflow-x:auto;max-height:${isMobileDevice ? '120px' : '150px'};overflow-y:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
+                                <thead><tr style="background:#e2e8f0;"><th style="padding:4px;text-align:left;">Data</th><th style="padding:4px;text-align:left;">Produto</th><th style="padding:4px;text-align:left;">Qtd</th><th style="padding:4px;text-align:left;">Valor</th></tr></thead>
+                                <tbody>${comprasHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Histórico de Pagamentos -->
+                    <div id="abaPagamentos-${idSufixo}" style="display:none;margin-bottom:8px;">
+                        <div style="overflow-x:auto;max-height:${isMobileDevice ? '120px' : '150px'};overflow-y:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
+                                <thead><tr style="background:#e2e8f0;"><th style="padding:4px;text-align:left;">Data</th><th style="padding:4px;text-align:left;">Valor</th><th style="padding:4px;text-align:left;">Observação</th></tr></thead>
+                                <tbody>${pagamentosHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Ações (Pagamento e Pix) -->
+                    <div class="acoes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr' : '1fr 1fr'};gap:8px;margin-top:8px;">
+                        <div style="background:#f7fafc;padding:8px;border-radius:4px;border:1px solid #e2e8f0;">
+                            <p style="margin:0 0 4px 0;font-size:10px;font-weight:600;color:#4a5568;">💳 Registrar Pagamento</p>
+                            <div style="display:flex;gap:4px;">
+                                <input type="number" id="valorPagamentoDetalhe-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:4px;border:2px solid #e2e8f0;border-radius:4px;font-size:11px;">
+                                <button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" style="background:#48bb78;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:500;font-size:10px;">💵</button>
+                            </div>
+                            <div id="msgPagamentoInline-${idSufixo}" style="font-size:10px;margin-top:4px;"></div>
+                        </div>
+                        <div style="background:#f0f4ff;padding:8px;border-radius:4px;border:1px solid #667eea;">
+                            <p style="margin:0 0 4px 0;font-size:10px;font-weight:600;color:#4a5568;">📱 Pix</p>
+                            <div style="display:flex;gap:4px;">
+                                <input type="number" id="valorPixInline-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:4px;border:2px solid #667eea;border-radius:4px;font-size:11px;">
+                                <button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" style="background:#1a73e8;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:500;font-size:10px;">📱</button>
+                            </div>
+                            <div id="msgPixInline-${idSufixo}" style="font-size:10px;margin-top:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        } catch (error) {
+            console.error('❌ Erro ao carregar detalhes:', error);
+            container.innerHTML = `<div style="padding:10px;color:#e53e3e;font-size:13px;">❌ Erro: ${error.message}</div>`;
+        }
+    }
+
+    // ============================================================
+    // REGISTRAR PAGAMENTO INLINE
+    // ============================================================
+    window.registrarPagamentoInline = async function(nomeCliente, idSufixo) {
+        const valorInput = document.getElementById(`valorPagamentoDetalhe-${idSufixo}`);
+        const msgDiv = document.getElementById(`msgPagamentoInline-${idSufixo}`);
+        if (!valorInput || !msgDiv) return;
+
+        const valor = parseFloat(valorInput.value);
+        if (isNaN(valor) || valor <= 0) {
+            msgDiv.innerHTML = '<div style="color:#e53e3e;">Valor inválido</div>';
+            return;
+        }
+
+        confirmarAcao(`Confirmar pagamento de R$ ${valor.toFixed(2).replace('.', ',')} de ${nomeCliente}?`, async () => {
+            msgDiv.innerHTML = '<span style="color:#667eea;">⏳</span>';
+            try {
+                const result = await callAPI('registrarPagamento', { 
+                    cliente: nomeCliente, 
+                    valor, 
+                    observacao: 'Pagamento registrado' 
+                });
+                if (result.success) {
+                    msgDiv.innerHTML = `<div style="color:#38a169;">✅ R$ ${valor.toFixed(2).replace('.', ',')}</div>`;
+                    mostrarToast(`Pagamento registrado!`, 'success');
+                    valorInput.value = '';
+                    // Recarregar detalhes
+                    const safeNome = nomeCliente.replace(/[^a-zA-Z0-9]/g, '');
+                    const detalheContainer = document.getElementById(`detalhe-${safeNome}`);
+                    if (detalheContainer) {
+                        await carregarDetalhesCliente(nomeCliente, detalheContainer);
+                    }
+                    await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
+                } else {
+                    msgDiv.innerHTML = `<div style="color:#e53e3e;">❌ ${result.error || 'Erro'}</div>`;
+                }
+            } catch (error) {
+                msgDiv.innerHTML = `<div style="color:#e53e3e;">❌ Erro</div>`;
+            }
+        }, 'Confirmar', 'Cancelar');
+    };
+
+    // ============================================================
+    // GERAR PIX INLINE
+    // ============================================================
+    window.gerarPixInline = function(nomeCliente, idSufixo) {
+        const valorInput = document.getElementById(`valorPixInline-${idSufixo}`);
+        const msgDiv = document.getElementById(`msgPixInline-${idSufixo}`);
+        if (!valorInput || !msgDiv) return;
+
+        const valor = parseFloat(valorInput.value);
+        if (isNaN(valor) || valor <= 0) {
+            msgDiv.innerHTML = '<div style="color:#e53e3e;">Valor inválido</div>';
+            return;
+        }
+        msgDiv.innerHTML = '';
+        window.gerarQrCodePix(valor, `Pagamento de ${nomeCliente}`);
+    };
+
+    // ============================================================
+    // COMPARTILHAR EXTRATO
+    // ============================================================
+    window.compartilharExtrato = async function(nomeCliente) {
+        try {
+            const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
+                callAPI('listarDetalhesCliente', { cliente: nomeCliente }),
+                callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }),
+                callAPI('listarVendasPorCliente')
+            ]);
+            
+            let totalGasto = 0, totalPago = 0;
+            if (resumoCliente.success && resumoCliente.clientes) {
+                const cliente = resumoCliente.clientes.find(c => c.nome?.toLowerCase() === nomeCliente.toLowerCase());
+                if (cliente) {
+                    totalGasto = parseFloat(cliente.totalGasto) || 0;
+                    totalPago = parseFloat(cliente.totalPago) || 0;
+                }
+            }
+            
+            const saldo = totalGasto - totalPago;
+            let texto = `📋 EXTRATO - ${nomeCliente}\n\n`;
+            texto += `💰 Total Gasto: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
+            texto += `💵 Total Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
+            texto += `📊 Saldo: R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} (${saldo > 0 ? 'A pagar' : saldo < 0 ? 'Crédito' : 'Quitado'})\n\n`;
+            texto += `🛒 COMPRAS:\n`;
+            if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
+                historicoCompras.historico.forEach(h => {
+                    const data = h.data ? new Date(h.data) : new Date();
+                    texto += `- ${data.toLocaleDateString('pt-BR')}: ${h.produto} (${h.quantidade}x) = R$ ${(parseFloat(h.total)||0).toFixed(2).replace('.', ',')}\n`;
+                });
+            } else { texto += `Nenhuma compra.\n`; }
+            texto += `\n💳 PAGAMENTOS:\n`;
+            if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
+                historicoPagamentos.pagamentos.forEach(p => {
+                    const data = p.data ? new Date(p.data) : new Date();
+                    texto += `- ${data.toLocaleDateString('pt-BR')}: R$ ${(parseFloat(p.valor)||0).toFixed(2).replace('.', ',')} (${p.observacao || '-'})\n`;
+                });
+            } else { texto += `Nenhum pagamento.\n`; }
+            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+        } catch (error) {
+            mostrarToast('Erro: ' + error.message, 'error');
+        }
+    };
 
     // ============================================================
     // VENDEDORA
@@ -856,10 +1260,10 @@
     async function renderVendedora() {
         console.log('👩‍💼 Renderizando Vendedora...');
         const app = document.getElementById('app');
-        if (!app) return;
+        mostrarLoading('vendedora');
 
         app.innerHTML = `
-            <section>
+            <section style="animation:fadeIn 0.4s ease;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
                     <h2>👩‍💼 Área da Vendedora</h2>
                     <button onclick="window.atualizarVendedora()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;">🔄 Atualizar</button>
@@ -1018,7 +1422,6 @@
             return;
         }
         mostrarToast(`Gerando QR Code Pix para R$ ${valor.toFixed(2).replace('.', ',')}`, 'info');
-        // Implementação simplificada
         const payload = gerarPayloadPix(valor, descricao);
         mostrarModalPix(payload, valor, descricao);
     };
@@ -1142,18 +1545,16 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
-        console.log('🚀 Inicializando Sistema de Vendas V9.0...');
+        console.log('🚀 Inicializando Sistema de Vendas V10.0 (Mobile Optimized)...');
         adicionarEstilosCSS();
         inicializarNavegacao();
         
-        // Verificar se o elemento app existe
         const app = document.getElementById('app');
         if (!app) {
             console.error('❌ Elemento #app não encontrado!');
             return;
         }
         
-        // Carregar a página inicial
         setTimeout(() => {
             renderHome();
         }, 100);
@@ -1172,11 +1573,14 @@
     window.mostrarToast = mostrarToast;
     window.confirmarAcao = confirmarAcao;
     window.carregarTabelaClientes = carregarTabelaClientes;
+    window.toggleDetalhesCliente = window.toggleDetalhesCliente;
     window.enviarCobranca = window.enviarCobranca;
     window.atualizarVendedora = window.atualizarVendedora;
     window.gerarQrCodePix = window.gerarQrCodePix;
+    window.registrarPagamentoInline = window.registrarPagamentoInline;
+    window.gerarPixInline = window.gerarPixInline;
+    window.compartilharExtrato = window.compartilharExtrato;
 
-    // Iniciar quando o DOM estiver pronto
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
