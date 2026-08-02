@@ -1,11 +1,11 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO MOBILE OTIMIZADA V10.0
+// SISTEMA DE VENDAS - VERSÃO MOBILE OTIMIZADA V11.0
 // ============================================================
 
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V10.0...');
+    console.log('🚀 Iniciando Sistema de Vendas V11.0...');
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -146,7 +146,7 @@
             .cliente-detalhe-content{padding:15px;background:#f7fafc;border-radius:0 0 8px 8px;animation:fadeIn 0.3s ease}
             
             /* ============================================================ */
-            /* ESTILOS RESPONSIVOS PARA CLIENTES - MOBILE */
+            /* ESTILOS RESPONSIVOS PARA CLIENTES - MOBILE - VERTICAL */
             /* ============================================================ */
             @media (max-width: 768px) {
                 .clientes-table thead {
@@ -154,20 +154,20 @@
                 }
                 .clientes-table tbody tr {
                     display: block;
-                    margin-bottom: 10px;
+                    margin-bottom: 12px;
                     border: 1px solid #e2e8f0;
-                    border-radius: 8px;
-                    padding: 10px;
+                    border-radius: 10px;
+                    padding: 12px 15px;
                     background: white;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
                 }
                 .clientes-table tbody tr td {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 6px 0 !important;
+                    padding: 8px 0 !important;
                     border-bottom: 1px solid #f0f0f0;
-                    font-size: 13px;
+                    font-size: 14px;
                 }
                 .clientes-table tbody tr td:last-child {
                     border-bottom: none;
@@ -176,16 +176,20 @@
                     content: attr(data-label);
                     font-weight: 600;
                     color: #4a5568;
-                    font-size: 12px;
-                    flex: 0 0 100px;
+                    font-size: 13px;
+                    flex: 0 0 110px;
                 }
                 .clientes-table tbody tr td:first-child {
                     font-weight: 600;
-                    font-size: 15px;
+                    font-size: 16px;
                     color: #2d3748;
+                    border-bottom: 2px solid #e2e8f0;
+                    padding-bottom: 10px !important;
+                    margin-bottom: 4px;
                 }
                 .clientes-table tbody tr td:first-child::before {
                     content: "👤 Cliente";
+                    font-weight: 700;
                 }
                 .clientes-table tbody tr td:nth-child(2)::before {
                     content: "💰 Total Gasto";
@@ -197,9 +201,9 @@
                     content: "📊 Saldo";
                 }
                 
-                /* Detalhes do cliente em mobile */
+                /* Detalhes do cliente em mobile - VERTICAL */
                 .cliente-detalhe-content {
-                    padding: 10px !important;
+                    padding: 12px !important;
                 }
                 .cliente-detalhe-content .detalhes-grid {
                     display: grid !important;
@@ -207,20 +211,24 @@
                     gap: 6px !important;
                 }
                 .cliente-detalhe-content .detalhes-grid div {
-                    padding: 6px !important;
+                    padding: 8px !important;
                     font-size: 12px !important;
                 }
                 .cliente-detalhe-content .acoes-grid {
                     display: grid !important;
                     grid-template-columns: 1fr !important;
-                    gap: 6px !important;
+                    gap: 8px !important;
                 }
                 .cliente-detalhe-content table {
                     font-size: 11px !important;
                 }
                 .cliente-detalhe-content table td,
                 .cliente-detalhe-content table th {
-                    padding: 4px !important;
+                    padding: 4px 6px !important;
+                }
+                .cliente-detalhe-content .btn-acao {
+                    width: 100% !important;
+                    justify-content: center !important;
                 }
             }
             
@@ -251,11 +259,9 @@
     const StateManager = {
         currentPage: 'home',
         clienteExpandido: null,
-        loading: false,
         setPage(page) { this.currentPage = page; },
         setClienteExpandido(nome) { this.clienteExpandido = nome; },
-        getClienteExpandido() { return this.clienteExpandido; },
-        setLoading(status) { this.loading = status; }
+        getClienteExpandido() { return this.clienteExpandido; }
     };
 
     // ============================================================
@@ -283,7 +289,6 @@
                 console.log(`📄 Navegando para: ${page}`);
                 if (pageMap[page]) {
                     StateManager.setPage(page);
-                    // Mostrar loading antes de carregar
                     mostrarLoading(page);
                     setTimeout(() => pageMap[page](), 100);
                 }
@@ -338,7 +343,6 @@
 
         const { saudacao, horario } = obterSaudacao();
 
-        // Mostrar loading imediato
         mostrarLoading('home');
 
         try {
@@ -346,9 +350,6 @@
                 callAPI('listarProdutos'),
                 callAPI('listarVendas')
             ]);
-
-            console.log('📦 Produtos recebidos:', produtosResult);
-            console.log('💰 Vendas recebidas:', vendasResult);
 
             let totalProdutos = 0;
             let valorTotalEstoque = 0;
@@ -446,7 +447,6 @@
 
         try {
             const result = await callAPI('listarProdutos');
-            console.log('📦 Resultado listarProdutos:', result);
 
             let html = '';
             if (result.success && result.produtos) {
@@ -577,9 +577,6 @@
                 callAPI('listarProdutos'),
                 callAPI('listarClientes')
             ]);
-
-            console.log('📦 Produtos para venda:', produtosResult);
-            console.log('👥 Clientes:', clientesResult);
 
             let produtosOptions = '<option value="">Selecione um produto...</option>';
             if (produtosResult.success && produtosResult.produtos) {
@@ -794,20 +791,17 @@
     }
 
     // ============================================================
-    // CLIENTES - COM LAYOUT RESPONSIVO E LOADING SUAVE
+    // CLIENTES - LAYOUT VERTICAL EM MOBILE
     // ============================================================
     async function renderClientes() {
         console.log('👥 Renderizando Clientes...');
         const app = document.getElementById('app');
         
-        // Mostrar loading suave
         mostrarLoading('clientes');
 
         try {
             const result = await callAPI('listarVendasPorCliente');
-            console.log('👥 Resultado clientes:', result);
 
-            // Preparar dados
             let clientes = [];
             if (result.success && result.clientes) {
                 clientes = Array.isArray(result.clientes) ? result.clientes : [];
@@ -817,7 +811,6 @@
 
             const isMobileDevice = isMobile();
 
-            // Construir HTML da tabela
             let html = '';
             if (clientes.length > 0) {
                 clientes.forEach(cliente => {
@@ -854,7 +847,6 @@
                 html = `<tr><td colspan="4" style="text-align:center;padding:30px;"><p style="font-size:32px;">📭</p><p style="color:#666;">Nenhum cliente cadastrado</p></td></tr>`;
             }
 
-            // Montar página com tabela responsiva
             app.innerHTML = `
                 <section style="animation:fadeIn 0.4s ease;">
                     <h2>👥 Clientes</h2>
@@ -885,13 +877,11 @@
                 </section>
             `;
 
-            // Adicionar evento de busca
             document.getElementById('buscaCliente').addEventListener('input', (e) => {
                 const filtro = e.target.value;
                 carregarTabelaClientes(filtro);
             });
 
-            // Carregar detalhes do cliente expandido
             const expandido = StateManager.getClienteExpandido();
             if (expandido) {
                 const safeNome = expandido.replace(/[^a-zA-Z0-9]/g, '');
@@ -970,7 +960,6 @@
                 });
                 tbody.innerHTML = html;
 
-                // Recarregar detalhes do cliente expandido
                 const expandido = StateManager.getClienteExpandido();
                 if (expandido) {
                     const safeNome = expandido.replace(/[^a-zA-Z0-9]/g, '');
@@ -1004,7 +993,7 @@
     };
 
     // ============================================================
-    // CARREGAR DETALHES DO CLIENTE (RESPONSIVO)
+    // CARREGAR DETALHES DO CLIENTE - LAYOUT VERTICAL
     // ============================================================
     async function carregarDetalhesCliente(nomeCliente, container) {
         if (!container) return;
@@ -1029,7 +1018,6 @@
             const statusSaldo = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
             const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
 
-            // Preparar histórico de compras
             let comprasHtml = '';
             if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
                 comprasHtml = historicoCompras.historico.map(h => {
@@ -1042,7 +1030,6 @@
                 comprasHtml = `<tr><td colspan="4" style="text-align:center;padding:15px;color:#666;">Nenhuma compra</td></tr>`;
             }
 
-            // Preparar histórico de pagamentos
             let pagamentosHtml = '';
             if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
                 pagamentosHtml = historicoPagamentos.pagamentos.map(p => {
@@ -1061,84 +1048,99 @@
 
             container.innerHTML = `
                 <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);animation:slideDown 0.3s ease;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <h4 style="margin:0;color:#2d3748;font-size:${isMobileDevice ? '14px' : '16px'};">📋 ${nomeCliente}</h4>
-                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h4 style="margin:0;color:#2d3748;font-size:${isMobileDevice ? '15px' : '16px'};">📋 ${nomeCliente}</h4>
+                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;">✕ Fechar</button>
                     </div>
                     
-                    <!-- Resumo em grid responsivo -->
-                    <div class="detalhes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr 1fr' : 'repeat(auto-fit,minmax(120px,1fr))'};gap:8px;margin-bottom:10px;">
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Compras</p>
-                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:#667eea;">${historicoCompras.historico ? historicoCompras.historico.length : 0}</p>
+                    <!-- Resumo em grid 2x2 no mobile -->
+                    <div class="detalhes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr 1fr' : 'repeat(auto-fit,minmax(120px,1fr))'};gap:8px;margin-bottom:12px;">
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
+                            <p style="color:#718096;margin:0;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Compras</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#667eea;">${historicoCompras.historico ? historicoCompras.historico.length : 0}</p>
                         </div>
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Total Gasto</p>
-                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:#667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
+                            <p style="color:#718096;margin:0;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Total Gasto</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
                         </div>
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Total Pago</p>
-                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
+                            <p style="color:#718096;margin:0;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Total Pago</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
                         </div>
-                        <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Saldo</p>
-                            <p style="font-size:${isMobileDevice ? '16px' : '18px'};font-weight:bold;margin:2px 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
-                            <small style="color:${corSaldo};font-size:9px;">${statusSaldo}</small>
+                        <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:10px;border-radius:6px;text-align:center;border:1px solid ${corSaldo};">
+                            <p style="color:#718096;margin:0;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Saldo</p>
+                            <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
+                            <small style="color:${corSaldo};font-size:10px;font-weight:500;">${statusSaldo}</small>
                         </div>
                     </div>
                     
-                    <!-- Botão compartilhar -->
-                    <div style="margin-bottom:8px;">
-                        <button onclick="window.compartilharExtrato('${nomeSafe}')" style="background:#25D366;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:500;font-size:11px;width:100%;">📱 Compartilhar Extrato</button>
+                    <!-- Botão compartilhar - ocupando toda largura -->
+                    <div style="margin-bottom:10px;">
+                        <button onclick="window.compartilharExtrato('${nomeSafe}')" style="background:#25D366;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            📱 Compartilhar Extrato
+                        </button>
                     </div>
                     
                     <!-- Abas -->
-                    <div style="margin-bottom:8px;">
-                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='block';document.getElementById('abaPagamentos-${idSufixo}').style.display='none';" 
+                    <div style="margin-bottom:10px;display:flex;gap:6px;">
+                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='block';document.getElementById('abaPagamentos-${idSufixo}').style.display='none';this.style.background='#667eea';this.style.color='#fff';document.getElementById('btnPagamentos-${idSufixo}').style.background='#e2e8f0';document.getElementById('btnPagamentos-${idSufixo}').style.color='#4a5568';" 
                                 id="btnCompras-${idSufixo}" 
-                                style="background:#667eea;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;margin-right:6px;font-size:11px;">📦 Compras</button>
-                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='none';document.getElementById('abaPagamentos-${idSufixo}').style.display='block';" 
+                                style="flex:1;background:#667eea;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:all 0.2s;">📦 Compras</button>
+                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='none';document.getElementById('abaPagamentos-${idSufixo}').style.display='block';this.style.background='#667eea';this.style.color='#fff';document.getElementById('btnCompras-${idSufixo}').style.background='#e2e8f0';document.getElementById('btnCompras-${idSufixo}').style.color='#4a5568';" 
                                 id="btnPagamentos-${idSufixo}" 
-                                style="background:#e2e8f0;color:#4a5568;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">💳 Pagamentos</button>
+                                style="flex:1;background:#e2e8f0;color:#4a5568;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:all 0.2s;">💳 Pagamentos</button>
                     </div>
                     
                     <!-- Histórico de Compras -->
-                    <div id="abaCompras-${idSufixo}" style="margin-bottom:8px;">
-                        <div style="overflow-x:auto;max-height:${isMobileDevice ? '120px' : '150px'};overflow-y:auto;">
+                    <div id="abaCompras-${idSufixo}" style="margin-bottom:10px;">
+                        <div style="overflow-x:auto;max-height:${isMobileDevice ? '130px' : '160px'};overflow-y:auto;border:1px solid #edf2f7;border-radius:6px;">
                             <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
-                                <thead><tr style="background:#e2e8f0;"><th style="padding:4px;text-align:left;">Data</th><th style="padding:4px;text-align:left;">Produto</th><th style="padding:4px;text-align:left;">Qtd</th><th style="padding:4px;text-align:left;">Valor</th></tr></thead>
+                                <thead>
+                                    <tr style="background:#edf2f7;position:sticky;top:0;z-index:2;">
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Data</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Produto</th>
+                                        <th style="padding:6px 8px;text-align:center;font-weight:600;color:#4a5568;">Qtd</th>
+                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">Valor</th>
+                                    </tr>
+                                </thead>
                                 <tbody>${comprasHtml}</tbody>
                             </table>
                         </div>
                     </div>
                     
                     <!-- Histórico de Pagamentos -->
-                    <div id="abaPagamentos-${idSufixo}" style="display:none;margin-bottom:8px;">
-                        <div style="overflow-x:auto;max-height:${isMobileDevice ? '120px' : '150px'};overflow-y:auto;">
+                    <div id="abaPagamentos-${idSufixo}" style="display:none;margin-bottom:10px;">
+                        <div style="overflow-x:auto;max-height:${isMobileDevice ? '130px' : '160px'};overflow-y:auto;border:1px solid #edf2f7;border-radius:6px;">
                             <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
-                                <thead><tr style="background:#e2e8f0;"><th style="padding:4px;text-align:left;">Data</th><th style="padding:4px;text-align:left;">Valor</th><th style="padding:4px;text-align:left;">Observação</th></tr></thead>
+                                <thead>
+                                    <tr style="background:#edf2f7;position:sticky;top:0;z-index:2;">
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Data</th>
+                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">Valor</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Observação</th>
+                                    </tr>
+                                </thead>
                                 <tbody>${pagamentosHtml}</tbody>
                             </table>
                         </div>
                     </div>
                     
-                    <!-- Ações (Pagamento e Pix) -->
-                    <div class="acoes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr' : '1fr 1fr'};gap:8px;margin-top:8px;">
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;border:1px solid #e2e8f0;">
-                            <p style="margin:0 0 4px 0;font-size:10px;font-weight:600;color:#4a5568;">💳 Registrar Pagamento</p>
-                            <div style="display:flex;gap:4px;">
-                                <input type="number" id="valorPagamentoDetalhe-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:4px;border:2px solid #e2e8f0;border-radius:4px;font-size:11px;">
-                                <button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" style="background:#48bb78;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:500;font-size:10px;">💵</button>
+                    <!-- Ações - VERTICAL em mobile, lado a lado em desktop -->
+                    <div class="acoes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr' : '1fr 1fr'};gap:8px;margin-top:4px;">
+                        <div style="background:#f7fafc;padding:10px;border-radius:6px;border:1px solid #e2e8f0;">
+                            <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#4a5568;">💳 Registrar Pagamento</p>
+                            <div style="display:flex;gap:6px;">
+                                <input type="number" id="valorPagamentoDetalhe-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
+                                <button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" style="background:#48bb78;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">💵 Pagar</button>
                             </div>
-                            <div id="msgPagamentoInline-${idSufixo}" style="font-size:10px;margin-top:4px;"></div>
+                            <div id="msgPagamentoInline-${idSufixo}" style="font-size:11px;margin-top:6px;"></div>
                         </div>
-                        <div style="background:#f0f4ff;padding:8px;border-radius:4px;border:1px solid #667eea;">
-                            <p style="margin:0 0 4px 0;font-size:10px;font-weight:600;color:#4a5568;">📱 Pix</p>
-                            <div style="display:flex;gap:4px;">
-                                <input type="number" id="valorPixInline-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:4px;border:2px solid #667eea;border-radius:4px;font-size:11px;">
-                                <button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" style="background:#1a73e8;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:500;font-size:10px;">📱</button>
+                        <div style="background:#f0f4ff;padding:10px;border-radius:6px;border:1px solid #667eea;">
+                            <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#4a5568;">📱 Pagar com Pix</p>
+                            <div style="display:flex;gap:6px;">
+                                <input type="number" id="valorPixInline-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:8px;border:2px solid #667eea;border-radius:6px;font-size:13px;">
+                                <button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" style="background:#1a73e8;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">📱 Pix</button>
                             </div>
-                            <div id="msgPixInline-${idSufixo}" style="font-size:10px;margin-top:4px;"></div>
+                            <div id="msgPixInline-${idSufixo}" style="font-size:11px;margin-top:6px;"></div>
                         </div>
                     </div>
                 </div>
@@ -1146,7 +1148,7 @@
 
         } catch (error) {
             console.error('❌ Erro ao carregar detalhes:', error);
-            container.innerHTML = `<div style="padding:10px;color:#e53e3e;font-size:13px;">❌ Erro: ${error.message}</div>`;
+            container.innerHTML = `<div style="padding:12px;color:#e53e3e;font-size:13px;text-align:center;">❌ Erro ao carregar detalhes</div>`;
         }
     }
 
@@ -1176,7 +1178,6 @@
                     msgDiv.innerHTML = `<div style="color:#38a169;">✅ R$ ${valor.toFixed(2).replace('.', ',')}</div>`;
                     mostrarToast(`Pagamento registrado!`, 'success');
                     valorInput.value = '';
-                    // Recarregar detalhes
                     const safeNome = nomeCliente.replace(/[^a-zA-Z0-9]/g, '');
                     const detalheContainer = document.getElementById(`detalhe-${safeNome}`);
                     if (detalheContainer) {
@@ -1319,7 +1320,6 @@
 
         try {
             const result = await callAPI('listarPromessasPagamento');
-            console.log('📅 Promessas:', result);
 
             if (!result.success || !result.promessas || result.promessas.length === 0) {
                 container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
@@ -1396,7 +1396,6 @@
     // ENVIAR COBRANÇA VIA WHATSAPP
     // ============================================================
     window.enviarCobranca = function(cliente, valor, whatsapp) {
-        console.log(`📱 Enviando cobrança para ${cliente} (${whatsapp}) - R$ ${valor}`);
         const mensagem = `Olá, querida! Tudo bem? 💕\n\nPassando rapidinho para te lembrar do vencimento da sua parcela hoje!\nAssim você garante seus atendimentos e novidades sem preocupação! 😉🥰\n\n📲 Chave Pix: ${CONFIG.PIX.chave}\n\n📄 Comprovante: Pode me enviar por aqui mesmo!\n\nAgradeço demais a sua confiança e preferência de sempre! 🌷`;
         let url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
         if (whatsapp) {
@@ -1414,7 +1413,7 @@
     };
 
     // ============================================================
-    // PIX - FUNÇÕES SIMPLIFICADAS
+    // PIX
     // ============================================================
     window.gerarQrCodePix = function(valor, descricao = 'Pagamento') {
         if (!valor || valor <= 0) {
@@ -1545,7 +1544,7 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
-        console.log('🚀 Inicializando Sistema de Vendas V10.0 (Mobile Optimized)...');
+        console.log('🚀 Inicializando Sistema de Vendas V11.0 (Mobile Vertical)...');
         adicionarEstilosCSS();
         inicializarNavegacao();
         
