@@ -1820,15 +1820,52 @@
     };
 
     window.compartilharExtrato = async function(nomeCliente) {
-        const res = await callAPI('listarDetalhesCliente', { cliente: nomeCliente });
-        let texto = `📋 EXTRATO - ${nomeCliente}\n\n`;
-        if (res.success && Array.isArray(res.historico)) {
-            res.historico.forEach(h => {
-                texto += `- ${h.produto} (${h.quantidade}x) = R$ ${(parseFloat(h.total)||0).toFixed(2).replace('.', ',')}\n`;
-            });
+    try {
+        const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
+            callAPI('listarDetalhesCliente', { cliente: nomeCliente }, false),
+            callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }, false),
+            callAPI('listarVendasPorCliente', null, false)
+        ]);
+        let totalGasto = 0, totalPago = 0;
+        if (resumoCliente.success && resumoCliente.clientes) {
+            const cliente = resumoCliente.clientes.find(c => c.nome.toLowerCase() === nomeCliente.toLowerCase());
+            if (cliente) {
+                totalGasto = parseFloat(cliente.totalGasto) || 0;
+                totalPago = parseFloat(cliente.totalPago) || 0;
+            }
         }
-        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-    };
+        const saldo = totalGasto - totalPago;
+        let texto = `📋 EXTRATO DO CLIENTE\n\n`;
+        texto += `👤 Nome: ${nomeCliente}\n`;
+        texto += `💰 Total Gasto: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
+        texto += `💵 Total Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
+        texto += `📊 Saldo: R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} (${saldo > 0 ? 'A pagar' : saldo < 0 ? 'Crédito' : 'Quitado'})\n\n`;
+        texto += `🛒 COMPRAS:\n`;
+        if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
+            historicoCompras.historico.forEach(h => {
+                const data = h.data ? new Date(h.data) : new Date();
+                const dataStr = data.toLocaleDateString('pt-BR');
+                texto += `- ${dataStr}: ${h.produto} (${h.quantidade}x) = R$ ${(parseFloat(h.total)||0).toFixed(2).replace('.', ',')}\n`;
+            });
+        } else {
+            texto += `Nenhuma compra encontrada.\n`;
+        }
+        texto += `\n💳 PAGAMENTOS:\n`;
+        if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
+            historicoPagamentos.pagamentos.forEach(p => {
+                const data = p.data ? new Date(p.data) : new Date();
+                const dataStr = data.toLocaleDateString('pt-BR');
+                texto += `- ${dataStr}: R$ ${(parseFloat(p.valor)||0).toFixed(2).replace('.', ',')} (${p.observacao || '-'})\n`;
+            });
+        } else {
+            texto += `Nenhum pagamento encontrado.\n`;
+        }
+        const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+        window.open(url, '_blank');
+    } catch (error) {
+        mostrarToast('Erro ao gerar extrato: ' + error.message, 'error');
+    }
+};
 
     // ============================================================
     // VENDEDORA & COBRANÇAS
