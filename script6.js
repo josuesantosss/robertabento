@@ -1,6 +1,5 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V8.0
-// Carregamento Rápido
+// SISTEMA DE VENDAS - VERSÃO CORRIGIDA
 // ============================================================
 
 (function() {
@@ -83,7 +82,7 @@
                 .then(result => resolve(result))
                 .catch(error => {
                     clearTimeout(timeoutId);
-                    console.error(`❌ API Error (${action}):`, error);
+                    console.error('API Error:', error);
                     resolve({ success: false, error: error.message });
                 });
             });
@@ -231,7 +230,7 @@
     function inicializarNavegacao() {
         const navButtons = document.querySelectorAll('.nav-btn');
         navButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', function(e) {
                 const button = e.target.closest('.nav-btn');
                 if (!button) return;
                 navButtons.forEach(b => b.classList.remove('active'));
@@ -248,7 +247,7 @@
                 if (pageMap[page]) {
                     StateManager.setPage(page);
                     Cache.clear();
-                    requestAnimationFrame(() => pageMap[page]());
+                    setTimeout(() => pageMap[page](), 50);
                 }
             });
         });
@@ -265,50 +264,37 @@
     }
 
     // ============================================================
-    // PIX
+    // PIX - FUNÇÕES SIMPLIFICADAS
     // ============================================================
     window.gerarQrCodePix = function(valor, descricao = 'Pagamento') {
         if (!valor || valor <= 0) {
             mostrarToast('Valor inválido para gerar QR Code', 'error');
             return;
         }
-        const txid = 'VENDA' + Date.now().toString().slice(-8);
-        const payload = gerarPayloadPix(valor, descricao, txid);
+        // Implementação simplificada do Pix
+        const payload = gerarPayloadPix(valor, descricao);
         mostrarModalPix(payload, valor, descricao);
     };
 
-    function gerarPayloadPix(valor, descricao, txid) {
+    function gerarPayloadPix(valor, descricao) {
         const { chave, nomeRecebedor, cidade } = CONFIG.PIX;
-        let chaveLimpa = chave.trim();
-        let nomeLimpo = removerAcentos(nomeRecebedor.trim()).substring(0, 25);
-        let cidadeLimpa = removerAcentos(cidade.trim()).substring(0, 15);
-        let txidLimpo = (txid && txid.trim()) ? txid.trim().substring(0, 25) : '***';
-
         let payload = '000201';
-        const gui = '0014BR.GOV.BCB.PIX';
-        const chaveLen = String(chaveLimpa.length).padStart(2, '0');
-        const merchantAccount = gui + '01' + chaveLen + chaveLimpa;
-        const merchantAccountLen = String(merchantAccount.length).padStart(2, '0');
-        payload += '26' + merchantAccountLen + merchantAccount;
+        payload += '26420014BR.GOV.BCB.PIX0114' + chave;
         payload += '52040000';
         payload += '5303986';
         if (valor && valor > 0) {
             const valorFormatado = valor.toFixed(2);
-            const valorLen = String(valorFormatado.length).padStart(2, '0');
-            payload += '54' + valorLen + valorFormatado;
+            payload += '54' + String(valorFormatado.length).padStart(2, '0') + valorFormatado;
         }
         payload += '5802BR';
-        const nomeLen = String(nomeLimpo.length).padStart(2, '0');
-        payload += '59' + nomeLen + nomeLimpo;
-        const cidadeLen = String(cidadeLimpa.length).padStart(2, '0');
-        payload += '60' + cidadeLen + cidadeLimpa;
-        const txidValue = '05' + String(txidLimpo.length).padStart(2, '0') + txidLimpo;
-        const txidLen = String(txidValue.length).padStart(2, '0');
-        payload += '62' + txidLen + txidValue;
+        const nomeLimpo = removerAcentos(nomeRecebedor).substring(0, 25);
+        payload += '59' + String(nomeLimpo.length).padStart(2, '0') + nomeLimpo;
+        const cidadeLimpa = removerAcentos(cidade).substring(0, 15);
+        payload += '60' + String(cidadeLimpa.length).padStart(2, '0') + cidadeLimpa;
+        payload += '62070503***';
         payload += '6304';
         const crc = calcularCRC16(payload);
-        const crcHex = crc.toString(16).toUpperCase().padStart(4, '0');
-        payload += crcHex;
+        payload += crc.toString(16).toUpperCase().padStart(4, '0');
         return payload;
     }
 
@@ -322,13 +308,12 @@
     }
 
     function calcularCRC16(payload) {
-        const polynomial = 0x1021;
         let crc = 0xFFFF;
         for (let i = 0; i < payload.length; i++) {
             crc ^= payload.charCodeAt(i) << 8;
             for (let j = 0; j < 8; j++) {
                 if (crc & 0x8000) {
-                    crc = (crc << 1) ^ polynomial;
+                    crc = (crc << 1) ^ 0x1021;
                 } else {
                     crc <<= 1;
                 }
@@ -348,14 +333,14 @@
             position: 'fixed', top: '0', left: '0', right: '0', bottom: '0',
             background: 'rgba(0,0,0,0.6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: '10001', animation: 'fadeIn 0.2s ease',
+            zIndex: '10001',
             padding: '20px'
         });
 
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payload)}`;
 
         overlay.innerHTML = `
-            <div style="background:white; padding:20px; border-radius:16px; max-width:400px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:scaleIn 0.2s ease; position:relative;">
+            <div style="background:white; padding:20px; border-radius:16px; max-width:400px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
                 <button onclick="this.closest('.modal-pix').remove()" style="position:absolute; top:8px; right:12px; background:transparent; border:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
                 <div style="text-align:center;">
                     <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
@@ -420,13 +405,17 @@
     };
 
     // ============================================================
-    // HOME
+    // HOME (DASHBOARD)
     // ============================================================
     async function renderHome() {
         const app = document.getElementById('app');
-        if (!app) return;
+        if (!app) {
+            console.error('Elemento #app não encontrado!');
+            return;
+        }
         const { saudacao, horario } = obterSaudacao();
 
+        // Mostrar loading
         app.innerHTML = `
             <section>
                 <h2>🏠 Dashboard</h2>
@@ -460,21 +449,18 @@
         `;
 
         try {
-            const [produtosResult, vendasResult, promessasResult] = await Promise.all([
+            const [produtosResult, vendasResult] = await Promise.all([
                 callAPI('listarProdutos', null, false),
-                callAPI('listarVendas', null, false),
-                callAPI('listarPromessasPagamento', null, false)
+                callAPI('listarVendas', null, false)
             ]);
 
-            let totalProdutos = 0, valorTotalEstoque = 0, produtosBaixoEstoque = 0, produtosEsgotados = 0;
+            let totalProdutos = 0, valorTotalEstoque = 0;
             if (produtosResult.success && produtosResult.produtos) {
                 totalProdutos = produtosResult.produtos.length;
                 produtosResult.produtos.forEach(produto => {
                     const preco = parseFloat(produto.preco) || 0;
                     const quantidade = parseInt(produto.quantidade) || 0;
                     valorTotalEstoque += preco * quantidade;
-                    if (quantidade === 0) produtosEsgotados++;
-                    else if (quantidade <= 5) produtosBaixoEstoque++;
                 });
             }
 
@@ -496,7 +482,7 @@
                 <section>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                         <h2>🏠 Dashboard</h2>
-                        <button onclick="window.atualizarDashboard()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;">🔄 Atualizar</button>
+                        <button onclick="window.atualizarDashboard()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;cursor:pointer;">🔄 Atualizar</button>
                     </div>
                     <div class="saudacao-card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:18px 22px;border-radius:15px;margin-bottom:18px;box-shadow:0 4px 15px rgba(102,126,234,0.3);">
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -550,12 +536,6 @@
                             <small style="opacity:0.8;font-size:11px;">Desde ${inicioMes.toLocaleDateString('pt-BR')}</small>
                         </div>
                     </div>
-                    ${(produtosBaixoEstoque > 0 || produtosEsgotados > 0) ? `
-                        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
-                            ${produtosBaixoEstoque > 0 ? `<div style="padding:10px;background:#fff3cd;border:2px solid #ffc107;border-radius:6px;color:#856404;font-size:12px;"><strong>⚠️</strong> ${produtosBaixoEstoque} com estoque baixo</div>` : ''}
-                            ${produtosEsgotados > 0 ? `<div style="padding:10px;background:#f8d7da;border:2px solid #dc3545;border-radius:6px;color:#721c24;font-size:12px;"><strong>🔴</strong> ${produtosEsgotados} esgotados</div>` : ''}
-                        </div>
-                    ` : ''}
                     <div style="margin-top:12px;padding:15px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
                         <h3 style="margin:0 0 10px 0;font-size:15px;">📈 Resumo Geral</h3>
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
@@ -567,12 +547,13 @@
             `;
 
         } catch (error) {
+            console.error('Erro no renderHome:', error);
             app.innerHTML = `
                 <section><h2>🏠 Dashboard</h2>
                 <div style="text-align:center;padding:25px;color:#e53e3e;">
                     <p style="font-size:36px;">😕</p>
                     <p>❌ Erro: ${error.message}</p>
-                    <button onclick="window.renderHome()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;margin-top:6px;">🔄 Tentar</button>
+                    <button onclick="window.renderHome()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;margin-top:6px;">🔄 Tentar novamente</button>
                 </div></section>
             `;
         }
@@ -585,10 +566,12 @@
     };
 
     // ============================================================
-    // ESTOQUE
+    // ESTOQUE (VERSÃO SIMPLIFICADA)
     // ============================================================
     async function renderEstoque() {
         const app = document.getElementById('app');
+        if (!app) return;
+
         app.innerHTML = `
             <section>
                 <h2>📦 Estoque</h2>
@@ -629,22 +612,15 @@
         try {
             const result = await callAPI('listarProdutos');
             let html = '';
-            if (result.success && result.produtos.length > 0) {
-                const produtosOrdenados = result.produtos.sort((a, b) => 
-                    (a.nome || '').toLowerCase().localeCompare((b.nome || '').toLowerCase(), 'pt-BR')
-                );
-
-                produtosOrdenados.forEach(p => {
+            if (result.success && result.produtos && result.produtos.length > 0) {
+                result.produtos.forEach(p => {
                     const qtd = parseInt(p.quantidade) || 0;
                     const preco = parseFloat(p.preco) || 0;
                     const status = qtd === 0 ? '🔴' : qtd <= 5 ? '🟡' : '🟢';
                     const statusTexto = qtd === 0 ? 'Esgotado' : qtd <= 5 ? 'Baixo' : 'Normal';
-                    const nomeSafe = String(p.nome || '').replace(/'/g, "\\'");
-                    const marcaSafe = String(p.marca || '').replace(/'/g, "\\'");
-                    const categoriaSafe = String(p.categoria || '').replace(/'/g, "\\'");
                     html += `
-                        <tr onclick="window.abrirEdicaoProduto(${p.id}, '${nomeSafe}', ${preco}, ${qtd}, '${marcaSafe}', '${categoriaSafe}')" style="${qtd === 0 ? 'background:#fff5f5;' : ''}">
-                            <td style="padding:8px;"><strong>${p.nome}</strong></td>
+                        <tr>
+                            <td style="padding:8px;"><strong>${p.nome || 'Sem nome'}</strong></td>
                             <td style="padding:8px;">R$ ${preco.toFixed(2).replace('.', ',')}</td>
                             <td style="padding:8px;">${status} ${qtd} <small style="color:#666;">(${statusTexto})</small></td>
                             <td style="padding:8px;">${p.marca || '-'}</td>
@@ -687,9 +663,8 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
                         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;">
                             <span>🟢 Normal | 🟡 Baixo | 🔴 Esgotado</span>
-                            <span style="color:#666;">💡 Clique na linha para editar</span>
                         </div>
-                        <button onclick="window.renderEstoque()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;">🔄 Atualizar</button>
+                        <button onclick="window.renderEstoque()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;cursor:pointer;">🔄 Atualizar</button>
                     </div>
                     <div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);overflow:hidden;">
                         <div style="overflow-x:auto;">
@@ -713,6 +688,7 @@
             document.getElementById('formCadastroRapido').addEventListener('submit', cadastrarProdutoRapido);
 
         } catch (error) {
+            console.error('Erro no renderEstoque:', error);
             app.innerHTML = `<section><h2>📦 Estoque</h2><p style="color:red;">❌ Erro: ${error.message}</p></section>`;
         }
     }
@@ -743,112 +719,12 @@
             Cache.clear();
             renderEstoque();
         } else {
-            msg.innerHTML = `<div style="color:#e53e3e;">${result.error}</div>`;
+            msg.innerHTML = `<div style="color:#e53e3e;">${result.error || 'Erro ao cadastrar'}</div>`;
         }
     }
 
     // ============================================================
-    // EDIÇÃO DE PRODUTO
-    // ============================================================
-    window.abrirEdicaoProduto = function(id, nome, preco, quantidade, marca = '', categoria = '') {
-        const overlay = document.createElement('div');
-        Object.assign(overlay.style, {
-            position: 'fixed', top: '0', left: '0', right: '0', bottom: '0',
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: '9999', animation: 'fadeIn 0.15s ease'
-        });
-        overlay.innerHTML = `
-            <div class="edit-modal" style="background:#fff;padding:20px;border-radius:12px;max-width:450px;width:90%;box-shadow:0 10px 25px rgba(0,0,0,0.2);animation:scaleIn 0.15s ease;">
-                <h3 style="margin-top:0;font-size:17px;">✏️ Editar Produto</h3>
-                <p style="font-size:14px;color:#4a5568;"><strong>${nome}</strong> (ID: ${id})</p>
-                <div style="margin-bottom:10px;">
-                    <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Preço (R$)</label>
-                    <input type="number" id="editPreco" step="0.01" value="${preco.toFixed(2)}" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Quantidade</label>
-                    <input type="number" id="editQuantidade" value="${quantidade}" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Marca</label>
-                    <select id="editMarca" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                        <option value="">Selecione</option>
-                        ${CONFIG.MARCAS.map(m => `<option value="${m}" ${m === marca ? 'selected' : ''}>${m}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block;margin-bottom:3px;color:#4a5568;font-weight:500;font-size:12px;">Categoria</label>
-                    <select id="editCategoria" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                        <option value="">Selecione</option>
-                        ${CONFIG.CATEGORIAS.map(c => `<option value="${c}" ${c === categoria ? 'selected' : ''}>${c}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button id="btnSalvarEdicao" style="flex:1;background:#48bb78;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px;">💾 Salvar</button>
-                    <button id="btnExcluirEdicao" style="flex:1;background:#e53e3e;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px;">🗑️ Excluir</button>
-                    <button id="btnCancelarEdicao" style="flex:1;background:#e2e8f0;color:#4a5568;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px;">Cancelar</button>
-                </div>
-                <div id="msgEdicao" style="margin-top:10px;font-size:13px;"></div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-
-        overlay.querySelector('#btnSalvarEdicao').onclick = async () => {
-            const novoPreco = parseFloat(overlay.querySelector('#editPreco').value);
-            const novaQuantidade = parseInt(overlay.querySelector('#editQuantidade').value);
-            const novaMarca = overlay.querySelector('#editMarca').value;
-            const novaCategoria = overlay.querySelector('#editCategoria').value;
-            if (isNaN(novoPreco) || novoPreco < 0) {
-                overlay.querySelector('#msgEdicao').innerHTML = '<div style="color:#e53e3e;">Preço inválido</div>';
-                return;
-            }
-            if (isNaN(novaQuantidade) || novaQuantidade < 0) {
-                overlay.querySelector('#msgEdicao').innerHTML = '<div style="color:#e53e3e;">Quantidade inválida</div>';
-                return;
-            }
-            const result = await callAPI('atualizarProduto', {
-                id, preco: novoPreco, quantidade: novaQuantidade,
-                marca: novaMarca || '', categoria: novaCategoria || ''
-            }, false);
-            if (result.success) {
-                mostrarToast(`Produto "${nome}" atualizado!`, 'success');
-                overlay.remove();
-                renderEstoque();
-            } else {
-                overlay.querySelector('#msgEdicao').innerHTML = `<div style="color:#e53e3e;">${result.error}</div>`;
-            }
-        };
-
-        overlay.querySelector('#btnExcluirEdicao').onclick = () => {
-            overlay.remove();
-            window.confirmarExclusaoProduto(id, nome);
-        };
-
-        overlay.querySelector('#btnCancelarEdicao').onclick = () => overlay.remove();
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    };
-
-    window.confirmarExclusaoProduto = function(id, nome) {
-        confirmarAcao(
-            `Deseja excluir o produto "${nome}"?`,
-            async () => {
-                const result = await callAPI('excluirProduto', { id }, false);
-                if (result.success) {
-                    mostrarToast(`Produto "${nome}" excluído!`, 'success');
-                    Cache.clear();
-                    renderEstoque();
-                } else {
-                    mostrarToast(result.error || 'Erro ao excluir', 'error');
-                }
-            },
-            'Excluir',
-            'Cancelar'
-        );
-    };
-
-    // ============================================================
-    // VENDAS
+    // VENDAS (VERSÃO SIMPLIFICADA)
     // ============================================================
     async function renderVendas() {
         const app = document.getElementById('app');
@@ -869,11 +745,8 @@
             ]);
 
             let produtosOptions = '<option value="">Selecione um produto...</option>';
-            if (produtosResult.success && produtosResult.produtos.length > 0) {
-                const produtosOrdenados = produtosResult.produtos.sort((a, b) => 
-                    (a.nome || '').toLowerCase().localeCompare((b.nome || '').toLowerCase(), 'pt-BR')
-                );
-                produtosOrdenados.forEach(p => {
+            if (produtosResult.success && produtosResult.produtos && produtosResult.produtos.length > 0) {
+                produtosResult.produtos.forEach(p => {
                     const qtd = parseInt(p.quantidade) || 0;
                     const preco = parseFloat(p.preco) || 0;
                     const disabled = qtd === 0 ? 'disabled' : '';
@@ -886,12 +759,11 @@
             }
 
             let clientesOptions = '<option value="">Selecione um cliente...</option>';
-            let clientes = [];
             if (clientesResult.success && clientesResult.clientes && clientesResult.clientes.length > 0) {
-                clientes = clientesResult.clientes.map(c => c.nome).filter(n => n && n !== 'Cliente não informado');
-                clientes.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase(), 'pt-BR'));
-                clientes.forEach(nome => {
-                    clientesOptions += `<option value="${nome}">${nome}</option>`;
+                clientesResult.clientes.forEach(c => {
+                    if (c.nome && c.nome !== 'Cliente não informado') {
+                        clientesOptions += `<option value="${c.nome}">${c.nome}</option>`;
+                    }
                 });
             }
 
@@ -932,17 +804,6 @@
                                             <label style="font-size:12px;color:#4a5568;">Qtd</label>
                                             <input type="number" id="qtd${i}" class="qtd-produto" min="0" value="0" style="width:100%;padding:6px;border:2px solid #e2e8f0;border-radius:6px;font-size:12px;">
                                         </div>
-                                        <div style="flex:1.5;min-width:100px;">
-                                            <label style="font-size:12px;color:#4a5568;">Desconto</label>
-                                            <div style="display:flex;gap:4px;align-items:center;">
-                                                <input type="number" id="descValor${i}" class="desc-valor" min="0" step="0.01" placeholder="0" style="flex:1;min-width:40px;padding:6px;border:2px solid #e2e8f0;border-radius:6px;font-size:12px;">
-                                                <select id="descTipo${i}" class="desc-tipo" style="padding:6px;border:2px solid #e2e8f0;border-radius:6px;background:#fff;width:55px;font-size:12px;">
-                                                    <option value="%">%</option>
-                                                    <option value="R$">R$</option>
-                                                </select>
-                                            </div>
-                                            <span id="descAplicado${i}" style="font-size:11px;color:#e53e3e;display:block;min-height:16px;"></span>
-                                        </div>
                                         <div style="flex:1;min-width:80px;">
                                             <label style="font-size:12px;color:#4a5568;">Subtotal</label>
                                             <span id="subtotal${i}" style="display:block;padding:6px;background:#f7fafc;border-radius:6px;text-align:center;font-weight:bold;color:#667eea;font-size:13px;">R$ 0,00</span>
@@ -966,18 +827,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="button" id="btnMostrarPix" style="margin-top:8px;background:#1a73e8;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:500;width:100%;font-size:14px;">💳 Pagar com PIX</button>
-                            <div id="pixBox" style="display:none;margin-top:8px;padding:12px;background:#f0f4ff;border-radius:6px;border:2px solid #667eea;">
-                                <div style="display:flex;flex-direction:column;gap:8px;">
-                                    <label style="font-weight:500;color:#2d3748;font-size:13px;">Valor a pagar via Pix</label>
-                                    <input type="number" id="valorPixVenda" step="0.01" min="0" placeholder="Digite o valor" style="width:100%;padding:8px;border:2px solid #667eea;border-radius:6px;font-size:14px;">
-                                    <div style="display:flex;gap:8px;">
-                                        <button type="button" id="btnGerarPix" style="flex:1;background:#48bb78;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:500;font-size:12px;">📱 Gerar QR Code</button>
-                                        <button type="button" id="btnCancelarPix" style="flex:1;background:#e2e8f0;color:#4a5568;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:500;font-size:12px;">Cancelar</button>
-                                    </div>
-                                    <div id="msgPixVenda" style="font-size:12px;"></div>
-                                </div>
-                            </div>
                             <button type="submit" style="margin-top:8px;background:#48bb78;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:500;width:100%;font-size:14px;">💰 Registrar Venda</button>
                         </form>
                         <div id="msgVenda" style="margin-top:12px;"></div>
@@ -991,36 +840,19 @@
                     const select = document.getElementById(`produto${i}`);
                     const qtdInput = document.getElementById(`qtd${i}`);
                     const subtotalSpan = document.getElementById(`subtotal${i}`);
-                    const descValorInput = document.getElementById(`descValor${i}`);
-                    const descTipoSelect = document.getElementById(`descTipo${i}`);
-                    const descAplicadoSpan = document.getElementById(`descAplicado${i}`);
 
                     const qtd = parseInt(qtdInput.value) || 0;
                     const option = select.options[select.selectedIndex];
-                    let subtotal = 0, descontoAplicado = 0, subtotalFinal = 0;
+                    let subtotalFinal = 0;
 
                     if (select.selectedIndex > 0 && option && qtd > 0) {
                         const preco = parseFloat(option.dataset.preco || 0);
-                        subtotal = preco * qtd;
-                        const descValor = parseFloat(descValorInput.value) || 0;
-                        const descTipo = descTipoSelect.value;
-                        if (descValor > 0) {
-                            if (descTipo === '%') {
-                                descontoAplicado = (subtotal * descValor) / 100;
-                                if (descontoAplicado > subtotal) descontoAplicado = subtotal;
-                            } else {
-                                descontoAplicado = Math.min(descValor, subtotal);
-                            }
-                        }
-                        subtotalFinal = subtotal - descontoAplicado;
+                        subtotalFinal = preco * qtd;
                     }
                     subtotalSpan.textContent = `R$ ${subtotalFinal.toFixed(2).replace('.', ',')}`;
-                    descAplicadoSpan.textContent = descontoAplicado > 0 ? `-${descTipoSelect.value === '%' ? descValorInput.value + '%' : 'R$ ' + descValorInput.value}` : '';
                     totalGeral += subtotalFinal;
                 }
                 document.getElementById('totalVenda').textContent = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
-                const valorPixInput = document.getElementById('valorPixVenda');
-                if (valorPixInput && !valorPixInput.value) valorPixInput.value = totalGeral.toFixed(2);
                 const valorPago = parseFloat(document.getElementById('valorPago').value) || 0;
                 const troco = valorPago - totalGeral;
                 const trocoSpan = document.getElementById('trocoOuPendente');
@@ -1033,44 +865,17 @@
                 }
             }
 
-            document.querySelectorAll('.produto-select, .qtd-produto, .desc-valor, .desc-tipo').forEach(el => {
+            document.querySelectorAll('.produto-select, .qtd-produto').forEach(el => {
                 el.addEventListener('change', calcularTotais);
                 el.addEventListener('input', calcularTotais);
             });
             document.getElementById('valorPago').addEventListener('input', calcularTotais);
 
-            const btnMostrarPix = document.getElementById('btnMostrarPix');
-            const pixBox = document.getElementById('pixBox');
-            document.getElementById('btnCancelarPix').addEventListener('click', function() {
-                pixBox.style.display = 'none';
-                btnMostrarPix.textContent = '💳 Pagar com PIX';
-            });
-            document.getElementById('btnGerarPix').addEventListener('click', function() {
-                const valor = parseFloat(document.getElementById('valorPixVenda').value);
-                if (isNaN(valor) || valor <= 0) {
-                    document.getElementById('msgPixVenda').innerHTML = '<div style="color:#e53e3e;">Valor inválido</div>';
-                    return;
-                }
-                const cliente = document.getElementById('clienteSelect').value || 'Cliente';
-                document.getElementById('msgPixVenda').innerHTML = '';
-                gerarQrCodePix(valor, `Venda para ${cliente}`);
-            });
-            btnMostrarPix.addEventListener('click', function() {
-                if (pixBox.style.display === 'none') {
-                    const total = parseFloat(document.getElementById('totalVenda').textContent.replace('R$ ', '').replace(',', '.')) || 0;
-                    document.getElementById('valorPixVenda').value = total.toFixed(2);
-                    pixBox.style.display = 'block';
-                    btnMostrarPix.textContent = 'Ocultar Pix';
-                } else {
-                    pixBox.style.display = 'none';
-                    btnMostrarPix.textContent = '💳 Pagar com PIX';
-                }
-            });
-
             document.getElementById('formVendaMultipla').addEventListener('submit', registrarVendaMultipla);
             calcularTotais();
 
         } catch (error) {
+            console.error('Erro no renderVendas:', error);
             app.innerHTML = `<section><h2>💰 Vendas</h2><p style="color:red;">❌ Erro: ${error.message}</p></section>`;
         }
     }
@@ -1095,8 +900,6 @@
         for (let i = 1; i <= 4; i++) {
             const select = document.getElementById(`produto${i}`);
             const qtdInput = document.getElementById(`qtd${i}`);
-            const descValorInput = document.getElementById(`descValor${i}`);
-            const descTipoSelect = document.getElementById(`descTipo${i}`);
             const qtd = parseInt(qtdInput.value) || 0;
 
             if (qtd > 0 && select.selectedIndex > 0) {
@@ -1111,28 +914,10 @@
                     return;
                 }
 
-                const subtotal = precoOriginal * qtd;
-                const descValor = parseFloat(descValorInput.value) || 0;
-                const descTipo = descTipoSelect.value;
-                let descontoAplicado = 0;
-                if (descValor > 0) {
-                    if (descTipo === '%') {
-                        descontoAplicado = (subtotal * descValor) / 100;
-                        if (descontoAplicado > subtotal) descontoAplicado = subtotal;
-                    } else {
-                        descontoAplicado = Math.min(descValor, subtotal);
-                    }
-                }
-                const totalItem = subtotal - descontoAplicado;
-                itens.push({
-                    produtoId, quantidade: qtd,
-                    precoUnitario: totalItem / qtd,
-                    desconto: descontoAplicado,
-                    descontoTipo: descTipo,
-                    descontoValor: descValor
-                });
+                const totalItem = precoOriginal * qtd;
+                itens.push({ produtoId, quantidade: qtd, precoUnitario: precoOriginal });
                 totalVenda += totalItem;
-                resumoItens.push(`${qtd}x ${nomeProduto}${descontoAplicado > 0 ? ` (desc: ${descValor}${descTipo === '%' ? '%' : 'R$'})` : ''}`);
+                resumoItens.push(`${qtd}x ${nomeProduto}`);
             }
         }
 
@@ -1144,22 +929,23 @@
         const troco = valorPago - totalVenda;
         let msgConfirm = `Confirmar venda para ${cliente}?<br><br>Itens: ${resumoItens.join(', ')}<br><br>Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}<br>Pago: R$ ${valorPago.toFixed(2).replace('.', ',')}`;
         msgConfirm += troco >= 0 ? `<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}` : `<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`;
-        if (troco < 0 && dataPagamento) msgConfirm += `<br>📅 Data: ${new Date(dataPagamento).toLocaleDateString('pt-BR')}`;
-        if (troco < 0 && whatsapp) msgConfirm += `<br>📱 WhatsApp: ${whatsapp}`;
 
         confirmarAcao(msgConfirm, async () => {
             try {
-                botaoSubmit.innerHTML = '<span class="loading-spinner" style="font-size:16px;">⏳</span> Processando...';
+                botaoSubmit.innerHTML = '⏳ Processando...';
                 botaoSubmit.disabled = true;
                 msg.innerHTML = '<div style="padding:10px;background:#e3f2fd;color:#0d47a1;border-radius:6px;">⏳ Processando venda...</div>';
 
                 let todasOk = true;
                 for (const item of itens) {
                     const result = await callAPI('registrarVenda', {
-                        produtoId: item.produtoId, quantidade: item.quantidade,
-                        cliente: cliente, precoUnitario: item.precoUnitario,
-                        desconto: item.desconto, descontoTipo: item.descontoTipo,
-                        descontoValor: item.descontoValor
+                        produtoId: item.produtoId,
+                        quantidade: item.quantidade,
+                        cliente: cliente,
+                        precoUnitario: item.precoUnitario,
+                        desconto: 0,
+                        descontoTipo: 'R$',
+                        descontoValor: 0
                     }, false);
                     if (!result.success) { todasOk = false; break; }
                 }
@@ -1183,7 +969,6 @@
                         <div style="padding:12px;background:#c6f6d5;color:#22543d;border-radius:6px;">
                             ✅ Venda registrada! Total: R$ ${totalVenda.toFixed(2).replace('.', ',')}
                             ${troco >= 0 ? `<br>Troco: R$ ${troco.toFixed(2).replace('.', ',')}` : `<br>⚠️ Pendente: R$ ${Math.abs(troco).toFixed(2).replace('.', ',')}`}
-                            ${troco < 0 && dataPagamento ? `<br>📅 Data prometida: ${new Date(dataPagamento).toLocaleDateString('pt-BR')}` : ''}
                         </div>
                         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="gerarQrCodePix(${totalVenda}, 'Venda para ${cliente}')" 
@@ -1202,19 +987,15 @@
                             </button>
                         </div>
                     `;
-                    mostrarToast(`Venda de R$ ${totalVenda.toFixed(2).replace('.', ',')} registrada!`, 'success');
+                    mostrarToast(`Venda registrada!`, 'success');
                     document.querySelectorAll('.qtd-produto').forEach(el => el.value = 0);
                     document.querySelectorAll('.produto-select').forEach(el => el.selectedIndex = 0);
-                    document.querySelectorAll('.desc-valor').forEach(el => el.value = '');
-                    document.querySelectorAll('.desc-tipo').forEach(el => el.selectedIndex = 0);
-                    document.querySelectorAll('#subtotal1, #subtotal2, #subtotal3, #subtotal4').forEach(el => el.textContent = 'R$ 0,00');
                     document.getElementById('totalVenda').textContent = 'R$ 0,00';
                     document.getElementById('trocoOuPendente').textContent = 'R$ 0,00';
                     document.getElementById('valorPago').value = '';
                     document.getElementById('whatsappCliente').value = '';
                     document.getElementById('dataPagamento').value = '';
                     Cache.clear();
-                    await carregarClientesDropdown();
                 }
             } catch (error) {
                 msg.innerHTML = `<div style="padding:10px;background:#fed7d7;color:#9b2c2c;border-radius:6px;">❌ Erro: ${error.message}</div>`;
@@ -1234,45 +1015,17 @@
         const select = document.getElementById('clienteSelect');
         if (select) {
             const novoNome = nome.trim();
-            const options = Array.from(select.options).filter(opt => opt.value !== '');
-            options.push({ value: novoNome, textContent: novoNome });
-            options.sort((a, b) => (a.value || '').toLowerCase().localeCompare((b.value || '').toLowerCase(), 'pt-BR'));
-            select.innerHTML = '<option value="">Selecione um cliente...</option>';
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt.value || opt.textContent;
-                option.textContent = opt.textContent || opt.value;
-                select.appendChild(option);
-            });
+            const option = document.createElement('option');
+            option.value = novoNome;
+            option.textContent = novoNome;
+            select.appendChild(option);
             select.value = novoNome;
             mostrarToast(`Cliente "${novoNome}" adicionado!`, 'success');
         }
     };
 
-    async function carregarClientesDropdown() {
-        const select = document.getElementById('clienteSelect');
-        if (!select) return;
-        try {
-            const result = await callAPI('listarClientes', null, false);
-            let clientes = [];
-            if (result.success && result.clientes) {
-                clientes = result.clientes.map(c => c.nome).filter(n => n && n !== 'Cliente não informado');
-                clientes.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase(), 'pt-BR'));
-            }
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">Selecione um cliente...</option>';
-            clientes.forEach(nome => {
-                const opt = document.createElement('option');
-                opt.value = nome;
-                opt.textContent = nome;
-                select.appendChild(opt);
-            });
-            if (currentValue && clientes.includes(currentValue)) select.value = currentValue;
-        } catch (e) { console.error('Erro ao carregar clientes:', e); }
-    }
-
     // ============================================================
-    // CLIENTES
+    // CLIENTES (VERSÃO SIMPLIFICADA)
     // ============================================================
     async function renderClientes() {
         const app = document.getElementById('app');
@@ -1308,46 +1061,28 @@
         const container = document.getElementById('tabelaClientes');
         if (!container) return;
 
-        container.innerHTML = `<div style="text-align:center;padding:15px;"><div class="loading-spinner" style="font-size:18px;">⏳</div><p style="color:#667eea;font-size:13px;">Atualizando...</p></div>`;
-
         try {
             const result = await callAPI('listarVendasPorCliente', null, false);
             let html = '';
             if (result.success && result.clientes && result.clientes.length > 0) {
                 let clientesFiltrados = result.clientes.filter(c => c.nome && c.nome !== 'Cliente não informado');
-                if (filtro) clientesFiltrados = clientesFiltrados.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()));
-                
+                if (filtro) {
+                    clientesFiltrados = clientesFiltrados.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()));
+                }
                 if (clientesFiltrados.length > 0) {
-                    clientesFiltrados.sort((a, b) => (a.nome || '').toLowerCase().localeCompare((b.nome || '').toLowerCase(), 'pt-BR'));
-
                     clientesFiltrados.forEach(cliente => {
                         const totalGasto = parseFloat(cliente.totalGasto) || 0;
                         const totalPago = parseFloat(cliente.totalPago) || 0;
                         const saldo = totalGasto - totalPago;
                         const statusSaldo = saldo > 0.01 ? '🔴' : saldo < -0.01 ? '🟡' : '🟢';
                         const statusTexto = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
-                        const nomeSafe = String(cliente.nome || '').replace(/'/g, "\\'");
-                        const isExpanded = StateManager.getClienteExpandido() === cliente.nome;
-                        
                         html += `
-                            <tr onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="${isExpanded ? 'background:#f7fafc;' : ''}">
+                            <tr>
                                 <td style="padding:8px;"><strong>${cliente.nome}</strong></td>
                                 <td style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                                 <td style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
                                 <td style="padding:8px;">${statusSaldo} <strong>R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</strong> <small>(${statusTexto})</small></td>
                             </tr>
-                            ${isExpanded ? `
-                                <tr class="cliente-detalhe-row">
-                                    <td colspan="4">
-                                        <div class="cliente-detalhe-content" id="detalhe-${cliente.nome.replace(/[^a-zA-Z0-9]/g, '')}">
-                                            <div style="text-align:center;padding:8px;">
-                                                <div class="loading-spinner" style="font-size:16px;">⏳</div>
-                                                <p style="color:#667eea;font-size:12px;">Carregando detalhes...</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ` : ''}
                         `;
                     });
                 } else {
@@ -1372,252 +1107,20 @@
                     </table>
                 </div>
                 <div style="margin-top:8px;padding:8px;background:#f7fafc;border-radius:6px;font-size:11px;color:#666;">
-                    🟢 Quitado | 🔴 Em débito | 🟡 Crédito | Clique no cliente para ver detalhes
+                    🟢 Quitado | 🔴 Em débito | 🟡 Crédito
                 </div>
             `;
 
-            const expandido = StateManager.getClienteExpandido();
-            if (expandido) {
-                const safeNome = expandido.replace(/[^a-zA-Z0-9]/g, '');
-                const detalheContainer = document.getElementById(`detalhe-${safeNome}`);
-                if (detalheContainer) await carregarDetalhesCliente(expandido, detalheContainer);
-            }
-
         } catch (error) {
+            console.error('Erro ao carregar clientes:', error);
             container.innerHTML = `<div style="text-align:center;padding:15px;color:#e53e3e;"><p>❌ Erro: ${error.message}</p><button onclick="carregarTabelaClientes()" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;">🔄 Tentar</button></div>`;
         }
     }
 
-    window.toggleDetalhesCliente = async function(nomeCliente) {
-        const current = StateManager.getClienteExpandido();
-        if (current === nomeCliente) {
-            StateManager.setClienteExpandido(null);
-        } else {
-            StateManager.setClienteExpandido(nomeCliente);
-        }
-        await carregarTabelaClientes(StateManager.getFiltro());
-    };
-
-    async function carregarDetalhesCliente(nomeCliente, container) {
-        if (!container) return;
-
-        try {
-            const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
-                callAPI('listarDetalhesCliente', { cliente: nomeCliente }, false),
-                callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }, false),
-                callAPI('listarVendasPorCliente', null, false)
-            ]);
-
-            let totalGasto = 0, totalPago = 0;
-            if (resumoCliente.success && resumoCliente.clientes) {
-                const cliente = resumoCliente.clientes.find(c => c.nome.toLowerCase() === nomeCliente.toLowerCase());
-                if (cliente) {
-                    totalGasto = parseFloat(cliente.totalGasto) || 0;
-                    totalPago = parseFloat(cliente.totalPago) || 0;
-                }
-            }
-
-            const saldo = totalGasto - totalPago;
-            const statusSaldo = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
-            const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
-
-            let comprasHtml = '';
-            if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
-                comprasHtml = historicoCompras.historico.map(h => {
-                    const data = h.data ? new Date(h.data) : new Date();
-                    const dataFormatada = data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    let nomeProduto = h.produto || '-';
-                    let observacao = '';
-                    const descRegex = /\(desc:\s*(.*?)\)/;
-                    const match = nomeProduto.match(descRegex);
-                    if (match) { observacao = match[1].trim(); nomeProduto = nomeProduto.replace(descRegex, '').trim(); }
-                    return `<tr><td style="padding:6px;">${dataFormatada}</td><td style="padding:6px;">${nomeProduto}</td><td style="padding:6px;">${h.quantidade || 1}</td><td style="padding:6px;">R$ ${(parseFloat(h.total) || 0).toFixed(2).replace('.', ',')}</td><td style="padding:6px;">${observacao || ''}</td></tr>`;
-                }).join('');
-            } else {
-                comprasHtml = `<tr><td colspan="5" style="text-align:center;padding:15px;color:#666;">Nenhuma compra</td></tr>`;
-            }
-
-            let pagamentosHtml = '';
-            if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
-                pagamentosHtml = historicoPagamentos.pagamentos.map(p => {
-                    const data = p.data ? new Date(p.data) : new Date();
-                    const dataFormatada = data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    return `<tr><td style="padding:6px;">${dataFormatada}</td><td style="padding:6px;">R$ ${(parseFloat(p.valor) || 0).toFixed(2).replace('.', ',')}</td><td style="padding:6px;">${p.observacao || '-'}</td></tr>`;
-                }).join('');
-            } else {
-                pagamentosHtml = `<tr><td colspan="3" style="text-align:center;padding:15px;color:#666;">Nenhum pagamento</td></tr>`;
-            }
-
-            const idSufixo = nomeCliente.replace(/[^a-zA-Z0-9]/g, '');
-            const nomeSafe = nomeCliente.replace(/'/g, "\\'");
-
-            container.innerHTML = `
-                <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <h4 style="margin:0;color:#2d3748;font-size:15px;">📋 ${nomeCliente}</h4>
-                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Compras</p>
-                            <p style="font-size:18px;font-weight:bold;margin:2px 0;color:#667eea;">${historicoCompras.historico ? historicoCompras.historico.length : 0}</p>
-                        </div>
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Total Gasto</p>
-                            <p style="font-size:18px;font-weight:bold;margin:2px 0;color:#667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
-                        </div>
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Total Pago</p>
-                            <p style="font-size:18px;font-weight:bold;margin:2px 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
-                        </div>
-                        <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:8px;border-radius:4px;text-align:center;">
-                            <p style="color:#666;margin:0;font-size:10px;">Saldo</p>
-                            <p style="font-size:18px;font-weight:bold;margin:2px 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
-                            <small style="color:${corSaldo};font-size:9px;">${statusSaldo}</small>
-                        </div>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <button onclick="window.compartilharExtrato('${nomeSafe}')" style="background:#25D366;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:500;font-size:11px;width:100%;">📱 Compartilhar Extrato</button>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='block';document.getElementById('abaPagamentos-${idSufixo}').style.display='none';" 
-                                id="btnCompras-${idSufixo}" 
-                                style="background:#667eea;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;margin-right:6px;font-size:11px;">📦 Compras</button>
-                        <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='none';document.getElementById('abaPagamentos-${idSufixo}').style.display='block';" 
-                                id="btnPagamentos-${idSufixo}" 
-                                style="background:#e2e8f0;color:#4a5568;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">💳 Pagamentos</button>
-                    </div>
-                    <div id="abaCompras-${idSufixo}" style="margin-bottom:8px;">
-                        <div style="overflow-x:auto;max-height:150px;overflow-y:auto;">
-                            <table style="width:100%;border-collapse:collapse;font-size:11px;">
-                                <thead><tr style="background:#e2e8f0;"><th style="padding:4px;text-align:left;">Data</th><th style="padding:4px;text-align:left;">Produto</th><th style="padding:4px;text-align:left;">Qtd</th><th style="padding:4px;text-align:left;">Valor</th><th style="padding:4px;text-align:left;">Obs</th></tr></thead>
-                                <tbody>${comprasHtml}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div id="abaPagamentos-${idSufixo}" style="display:none;margin-bottom:8px;">
-                        <div style="overflow-x:auto;max-height:150px;overflow-y:auto;">
-                            <table style="width:100%;border-collapse:collapse;font-size:11px;">
-                                <thead><tr style="background:#e2e8f0;"><th style="padding:4px;text-align:left;">Data</th><th style="padding:4px;text-align:left;">Valor</th><th style="padding:4px;text-align:left;">Observação</th></tr></thead>
-                                <tbody>${pagamentosHtml}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div style="background:#f7fafc;padding:8px;border-radius:4px;border:1px solid #e2e8f0;">
-                            <p style="margin:0 0 4px 0;font-size:10px;font-weight:600;color:#4a5568;">💳 Registrar Pagamento</p>
-                            <div style="display:flex;gap:4px;">
-                                <input type="number" id="valorPagamentoDetalhe-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:4px;border:2px solid #e2e8f0;border-radius:4px;font-size:11px;">
-                                <button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" style="background:#48bb78;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:500;font-size:10px;">💵</button>
-                            </div>
-                            <div id="msgPagamentoInline-${idSufixo}" style="font-size:10px;margin-top:4px;"></div>
-                        </div>
-                        <div style="background:#f0f4ff;padding:8px;border-radius:4px;border:1px solid #667eea;">
-                            <p style="margin:0 0 4px 0;font-size:10px;font-weight:600;color:#4a5568;">📱 Pix</p>
-                            <div style="display:flex;gap:4px;">
-                                <input type="number" id="valorPixInline-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:4px;border:2px solid #667eea;border-radius:4px;font-size:11px;">
-                                <button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" style="background:#1a73e8;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:500;font-size:10px;">📱</button>
-                            </div>
-                            <div id="msgPixInline-${idSufixo}" style="font-size:10px;margin-top:4px;"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-        } catch (error) {
-            container.innerHTML = `<div style="padding:10px;color:#e53e3e;font-size:13px;">❌ Erro: ${error.message}</div>`;
-        }
-    }
-
-    window.registrarPagamentoInline = async function(nomeCliente, idSufixo) {
-        const valorInput = document.getElementById(`valorPagamentoDetalhe-${idSufixo}`);
-        const msgDiv = document.getElementById(`msgPagamentoInline-${idSufixo}`);
-        if (!valorInput || !msgDiv) return;
-
-        const valor = parseFloat(valorInput.value);
-        if (isNaN(valor) || valor <= 0) {
-            msgDiv.innerHTML = '<div style="color:#e53e3e;">Valor inválido</div>';
-            return;
-        }
-
-        confirmarAcao(`Confirmar pagamento de R$ ${valor.toFixed(2).replace('.', ',')} de ${nomeCliente}?`, async () => {
-            msgDiv.innerHTML = '<span style="color:#667eea;">⏳</span>';
-            try {
-                const result = await callAPI('registrarPagamento', { cliente: nomeCliente, valor, observacao: 'Pagamento registrado' }, false);
-                if (result.success) {
-                    msgDiv.innerHTML = `<div style="color:#38a169;">✅ R$ ${valor.toFixed(2).replace('.', ',')}</div>`;
-                    mostrarToast(`Pagamento registrado!`, 'success');
-                    valorInput.value = '';
-                    Cache.clear();
-                    const safeNome = nomeCliente.replace(/[^a-zA-Z0-9]/g, '');
-                    const detalheContainer = document.getElementById(`detalhe-${safeNome}`);
-                    if (detalheContainer) await carregarDetalhesCliente(nomeCliente, detalheContainer);
-                    await carregarTabelaClientes(StateManager.getFiltro());
-                } else {
-                    msgDiv.innerHTML = `<div style="color:#e53e3e;">❌ ${result.error}</div>`;
-                }
-            } catch (error) {
-                msgDiv.innerHTML = `<div style="color:#e53e3e;">❌ Erro</div>`;
-            }
-        }, 'Confirmar', 'Cancelar');
-    };
-
-    window.gerarPixInline = function(nomeCliente, idSufixo) {
-        const valorInput = document.getElementById(`valorPixInline-${idSufixo}`);
-        const msgDiv = document.getElementById(`msgPixInline-${idSufixo}`);
-        if (!valorInput || !msgDiv) return;
-
-        const valor = parseFloat(valorInput.value);
-        if (isNaN(valor) || valor <= 0) {
-            msgDiv.innerHTML = '<div style="color:#e53e3e;">Valor inválido</div>';
-            return;
-        }
-        msgDiv.innerHTML = '';
-        gerarQrCodePix(valor, `Pagamento de ${nomeCliente}`);
-    };
-
-    window.compartilharExtrato = async function(nomeCliente) {
-        try {
-            const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
-                callAPI('listarDetalhesCliente', { cliente: nomeCliente }, false),
-                callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }, false),
-                callAPI('listarVendasPorCliente', null, false)
-            ]);
-            let totalGasto = 0, totalPago = 0;
-            if (resumoCliente.success && resumoCliente.clientes) {
-                const cliente = resumoCliente.clientes.find(c => c.nome.toLowerCase() === nomeCliente.toLowerCase());
-                if (cliente) {
-                    totalGasto = parseFloat(cliente.totalGasto) || 0;
-                    totalPago = parseFloat(cliente.totalPago) || 0;
-                }
-            }
-            const saldo = totalGasto - totalPago;
-            let texto = `📋 EXTRATO - ${nomeCliente}\n\n`;
-            texto += `💰 Total Gasto: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
-            texto += `💵 Total Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
-            texto += `📊 Saldo: R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} (${saldo > 0 ? 'A pagar' : saldo < 0 ? 'Crédito' : 'Quitado'})\n\n`;
-            texto += `🛒 COMPRAS:\n`;
-            if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
-                historicoCompras.historico.forEach(h => {
-                    const data = h.data ? new Date(h.data) : new Date();
-                    texto += `- ${data.toLocaleDateString('pt-BR')}: ${h.produto} (${h.quantidade}x) = R$ ${(parseFloat(h.total)||0).toFixed(2).replace('.', ',')}\n`;
-                });
-            } else { texto += `Nenhuma compra.\n`; }
-            texto += `\n💳 PAGAMENTOS:\n`;
-            if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
-                historicoPagamentos.pagamentos.forEach(p => {
-                    const data = p.data ? new Date(p.data) : new Date();
-                    texto += `- ${data.toLocaleDateString('pt-BR')}: R$ ${(parseFloat(p.valor)||0).toFixed(2).replace('.', ',')} (${p.observacao || '-'})\n`;
-                });
-            } else { texto += `Nenhum pagamento.\n`; }
-            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-        } catch (error) {
-            mostrarToast('Erro: ' + error.message, 'error');
-        }
-    };
+    window.carregarTabelaClientes = carregarTabelaClientes;
 
     // ============================================================
-    // VENDEDORA
+    // VENDEDORA (VERSÃO SIMPLIFICADA)
     // ============================================================
     async function renderVendedora() {
         const app = document.getElementById('app');
@@ -1627,7 +1130,7 @@
             <section>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
                     <h2>👩‍💼 Área da Vendedora</h2>
-                    <button onclick="window.atualizarVendedora()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;">🔄 Atualizar</button>
+                    <button onclick="window.atualizarVendedora()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;cursor:pointer;">🔄 Atualizar</button>
                 </div>
                 <div style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
                     <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:12px;color:#fff;">
@@ -1650,28 +1153,21 @@
                         </div>
                     </div>
                     <div style="margin-bottom:15px;">
-                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📊 Extratos de Vendas</h4>
+                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📊 Extratos</h4>
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-                            <button onclick="window.gerarExtrato('semanal')" class="btn-extrato" style="background:#667eea;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📅 Semanal</button>
-                            <button onclick="window.gerarExtrato('mensal')" class="btn-extrato" style="background:#4facfe;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📆 Mensal</button>
-                            <button onclick="window.gerarExtrato('semestral')" class="btn-extrato" style="background:#f093fb;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📊 Semestral</button>
-                            <button onclick="window.gerarExtrato('anual')" class="btn-extrato" style="background:#43e97b;color:#1a202c;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📈 Anual</button>
+                            <button onclick="mostrarToast('Extrato semanal', 'info')" class="btn-extrato" style="background:#667eea;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📅 Semanal</button>
+                            <button onclick="mostrarToast('Extrato mensal', 'info')" class="btn-extrato" style="background:#4facfe;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📆 Mensal</button>
+                            <button onclick="mostrarToast('Extrato semestral', 'info')" class="btn-extrato" style="background:#f093fb;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📊 Semestral</button>
+                            <button onclick="mostrarToast('Extrato anual', 'info')" class="btn-extrato" style="background:#43e97b;color:#1a202c;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📈 Anual</button>
                         </div>
                     </div>
                     <div style="margin-top:20px;border-top:2px solid #e2e8f0;padding-top:15px;">
                         <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">💰 Pagamentos Recebidos</h4>
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-                            <button onclick="window.gerarExtratoPagamentos('semanal')" class="btn-extrato" style="background:#38a169;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">💳 Semana</button>
-                            <button onclick="window.gerarExtratoPagamentos('mensal')" class="btn-extrato" style="background:#2b6cb0;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📆 Mês</button>
-                            <button onclick="window.gerarExtratoPagamentos('anual')" class="btn-extrato" style="background:#d69e2e;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📈 Ano</button>
+                            <button onclick="mostrarToast('Pagamentos da semana', 'info')" class="btn-extrato" style="background:#38a169;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">💳 Semana</button>
+                            <button onclick="mostrarToast('Pagamentos do mês', 'info')" class="btn-extrato" style="background:#2b6cb0;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📆 Mês</button>
+                            <button onclick="mostrarToast('Pagamentos do ano', 'info')" class="btn-extrato" style="background:#d69e2e;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📈 Ano</button>
                         </div>
-                    </div>
-                    <div id="resultadoExtrato" style="display:none;margin-top:15px;padding:15px;background:#f7fafc;border-radius:8px;border:2px solid #e2e8f0;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                            <h4 id="tituloExtrato" style="margin:0;color:#2d3748;font-size:15px;">📊 Extrato</h4>
-                            <button onclick="window.fecharResultadoExtrato()" style="background:#e2e8f0;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;">✕</button>
-                        </div>
-                        <div id="conteudoExtrato" style="font-size:13px;color:#4a5568;"></div>
                     </div>
                 </div>
             </section>
@@ -1681,7 +1177,7 @@
     }
 
     // ============================================================
-    // PROMESSAS
+    // PROMESSAS DE PAGAMENTO
     // ============================================================
     async function carregarPromessasHoje() {
         const container = document.getElementById('promessasHojeContainer');
@@ -1707,8 +1203,6 @@
                 return;
             }
 
-            promessasPendentes.sort((a, b) => new Date(a.dataPagamento) - new Date(b.dataPagamento));
-
             let html = `
                 <div style="background:#fff;border-radius:6px;border:2px solid #48bb78;overflow:hidden;">
                     <div style="background:#48bb78;color:#fff;padding:6px 10px;font-weight:600;font-size:12px;display:flex;justify-content:space-between;">
@@ -1731,8 +1225,7 @@
                     badge = '<span class="badge-hoje">Hoje</span>';
                     cor = '#f0fff4';
                 } else if (dataPag < hoje) {
-                    const dias = Math.floor((hoje - dataPag) / (1000*60*60*24));
-                    badge = `<span class="badge-atraso">${dias}d atraso</span>`;
+                    badge = '<span class="badge-atraso">Atrasado</span>';
                     cor = '#fff5f5';
                 } else {
                     badge = '<span class="badge-futuro">Futuro</span>';
@@ -1757,260 +1250,10 @@
             container.innerHTML = html;
 
         } catch (error) {
+            console.error('Erro ao carregar promessas:', error);
             container.innerHTML = `<div style="background:#fed7d7;padding:12px;border-radius:6px;text-align:center;color:#9b2c2c;font-size:13px;">❌ Erro: ${error.message}</div>`;
         }
     }
-
-    // ============================================================
-    // EXTRATOS
-    // ============================================================
-    window.gerarExtrato = async function(periodo) {
-        const resultadoDiv = document.getElementById('resultadoExtrato');
-        const conteudoDiv = document.getElementById('conteudoExtrato');
-        const tituloDiv = document.getElementById('tituloExtrato');
-
-        if (!resultadoDiv || !conteudoDiv) {
-            mostrarToast('Erro: Elemento não encontrado', 'error');
-            return;
-        }
-
-        resultadoDiv.style.display = 'block';
-        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
-        tituloDiv.textContent = `📊 Extrato ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
-
-        try {
-            const result = await callAPI('listarVendas', null, false);
-            if (!result.success || !result.vendas || result.vendas.length === 0) {
-                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">📭</span><p>Nenhuma venda</p></div>`;
-                return;
-            }
-
-            const agora = new Date();
-            let dataInicio = new Date();
-            switch(periodo) {
-                case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
-                case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
-                case 'semestral': dataInicio.setMonth(agora.getMonth() - 6); break;
-                case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
-                default: dataInicio.setDate(agora.getDate() - 7);
-            }
-
-            const vendasFiltradas = result.vendas.filter(v => new Date(v.data) >= dataInicio && new Date(v.data) <= agora);
-            if (vendasFiltradas.length === 0) {
-                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhuma venda no período</p></div>`;
-                return;
-            }
-
-            let totalVendas = 0, totalItens = 0, totalClientes = new Set();
-            const produtos = {};
-            vendasFiltradas.forEach(v => {
-                const valor = parseFloat(v.total) || 0;
-                const quantidade = parseInt(v.quantidade) || 0;
-                totalVendas += valor; totalItens += quantidade;
-                if (v.cliente) totalClientes.add(v.cliente);
-                const nome = v.produto || 'Produto';
-                if (!produtos[nome]) produtos[nome] = { quantidade: 0, total: 0 };
-                produtos[nome].quantidade += quantidade;
-                produtos[nome].total += valor;
-            });
-
-            const top5 = Object.entries(produtos).sort((a,b) => b[1].quantidade - a[1].quantidade).slice(0,5);
-
-            let html = `
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Total</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#667eea;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
-                    </div>
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Vendas</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${vendasFiltradas.length}</p>
-                    </div>
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Itens</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${totalItens}</p>
-                    </div>
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#43e97b;">${totalClientes.size}</p>
-                    </div>
-                </div>
-                ${top5.length > 0 ? `
-                    <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
-                        <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">🏆 Top 5 Produtos</p>
-                        ${top5.map(([nome, dados], i) => `
-                            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
-                                <span>${i+1}. ${nome}</span>
-                                <span>${dados.quantidade} unid.</span>
-                                <span style="font-weight:bold;color:#4facfe;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
-                    📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
-                </div>
-            `;
-
-            conteudoDiv.innerHTML = html;
-
-            const btnContainer = document.createElement('div');
-            btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
-            
-            const btnWhatsApp = document.createElement('button');
-            btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
-            btnWhatsApp.innerHTML = '📱 Compartilhar';
-            btnWhatsApp.onclick = () => window.compartilharExtratoVendedora(vendasFiltradas, totalVendas, totalItens, periodo);
-            btnContainer.appendChild(btnWhatsApp);
-
-            conteudoDiv.appendChild(btnContainer);
-
-        } catch (error) {
-            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
-        }
-    };
-
-    window.gerarExtratoPagamentos = async function(periodo) {
-        const resultadoDiv = document.getElementById('resultadoExtrato');
-        const conteudoDiv = document.getElementById('conteudoExtrato');
-        const tituloDiv = document.getElementById('tituloExtrato');
-
-        if (!resultadoDiv || !conteudoDiv) {
-            mostrarToast('Erro: Elemento não encontrado', 'error');
-            return;
-        }
-
-        resultadoDiv.style.display = 'block';
-        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
-        tituloDiv.textContent = `💰 Pagamentos - ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
-
-        try {
-            const result = await callAPI('listarPagamentos', null, false);
-            if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
-                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">💰</span><p>Nenhum pagamento</p></div>`;
-                return;
-            }
-
-            const agora = new Date();
-            let dataInicio = new Date();
-            switch(periodo) {
-                case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
-                case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
-                case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
-                default: dataInicio.setDate(agora.getDate() - 7);
-            }
-
-            const pagamentosFiltrados = result.pagamentos.filter(p => new Date(p.data) >= dataInicio && new Date(p.data) <= agora);
-            if (pagamentosFiltrados.length === 0) {
-                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhum pagamento no período</p></div>`;
-                return;
-            }
-
-            let totalGeral = 0;
-            const porCliente = {};
-            pagamentosFiltrados.forEach(p => {
-                const valor = parseFloat(p.valor) || 0;
-                totalGeral += valor;
-                const cliente = p.cliente || 'Cliente';
-                if (!porCliente[cliente]) porCliente[cliente] = 0;
-                porCliente[cliente] += valor;
-            });
-
-            const clientesOrdenados = Object.entries(porCliente).sort((a,b) => b[1] - a[1]);
-
-            let html = `
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Total</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#38a169;">R$ ${totalGeral.toFixed(2).replace('.', ',')}</p>
-                    </div>
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Pagamentos</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${pagamentosFiltrados.length}</p>
-                    </div>
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${Object.keys(porCliente).length}</p>
-                    </div>
-                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                        <p style="margin:0;font-size:10px;color:#718096;">Médio</p>
-                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#d69e2e;">R$ ${(totalGeral/pagamentosFiltrados.length).toFixed(2).replace('.', ',')}</p>
-                    </div>
-                </div>
-                <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
-                    <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">👤 Por Cliente</p>
-                    ${clientesOrdenados.map(([cliente, valor], i) => `
-                        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
-                            <span>${i+1}. ${cliente}</span>
-                            <span style="font-weight:bold;color:#38a169;">R$ ${valor.toFixed(2).replace('.', ',')}</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
-                    📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
-                </div>
-            `;
-
-            conteudoDiv.innerHTML = html;
-
-            const btnContainer = document.createElement('div');
-            btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
-            
-            const btnWhatsApp = document.createElement('button');
-            btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
-            btnWhatsApp.innerHTML = '📱 Compartilhar';
-            btnWhatsApp.onclick = () => window.compartilharExtratoPagamentos(pagamentosFiltrados, totalGeral, periodo);
-            btnContainer.appendChild(btnWhatsApp);
-
-            conteudoDiv.appendChild(btnContainer);
-
-        } catch (error) {
-            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
-        }
-    };
-
-    window.compartilharExtratoVendedora = function(vendas, total, totalItens, periodo) {
-        const periodos = { semanal: 'Semana', mensal: 'Mês', semestral: 'Semestre', anual: 'Ano' };
-        let texto = `📊 EXTRATO - ${periodos[periodo] || 'Período'}\n\n`;
-        texto += `💰 Total Vendas: R$ ${total.toFixed(2).replace('.', ',')}\n`;
-        texto += `📦 Total Itens: ${totalItens}\n`;
-        texto += `📊 Nº Vendas: ${vendas.length}\n`;
-        texto += `📊 Ticket Médio: R$ ${(total/vendas.length).toFixed(2).replace('.', ',')}\n\n`;
-        const porDia = {};
-        vendas.forEach(v => {
-            const data = new Date(v.data);
-            const dataStr = data.toLocaleDateString('pt-BR');
-            if (!porDia[dataStr]) porDia[dataStr] = 0;
-            porDia[dataStr] += parseFloat(v.total) || 0;
-        });
-        Object.keys(porDia).sort().forEach(dia => {
-            texto += `- ${dia}: R$ ${porDia[dia].toFixed(2).replace('.', ',')}\n`;
-        });
-        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-    };
-
-    window.compartilharExtratoPagamentos = function(pagamentos, total, periodo) {
-        const periodos = { semanal: 'Semana', mensal: 'Mês', anual: 'Ano' };
-        let texto = `💳 PAGAMENTOS - ${periodos[periodo] || 'Período'}\n\n`;
-        texto += `💰 Total Recebido: R$ ${total.toFixed(2).replace('.', ',')}\n`;
-        texto += `📊 Nº Pagamentos: ${pagamentos.length}\n\n👤 POR CLIENTE:\n`;
-        const porCliente = {};
-        pagamentos.forEach(p => {
-            const cliente = p.cliente || 'Cliente';
-            const valor = parseFloat(p.valor) || 0;
-            if (!porCliente[cliente]) porCliente[cliente] = 0;
-            porCliente[cliente] += valor;
-        });
-        Object.entries(porCliente).sort((a,b) => b[1] - a[1]).forEach(([cliente, valor]) => {
-            texto += `- ${cliente}: R$ ${valor.toFixed(2).replace('.', ',')}\n`;
-        });
-        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-    };
-
-    window.fecharResultadoExtrato = function() {
-        const resultado = document.getElementById('resultadoExtrato');
-        if (resultado) resultado.style.display = 'none';
-    };
 
     window.atualizarVendedora = function() {
         mostrarToast('Atualizando...', 'info');
@@ -2022,11 +1265,15 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
+        console.log('🚀 Iniciando Sistema de Vendas...');
         adicionarEstilosCSS();
         bloquearZoom();
         inicializarNavegacao();
-        requestAnimationFrame(() => renderHome());
-        console.log('🚀 Sistema Otimizado V8.0');
+        // Carregar home após um pequeno delay para garantir que o DOM está pronto
+        setTimeout(() => {
+            renderHome();
+        }, 100);
+        console.log('✅ Sistema iniciado!');
     }
 
     // ============================================================
@@ -2040,25 +1287,13 @@
     window.mostrarToast = mostrarToast;
     window.confirmarAcao = confirmarAcao;
     window.carregarTabelaClientes = carregarTabelaClientes;
-    window.toggleDetalhesCliente = window.toggleDetalhesCliente;
     window.cadastrarNovoCliente = window.cadastrarNovoCliente;
-    window.abrirEdicaoProduto = window.abrirEdicaoProduto;
-    window.confirmarExclusaoProduto = window.confirmarExclusaoProduto;
-    window.registrarPagamentoInline = window.registrarPagamentoInline;
-    window.gerarPixInline = window.gerarPixInline;
-    window.compartilharExtrato = window.compartilharExtrato;
-    window.gerarQrCodePix = gerarQrCodePix;
-    window.gerarExtrato = window.gerarExtrato;
-    window.gerarExtratoPagamentos = window.gerarExtratoPagamentos;
-    window.fecharResultadoExtrato = window.fecharResultadoExtrato;
-    window.compartilharExtratoVendedora = window.compartilharExtratoVendedora;
-    window.compartilharExtratoPagamentos = window.compartilharExtratoPagamentos;
-    window.atualizarVendedora = window.atualizarVendedora;
     window.enviarCobranca = window.enviarCobranca;
-    window.carregarPromessasHoje = carregarPromessasHoje;
+    window.atualizarVendedora = window.atualizarVendedora;
     window.atualizarDashboard = window.atualizarDashboard;
+    window.gerarQrCodePix = window.gerarQrCodePix;
 
-    // Iniciar
+    // Iniciar quando o DOM estiver pronto
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
