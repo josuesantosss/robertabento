@@ -1,11 +1,11 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.0
+// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.1
 // ============================================================
 
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V13.0 (Otimizado)...');
+    console.log('🚀 Iniciando Sistema de Vendas V13.1 (Otimizado)...');
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -35,7 +35,6 @@
         maxItems: CONFIG.CACHE.MAX_ITEMS,
         
         async get(key, fetchFn, ttl = this.ttl) {
-            // Limpa cache se exceder o limite
             if (Object.keys(this.data).length > this.maxItems) {
                 this.clearOldest();
             }
@@ -53,7 +52,6 @@
                 return data;
             } catch (error) {
                 console.error(`❌ Erro no cache para ${key}:`, error);
-                // Se tiver dados em cache mesmo expirados, retorna como fallback
                 if (cached) {
                     console.log(`⚠️ Usando cache expirado como fallback para ${key}`);
                     return cached.data;
@@ -65,12 +63,10 @@
         set(key, data, ttl = this.ttl) {
             this.data[key] = { data, timestamp: Date.now() };
             
-            // Limpa timeout anterior
             if (this.timeouts[key]) {
                 clearTimeout(this.timeouts[key]);
             }
             
-            // Define novo timeout para limpeza automática
             this.timeouts[key] = setTimeout(() => {
                 delete this.data[key];
                 delete this.timeouts[key];
@@ -121,64 +117,6 @@
     }
 
     // ============================================================
-    // VIRTUALIZAÇÃO DE LISTAS
-    // ============================================================
-    class VirtualList {
-        constructor(container, items, renderFn, itemHeight = 40) {
-            this.container = container;
-            this.items = items;
-            this.renderFn = renderFn;
-            this.itemHeight = itemHeight;
-            this.visibleCount = Math.ceil(container.clientHeight / itemHeight) + 2;
-            this.scrollTop = 0;
-            this.isRendering = false;
-            this.render();
-            
-            // Throttle para scroll
-            let timeout;
-            this.container.addEventListener('scroll', () => {
-                if (timeout) return;
-                timeout = setTimeout(() => {
-                    this.onScroll();
-                    timeout = null;
-                }, 16); // ~60fps
-            });
-        }
-        
-        onScroll() {
-            this.scrollTop = this.container.scrollTop;
-            this.render();
-        }
-        
-        render() {
-            if (this.isRendering) return;
-            this.isRendering = true;
-            
-            requestAnimationFrame(() => {
-                const start = Math.floor(this.scrollTop / this.itemHeight);
-                const end = Math.min(start + this.visibleCount, this.items.length);
-                const offset = start * this.itemHeight;
-                
-                let html = `<div style="height:${this.items.length * this.itemHeight}px;position:relative;">`;
-                html += `<div style="position:absolute;top:${offset}px;width:100%;">`;
-                
-                for (let i = start; i < end; i++) {
-                    html += this.renderFn(this.items[i], i);
-                }
-                
-                html += '</div></div>';
-                this.container.innerHTML = html;
-                this.isRendering = false;
-            });
-        }
-        
-        updateItems(newItems) {
-            this.items = newItems;
-            this.render();
-        }
-    }
-
-    // ============================================================
     // DETECTAR DISPOSITIVO MÓVEL
     // ============================================================
     function isMobile() {
@@ -199,7 +137,7 @@
             try {
                 console.log(`📤 Chamando API: ${action}`);
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                const timeout = setTimeout(() => controller.abort(), 10000);
                 
                 const response = await fetch(url, { 
                     method: 'GET',
@@ -396,6 +334,15 @@
                 .clientes-table tbody tr td:nth-child(2)::before { content: "💰 Total Gasto"; }
                 .clientes-table tbody tr td:nth-child(3)::before { content: "💵 Total Pago"; }
                 .clientes-table tbody tr td:nth-child(4)::before { content: "📊 Saldo"; }
+                .clientes-table tbody tr td:nth-child(5)::before { content: "📋 Ações"; }
+                .clientes-table tbody tr td:last-child {
+                    justify-content: center !important;
+                }
+                .clientes-table tbody tr td:last-child button {
+                    width: 100% !important;
+                    padding: 8px !important;
+                    font-size: 14px !important;
+                }
                 
                 .cliente-detalhe-content .detalhes-grid {
                     display: grid !important;
@@ -486,7 +433,7 @@
         setPage(page) { 
             if (this.currentPage !== page) {
                 this.currentPage = page; 
-                this.pageCache[page] = null; // Limpa cache da página
+                this.pageCache[page] = null;
             }
         },
         getPage() { return this.currentPage; },
@@ -525,10 +472,8 @@
                 console.log(`📄 Navegando para: ${page}`);
                 if (pageMap[page]) {
                     StateManager.setPage(page);
-                    // Limpa cache apenas da página atual
                     Cache.clear();
                     mostrarLoadingSkeleton(page);
-                    // Usa requestAnimationFrame para melhor performance
                     requestAnimationFrame(() => {
                         setTimeout(() => pageMap[page](), 50);
                     });
@@ -806,19 +751,16 @@
         mostrarLoadingSkeleton('home');
 
         try {
-            // Carrega dados com prioridade
             const [produtosResult, vendasResult] = await Promise.all([
                 callAPI('listarProdutos', null, true, 30000),
                 callAPI('listarVendas', null, true, 30000)
             ]);
 
-            // Carrega promessas em background
             let promessasResult = null;
             setTimeout(async () => {
                 try {
                     promessasResult = await callAPI('listarPromessasPagamento', null, true, 30000);
                     if (promessasResult) {
-                        // Atualiza apenas a seção de promessas
                         atualizarPromessasDashboard(promessasResult);
                     }
                 } catch (e) {
@@ -992,11 +934,9 @@
                 </section>
             `;
 
-            // Carrega promessas após renderizar
             if (promessasResult) {
                 atualizarPromessasDashboard(promessasResult);
             } else {
-                // Tenta carregar novamente
                 try {
                     const promessasData = await callAPI('listarPromessasPagamento', null, true, 30000);
                     if (promessasData) {
@@ -1053,7 +993,6 @@
             });
         }
 
-        // Atualiza container de hoje
         if (promessasHoje.length > 0) {
             hojeContainer.innerHTML = `
                 <div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
@@ -1071,7 +1010,6 @@
             `;
         }
 
-        // Atualiza container de atraso
         if (promessasAtraso.length > 0) {
             atrasoContainer.innerHTML = `
                 <div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
@@ -1455,7 +1393,6 @@
                 </section>
             `;
 
-            // Função de cálculo otimizada com debounce
             let calcTimeout;
             function calcularTotais() {
                 if (calcTimeout) clearTimeout(calcTimeout);
@@ -1748,7 +1685,7 @@
     }
 
     // ============================================================
-    // CLIENTES OTIMIZADO
+    // CLIENTES OTIMIZADO COM BOTÃO + INFO
     // ============================================================
     async function renderClientes() {
         const app = document.getElementById('app');
@@ -1778,15 +1715,35 @@
                     const isExpanded = StateManager.getClienteExpandido() === cliente.nome;
 
                     html += `
-                        <tr onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="cursor:pointer;${isExpanded ? 'background:#f7fafc;' : ''}">
-                            <td data-label="👤 Cliente" style="padding:8px;"><strong>${cliente.nome}</strong></td>
+                        <tr style="${isExpanded ? 'background:#f7fafc;' : ''}">
+                            <td data-label="👤 Cliente" style="padding:8px;">
+                                <strong>${cliente.nome}</strong>
+                            </td>
                             <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                             <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
-                            <td data-label="📊 Saldo" style="padding:8px;">${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small></td>
+                            <td data-label="📊 Saldo" style="padding:8px;">
+                                ${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small>
+                            </td>
+                            <td data-label="📋 Ações" style="padding:8px; text-align:center;">
+                                <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" 
+                                        style="background:${isExpanded ? '#e53e3e' : '#667eea'}; 
+                                               color:white; 
+                                               border:none; 
+                                               padding:6px 12px; 
+                                               border-radius:6px; 
+                                               cursor:pointer; 
+                                               font-weight:600; 
+                                               font-size:12px;
+                                               transition: all 0.2s ease;"
+                                        onmouseover="this.style.transform='scale(1.05)'" 
+                                        onmouseout="this.style.transform='scale(1)'">
+                                    ${isExpanded ? '✕ Fechar' : '➕ Info'}
+                                </button>
+                            </td>
                         </tr>
                         ${isExpanded ? `
                             <tr class="cliente-detalhe-row">
-                                <td colspan="4" style="padding:0 !important;">
+                                <td colspan="5" style="padding:0 !important;">
                                     <div class="cliente-detalhe-content" id="detalhe-${cliente.nome.replace(/[^a-zA-Z0-9]/g, '')}">
                                         <div style="text-align:center;padding:8px;"><div class="loading-spinner" style="font-size:16px;">⏳</div></div>
                                     </div>
@@ -1796,7 +1753,7 @@
                     `;
                 });
             } else {
-                html = `<tr><td colspan="4" style="text-align:center;padding:30px;"><p style="font-size:32px;">📭</p><p style="color:#666;">Nenhum cliente cadastrado</p></td></tr>`;
+                html = `<tr><td colspan="5" style="text-align:center;padding:30px;"><p style="font-size:32px;">📭</p><p style="color:#666;">Nenhum cliente cadastrado</p></td></tr>`;
             }
 
             app.innerHTML = `
@@ -1815,19 +1772,19 @@
                                         <th style="padding:10px;text-align:left;color:#fff;">💰 Total Gasto</th>
                                         <th style="padding:10px;text-align:left;color:#fff;">💵 Total Pago</th>
                                         <th style="padding:10px;text-align:left;color:#fff;">📊 Saldo</th>
+                                        <th style="padding:10px;text-align:center;color:#fff;">📋 Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>${html}</tbody>
                             </table>
                         </div>
                         <div style="margin-top:8px;padding:8px;background:#f7fafc;border-radius:6px;font-size:11px;color:#666;text-align:center;">
-                            🟢 Quitado | 🔴 Em débito | 🟡 Crédito | 💡 Clique no cliente para ver detalhes
+                            🟢 Quitado | 🔴 Em débito | 🟡 Crédito | 💡 Clique em "+ Info" para ver detalhes
                         </div>
                     </div>
                 </section>
             `;
 
-            // Debounce para busca
             document.getElementById('buscaCliente').addEventListener('input', 
                 debounce((e) => {
                     const filtro = e.target.value;
@@ -1860,6 +1817,9 @@
         }
     }
 
+    // ============================================================
+    // CARREGAR TABELA DE CLIENTES COM BOTÃO + INFO
+    // ============================================================
     async function carregarTabelaClientes(filtro = '') {
         try {
             const result = await callAPI('listarVendasPorCliente', null, true, 30000);
@@ -1888,15 +1848,35 @@
                     const isExpanded = StateManager.getClienteExpandido() === cliente.nome;
 
                     html += `
-                        <tr onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="cursor:pointer;${isExpanded ? 'background:#f7fafc;' : ''}">
-                            <td data-label="👤 Cliente" style="padding:8px;"><strong>${cliente.nome}</strong></td>
+                        <tr style="${isExpanded ? 'background:#f7fafc;' : ''}">
+                            <td data-label="👤 Cliente" style="padding:8px;">
+                                <strong>${cliente.nome}</strong>
+                            </td>
                             <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                             <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
-                            <td data-label="📊 Saldo" style="padding:8px;">${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small></td>
+                            <td data-label="📊 Saldo" style="padding:8px;">
+                                ${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small>
+                            </td>
+                            <td data-label="📋 Ações" style="padding:8px; text-align:center;">
+                                <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" 
+                                        style="background:${isExpanded ? '#e53e3e' : '#667eea'}; 
+                                               color:white; 
+                                               border:none; 
+                                               padding:6px 12px; 
+                                               border-radius:6px; 
+                                               cursor:pointer; 
+                                               font-weight:600; 
+                                               font-size:12px;
+                                               transition: all 0.2s ease;"
+                                        onmouseover="this.style.transform='scale(1.05)'" 
+                                        onmouseout="this.style.transform='scale(1)'">
+                                    ${isExpanded ? '✕ Fechar' : '➕ Info'}
+                                </button>
+                            </td>
                         </tr>
                         ${isExpanded ? `
                             <tr class="cliente-detalhe-row">
-                                <td colspan="4" style="padding:0 !important;">
+                                <td colspan="5" style="padding:0 !important;">
                                     <div class="cliente-detalhe-content" id="detalhe-${cliente.nome.replace(/[^a-zA-Z0-9]/g, '')}">
                                         <div style="text-align:center;padding:8px;"><div class="loading-spinner" style="font-size:16px;">⏳</div></div>
                                     </div>
@@ -1916,7 +1896,7 @@
                     }
                 }
             } else {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum cliente encontrado</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;">Nenhum cliente encontrado</td></tr>`;
             }
 
         } catch (error) {
@@ -1933,13 +1913,7 @@
         const current = StateManager.getClienteExpandido();
         const novoEstado = current === nomeCliente ? null : nomeCliente;
         StateManager.setClienteExpandido(novoEstado);
-        
-        // Atualiza apenas a linha expandida
-        if (novoEstado) {
-            await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
-        } else {
-            await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
-        }
+        await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
     };
 
     // ============================================================
@@ -2576,7 +2550,7 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
-        console.log('🚀 Iniciando Sistema de Vendas V13.0 (Otimizado)...');
+        console.log('🚀 Iniciando Sistema de Vendas V13.1 (Otimizado com Botão + Info)...');
         adicionarEstilosCSS();
         bloquearZoom();
         inicializarNavegacao();
@@ -2587,7 +2561,6 @@
             return;
         }
         
-        // Inicializa com a home
         setTimeout(() => {
             renderHome();
         }, 100);
