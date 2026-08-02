@@ -1,11 +1,11 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO COMPLETA V12.0
+// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.0
 // ============================================================
 
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V12.0...');
+    console.log('🚀 Iniciando Sistema de Vendas V13.0 (Otimizado)...');
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -18,31 +18,165 @@
             cidade: 'Monte Azul Pta-SP'
         },
         MARCAS: ['Natura', 'Mary Kay', 'Eudora', 'Boticário', 'Outra'],
-        CATEGORIAS: ['Perfumaria', 'Maquiagem', 'Cuidados com a Pele', 'Cuidados com o Corpo', 'Cabelos', 'Infantil', 'Masculina', 'Kit', 'Outra']
+        CATEGORIAS: ['Perfumaria', 'Maquiagem', 'Cuidados com a Pele', 'Cuidados com o Corpo', 'Cabelos', 'Infantil', 'Masculina', 'Kit', 'Outra'],
+        CACHE: {
+            TTL: 2 * 60 * 1000, // 2 minutos
+            MAX_ITEMS: 50
+        }
     };
 
     // ============================================================
-    // SISTEMA DE CACHE
+    // SISTEMA DE CACHE OTIMIZADO
     // ============================================================
     const Cache = {
         data: {},
-        timeout: 5 * 60 * 1000,
-        async get(key, fetchFn) {
+        timeouts: {},
+        ttl: CONFIG.CACHE.TTL,
+        maxItems: CONFIG.CACHE.MAX_ITEMS,
+        
+        async get(key, fetchFn, ttl = this.ttl) {
+            // Limpa cache se exceder o limite
+            if (Object.keys(this.data).length > this.maxItems) {
+                this.clearOldest();
+            }
+            
             const cached = this.data[key];
-            if (cached && Date.now() - cached.timestamp < this.timeout) {
+            if (cached && Date.now() - cached.timestamp < ttl) {
                 console.log(`📦 Cache hit: ${key}`);
                 return cached.data;
             }
+            
             console.log(`🔄 Cache miss: ${key}`);
-            const data = await fetchFn();
-            this.data[key] = { data, timestamp: Date.now() };
-            return data;
+            try {
+                const data = await fetchFn();
+                this.set(key, data, ttl);
+                return data;
+            } catch (error) {
+                console.error(`❌ Erro no cache para ${key}:`, error);
+                // Se tiver dados em cache mesmo expirados, retorna como fallback
+                if (cached) {
+                    console.log(`⚠️ Usando cache expirado como fallback para ${key}`);
+                    return cached.data;
+                }
+                throw error;
+            }
         },
+        
+        set(key, data, ttl = this.ttl) {
+            this.data[key] = { data, timestamp: Date.now() };
+            
+            // Limpa timeout anterior
+            if (this.timeouts[key]) {
+                clearTimeout(this.timeouts[key]);
+            }
+            
+            // Define novo timeout para limpeza automática
+            this.timeouts[key] = setTimeout(() => {
+                delete this.data[key];
+                delete this.timeouts[key];
+                console.log(`🗑️ Cache expirado: ${key}`);
+            }, ttl);
+        },
+        
+        clearOldest() {
+            const keys = Object.keys(this.data);
+            if (keys.length > this.maxItems) {
+                const oldest = keys.reduce((a, b) => {
+                    return this.data[a].timestamp < this.data[b].timestamp ? a : b;
+                });
+                delete this.data[oldest];
+                if (this.timeouts[oldest]) {
+                    clearTimeout(this.timeouts[oldest]);
+                    delete this.timeouts[oldest];
+                }
+                console.log(`🗑️ Cache removido (limite excedido): ${oldest}`);
+            }
+        },
+        
         clear() {
+            Object.values(this.timeouts).forEach(timeout => clearTimeout(timeout));
             this.data = {};
-            console.log('🗑️ Cache limpo');
+            this.timeouts = {};
+            console.log('🗑️ Cache completamente limpo');
+        },
+        
+        getSize() {
+            return Object.keys(this.data).length;
         }
     };
+
+    // ============================================================
+    // DEBOUNCE PARA OTIMIZAR BUSCAS
+    // ============================================================
+    function debounce(func, wait = 300) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // ============================================================
+    // VIRTUALIZAÇÃO DE LISTAS
+    // ============================================================
+    class VirtualList {
+        constructor(container, items, renderFn, itemHeight = 40) {
+            this.container = container;
+            this.items = items;
+            this.renderFn = renderFn;
+            this.itemHeight = itemHeight;
+            this.visibleCount = Math.ceil(container.clientHeight / itemHeight) + 2;
+            this.scrollTop = 0;
+            this.isRendering = false;
+            this.render();
+            
+            // Throttle para scroll
+            let timeout;
+            this.container.addEventListener('scroll', () => {
+                if (timeout) return;
+                timeout = setTimeout(() => {
+                    this.onScroll();
+                    timeout = null;
+                }, 16); // ~60fps
+            });
+        }
+        
+        onScroll() {
+            this.scrollTop = this.container.scrollTop;
+            this.render();
+        }
+        
+        render() {
+            if (this.isRendering) return;
+            this.isRendering = true;
+            
+            requestAnimationFrame(() => {
+                const start = Math.floor(this.scrollTop / this.itemHeight);
+                const end = Math.min(start + this.visibleCount, this.items.length);
+                const offset = start * this.itemHeight;
+                
+                let html = `<div style="height:${this.items.length * this.itemHeight}px;position:relative;">`;
+                html += `<div style="position:absolute;top:${offset}px;width:100%;">`;
+                
+                for (let i = start; i < end; i++) {
+                    html += this.renderFn(this.items[i], i);
+                }
+                
+                html += '</div></div>';
+                this.container.innerHTML = html;
+                this.isRendering = false;
+            });
+        }
+        
+        updateItems(newItems) {
+            this.items = newItems;
+            this.render();
+        }
+    }
 
     // ============================================================
     // DETECTAR DISPOSITIVO MÓVEL
@@ -52,9 +186,9 @@
     }
 
     // ============================================================
-    // API CALL
+    // API CALL OTIMIZADA
     // ============================================================
-    async function callAPI(action, data = null, useCache = true) {
+    async function callAPI(action, data = null, useCache = true, ttl = CONFIG.CACHE.TTL) {
         let url = `${CONFIG.API_URL}?action=${action}`;
         if (data) {
             const params = new URLSearchParams(data);
@@ -64,26 +198,42 @@
         const fetchFn = async () => {
             try {
                 console.log(`📤 Chamando API: ${action}`);
-                const response = await fetch(url, { method: 'GET' });
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                
+                const response = await fetch(url, { 
+                    method: 'GET',
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                clearTimeout(timeout);
+                
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const result = await response.json();
                 console.log(`📥 Dados recebidos (${action}):`, result);
                 return result;
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error(`⏱️ Timeout na API (${action})`);
+                    return { success: false, error: 'Timeout na requisição' };
+                }
                 console.error(`❌ Erro na API (${action}):`, error);
                 return { success: false, error: error.message };
             }
         };
 
         if (useCache && !data) {
-            return await Cache.get(action, fetchFn);
+            return await Cache.get(action, fetchFn, ttl);
         } else {
             return await fetchFn();
         }
     }
 
     // ============================================================
-    // TOAST
+    // TOAST OTIMIZADO
     // ============================================================
     function mostrarToast(mensagem, tipo = 'success') {
         const cores = { success: '#48bb78', error: '#e53e3e', warning: '#ed8936', info: '#4299e1' };
@@ -101,13 +251,19 @@
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: '10000', maxWidth: '350px',
             display: 'flex', alignItems: 'center', gap: '10px',
-            fontWeight: '500', fontSize: '14px'
+            fontWeight: '500', fontSize: '14px',
+            animation: 'slideInRight 0.3s ease'
         });
         toast.innerHTML = `<span style="font-size:18px;">${icones[tipo] || 'ℹ️'}</span><span>${mensagem}</span>`;
         document.body.appendChild(toast);
 
         setTimeout(() => {
-            if (toast.parentNode) toast.remove();
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                }, 300);
+            }
         }, 3000);
     }
 
@@ -120,10 +276,11 @@
             position: 'fixed', top: '0', left: '0', right: '0', bottom: '0',
             background: 'rgba(0,0,0,0.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: '9999'
+            zIndex: '9999',
+            animation: 'fadeIn 0.2s ease'
         });
         overlay.innerHTML = `
-            <div style="background:white; padding:20px; border-radius:12px; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+            <div style="background:white; padding:20px; border-radius:12px; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2); animation:scaleIn 0.2s ease;">
                 <div style="text-align:center; margin-bottom:12px;"><span style="font-size:36px;">⚠️</span></div>
                 <h3 style="margin:0 0 8px 0; color:#2d3748; font-size:17px;">Confirmação</h3>
                 <p style="color:#4a5568; margin:0 0 15px 0; line-height:1.4; font-size:14px;">${mensagem}</p>
@@ -146,7 +303,7 @@
     }
 
     // ============================================================
-    // ESTILOS CSS
+    // ESTILOS CSS OTIMIZADOS
     // ============================================================
     function adicionarEstilosCSS() {
         const style = document.createElement('style');
@@ -157,6 +314,7 @@
             @keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
             @keyframes slideOutRight{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
             @keyframes scaleIn{from{transform:scale(0.95);opacity:0}to{transform:scale(1);opacity:1}}
+            @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
             
             .loading-spinner{animation:spin .8s linear infinite;display:inline-block}
             .card-dashboard{transition:all .2s ease}
@@ -186,6 +344,19 @@
             
             .cliente-detalhe-row td{padding:0 !important}
             .cliente-detalhe-content{padding:0 !important;background:transparent;border-radius:0;animation:fadeIn 0.3s ease}
+            
+            /* Skeleton Loading */
+            .skeleton-container{animation:fadeIn 0.3s ease}
+            .skeleton-header{height:40px;background:#e2e8f0;border-radius:8px;margin-bottom:20px;position:relative;overflow:hidden}
+            .skeleton-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
+            .skeleton-card{background:#f7fafc;padding:20px;border-radius:12px;position:relative;overflow:hidden}
+            .skeleton-line{height:20px;background:#e2e8f0;border-radius:4px;margin-bottom:10px}
+            .skeleton-line.short{width:60%}
+            .skeleton-loading{position:relative;overflow:hidden;background:#f7fafc;min-height:200px;border-radius:12px}
+            .skeleton-loading::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);animation:loading 1.5s infinite}
+            @keyframes loading{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+            
+            .skeleton-header::after,.skeleton-card::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);animation:loading 1.5s infinite}
             
             @media (max-width: 768px) {
                 .clientes-table thead { display: none; }
@@ -303,18 +474,30 @@
     }
 
     // ============================================================
-    // GERENCIADOR DE ESTADO
+    // GERENCIADOR DE ESTADO OTIMIZADO
     // ============================================================
     const StateManager = {
         currentPage: 'home',
         filtroBusca: '',
         clienteExpandido: null,
-        setPage(page) { this.currentPage = page; },
+        isLoading: false,
+        pageCache: {},
+        
+        setPage(page) { 
+            if (this.currentPage !== page) {
+                this.currentPage = page; 
+                this.pageCache[page] = null; // Limpa cache da página
+            }
+        },
         getPage() { return this.currentPage; },
         setFiltro(filtro) { this.filtroBusca = filtro; },
         getFiltro() { return this.filtroBusca; },
         setClienteExpandido(nome) { this.clienteExpandido = nome; },
-        getClienteExpandido() { return this.clienteExpandido; }
+        getClienteExpandido() { return this.clienteExpandido; },
+        setLoading(loading) { this.isLoading = loading; },
+        isLoading() { return this.isLoading; },
+        getPageCache(page) { return this.pageCache[page]; },
+        setPageCache(page, data) { this.pageCache[page] = data; }
     };
 
     // ============================================================
@@ -342,9 +525,13 @@
                 console.log(`📄 Navegando para: ${page}`);
                 if (pageMap[page]) {
                     StateManager.setPage(page);
+                    // Limpa cache apenas da página atual
                     Cache.clear();
-                    mostrarLoading(page);
-                    setTimeout(() => pageMap[page](), 100);
+                    mostrarLoadingSkeleton(page);
+                    // Usa requestAnimationFrame para melhor performance
+                    requestAnimationFrame(() => {
+                        setTimeout(() => pageMap[page](), 50);
+                    });
                 }
             });
         });
@@ -360,22 +547,61 @@
         });
     }
 
-    function mostrarLoading(page) {
+    // ============================================================
+    // SKELETON LOADING OTIMIZADO
+    // ============================================================
+    function mostrarLoadingSkeleton(page) {
         const app = document.getElementById('app');
         if (!app) return;
         
         const nomes = { 'home': 'Dashboard', 'estoque': 'Estoque', 'vendas': 'Vendas', 'clientes': 'Clientes', 'vendedora': 'Área da Vendedora' };
         const icones = { 'home': '🏠', 'estoque': '📦', 'vendas': '💰', 'clientes': '👥', 'vendedora': '👩‍💼' };
         
-        app.innerHTML = `
-            <section style="animation:fadeIn 0.3s ease;">
-                <h2>${icones[page] || '📄'} ${nomes[page] || page}</h2>
-                <div style="text-align:center;padding:40px 20px;">
-                    <div class="loading-spinner" style="font-size:32px;">⏳</div>
-                    <p style="color:#667eea;margin-top:12px;font-size:15px;">Carregando ${nomes[page] || page}...</p>
-                </div>
-            </section>
-        `;
+        const skeletons = {
+            home: `
+                <section style="animation:fadeIn 0.3s ease;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h2>${icones[page] || '📄'} ${nomes[page] || page}</h2>
+                    </div>
+                    <div class="skeleton-container">
+                        <div class="skeleton-header" style="height:80px;border-radius:15px;"></div>
+                        <div class="skeleton-grid">
+                            ${[1,2,3,4].map(() => `
+                                <div class="skeleton-card">
+                                    <div class="skeleton-line"></div>
+                                    <div class="skeleton-line short"></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `,
+            estoque: `
+                <section style="animation:fadeIn 0.3s ease;">
+                    <h2>${icones[page] || '📄'} ${nomes[page] || page}</h2>
+                    <div class="skeleton-container">
+                        <div class="skeleton-header" style="height:100px;"></div>
+                        <div class="skeleton-card">
+                            ${[1,2,3,4,5].map(() => `
+                                <div class="skeleton-line"></div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `,
+            default: `
+                <section style="animation:fadeIn 0.3s ease;">
+                    <h2>${icones[page] || '📄'} ${nomes[page] || page}</h2>
+                    <div class="skeleton-loading" style="min-height:300px;"></div>
+                </section>
+            `
+        };
+        
+        app.innerHTML = skeletons[page] || skeletons.default;
+    }
+
+    function mostrarLoading(page) {
+        mostrarLoadingSkeleton(page);
     }
 
     // ============================================================
@@ -481,7 +707,7 @@
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(payload)}`;
 
         overlay.innerHTML = `
-            <div style="background:white; padding:20px; border-radius:16px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
+            <div style="background:white; padding:20px; border-radius:16px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; animation:scaleIn 0.3s ease;">
                 <button onclick="this.closest('.modal-pix').remove()" style="position:absolute; top:8px; right:12px; background:transparent; border:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
                 <div style="text-align:center;">
                     <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
@@ -570,21 +796,35 @@
     };
 
     // ============================================================
-    // HOME (DASHBOARD)
+    // HOME (DASHBOARD) OTIMIZADO
     // ============================================================
     async function renderHome() {
         const app = document.getElementById('app');
         if (!app) return;
 
         const { saudacao, horario } = obterSaudacao();
-        mostrarLoading('home');
+        mostrarLoadingSkeleton('home');
 
         try {
-            const [produtosResult, vendasResult, promessasResult] = await Promise.all([
-                callAPI('listarProdutos', null, false),
-                callAPI('listarVendas', null, false),
-                callAPI('listarPromessasPagamento', null, false)
+            // Carrega dados com prioridade
+            const [produtosResult, vendasResult] = await Promise.all([
+                callAPI('listarProdutos', null, true, 30000),
+                callAPI('listarVendas', null, true, 30000)
             ]);
+
+            // Carrega promessas em background
+            let promessasResult = null;
+            setTimeout(async () => {
+                try {
+                    promessasResult = await callAPI('listarPromessasPagamento', null, true, 30000);
+                    if (promessasResult) {
+                        // Atualiza apenas a seção de promessas
+                        atualizarPromessasDashboard(promessasResult);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Erro ao carregar promessas:', e);
+                }
+            }, 100);
 
             let totalProdutos = 0, valorTotalEstoque = 0, produtosBaixoEstoque = 0, produtosEsgotados = 0;
             if (produtosResult.success && produtosResult.produtos) {
@@ -611,36 +851,6 @@
                     if (dataVenda >= inicioMes) totalVendasMes += total;
                 });
             }
-
-            let promessasHoje = [];
-            let promessasAtraso = [];
-            const hojeStr = hoje.toDateString();
-
-            if (promessasResult.success && promessasResult.promessas) {
-                promessasResult.promessas.forEach(p => {
-                    const cliente = String(p.cliente || '');
-                    const whatsapp = String(p.whatsapp || '');
-                    const observacao = String(p.observacao || '');
-                    const status = String(p.status || 'pendente');
-                    const saldo = parseFloat(p.saldo) || 0;
-
-                    let dataPagamento = new Date();
-                    if (p.dataPagamento) {
-                        dataPagamento = new Date(p.dataPagamento);
-                    }
-
-                    const dataPromessaStr = dataPagamento.toDateString();
-
-                    if (dataPromessaStr === hojeStr && saldo > 0 && status !== 'pago') {
-                        promessasHoje.push({ cliente, whatsapp, observacao, status, saldo, dataPagamento });
-                    } else if (dataPagamento < hoje && saldo > 0 && status !== 'pago') {
-                        promessasAtraso.push({ cliente, whatsapp, observacao, status, saldo, dataPagamento });
-                    }
-                });
-            }
-
-            promessasHoje.sort((a, b) => b.saldo - a.saldo);
-            promessasAtraso.sort((a, b) => b.saldo - a.saldo);
 
             let graficoHTML = '';
             if (vendasResult.success && vendasResult.vendas && vendasResult.vendas.length > 0) {
@@ -685,27 +895,17 @@
                 `;
             }
 
-            let statusHojeHTML = promessasHoje.length > 0 ?
-                `<div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
-                    <span style="font-size:32px;">⚠️</span>
-                    <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos pendentes para hoje</p>
-                    <p style="color:#e53e3e; margin:0;">${promessasHoje.length} cliente(s) com pagamento prometido</p>
-                </div>` :
-                `<div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
-                    <span style="font-size:32px;">✅</span>
-                    <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento pendente para hoje</p>
-                </div>`;
+            const statusHojeHTML = `<div id="promessas-hoje-container">
+                <div style="background:#f0f4ff;padding:15px;border-radius:8px;text-align:center;color:#718096;font-size:13px;">
+                    ⏳ Carregando pagamentos pendentes...
+                </div>
+            </div>`;
 
-            let statusAtrasoHTML = promessasAtraso.length > 0 ?
-                `<div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
-                    <span style="font-size:32px;">🔴</span>
-                    <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos em atraso</p>
-                    <p style="color:#e53e3e; margin:0;">${promessasAtraso.length} cliente(s) com pagamento atrasado</p>
-                </div>` :
-                `<div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
-                    <span style="font-size:32px;">✅</span>
-                    <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento em atraso</p>
-                </div>`;
+            const statusAtrasoHTML = `<div id="promessas-atraso-container">
+                <div style="background:#f0f4ff;padding:15px;border-radius:8px;text-align:center;color:#718096;font-size:13px;">
+                    ⏳ Carregando pagamentos atrasados...
+                </div>
+            </div>`;
 
             app.innerHTML = `
                 <section style="animation:fadeIn 0.4s ease;">
@@ -792,6 +992,21 @@
                 </section>
             `;
 
+            // Carrega promessas após renderizar
+            if (promessasResult) {
+                atualizarPromessasDashboard(promessasResult);
+            } else {
+                // Tenta carregar novamente
+                try {
+                    const promessasData = await callAPI('listarPromessasPagamento', null, true, 30000);
+                    if (promessasData) {
+                        atualizarPromessasDashboard(promessasData);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Erro ao carregar promessas:', e);
+                }
+            }
+
         } catch (error) {
             console.error('❌ Erro no renderHome:', error);
             app.innerHTML = `
@@ -807,6 +1022,74 @@
         }
     }
 
+    function atualizarPromessasDashboard(promessasResult) {
+        const hojeContainer = document.getElementById('promessas-hoje-container');
+        const atrasoContainer = document.getElementById('promessas-atraso-container');
+        
+        if (!hojeContainer || !atrasoContainer) return;
+
+        let promessasHoje = [];
+        let promessasAtraso = [];
+        const hoje = new Date();
+        const hojeStr = hoje.toDateString();
+
+        if (promessasResult.success && promessasResult.promessas) {
+            promessasResult.promessas.forEach(p => {
+                const saldo = parseFloat(p.saldo) || 0;
+                const status = String(p.status || 'pendente');
+
+                let dataPagamento = new Date();
+                if (p.dataPagamento) {
+                    dataPagamento = new Date(p.dataPagamento);
+                }
+
+                const dataPromessaStr = dataPagamento.toDateString();
+
+                if (dataPromessaStr === hojeStr && saldo > 0 && status !== 'pago') {
+                    promessasHoje.push(p);
+                } else if (dataPagamento < hoje && saldo > 0 && status !== 'pago') {
+                    promessasAtraso.push(p);
+                }
+            });
+        }
+
+        // Atualiza container de hoje
+        if (promessasHoje.length > 0) {
+            hojeContainer.innerHTML = `
+                <div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
+                    <span style="font-size:32px;">⚠️</span>
+                    <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos pendentes para hoje</p>
+                    <p style="color:#e53e3e; margin:0;">${promessasHoje.length} cliente(s) com pagamento prometido</p>
+                </div>
+            `;
+        } else {
+            hojeContainer.innerHTML = `
+                <div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
+                    <span style="font-size:32px;">✅</span>
+                    <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento pendente para hoje</p>
+                </div>
+            `;
+        }
+
+        // Atualiza container de atraso
+        if (promessasAtraso.length > 0) {
+            atrasoContainer.innerHTML = `
+                <div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
+                    <span style="font-size:32px;">🔴</span>
+                    <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos em atraso</p>
+                    <p style="color:#e53e3e; margin:0;">${promessasAtraso.length} cliente(s) com pagamento atrasado</p>
+                </div>
+            `;
+        } else {
+            atrasoContainer.innerHTML = `
+                <div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
+                    <span style="font-size:32px;">✅</span>
+                    <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento em atraso</p>
+                </div>
+            `;
+        }
+    }
+
     window.atualizarDashboard = function() {
         mostrarToast('Atualizando dashboard...', 'info');
         Cache.clear();
@@ -814,15 +1097,15 @@
     };
 
     // ============================================================
-    // ESTOQUE
+    // ESTOQUE OTIMIZADO
     // ============================================================
     async function renderEstoque() {
         const app = document.getElementById('app');
         if (!app) return;
-        mostrarLoading('estoque');
+        mostrarLoadingSkeleton('estoque');
 
         try {
-            const result = await callAPI('listarProdutos');
+            const result = await callAPI('listarProdutos', null, true, 30000);
             let html = '';
             if (result.success && result.produtos && result.produtos.length > 0) {
                 const produtosOrdenados = result.produtos.sort((a, b) => 
@@ -1044,17 +1327,17 @@
     };
 
     // ============================================================
-    // VENDAS
+    // VENDAS OTIMIZADO
     // ============================================================
     async function renderVendas() {
         const app = document.getElementById('app');
         if (!app) return;
-        mostrarLoading('vendas');
+        mostrarLoadingSkeleton('vendas');
 
         try {
             const [produtosResult, clientesResult] = await Promise.all([
-                callAPI('listarProdutos'),
-                callAPI('listarClientes')
+                callAPI('listarProdutos', null, true, 30000),
+                callAPI('listarClientes', null, true, 30000)
             ]);
 
             let produtosOptions = '<option value="">Selecione um produto...</option>';
@@ -1172,52 +1455,57 @@
                 </section>
             `;
 
+            // Função de cálculo otimizada com debounce
+            let calcTimeout;
             function calcularTotais() {
-                let totalGeral = 0;
-                for (let i = 1; i <= 4; i++) {
-                    const select = document.getElementById(`produto${i}`);
-                    const qtdInput = document.getElementById(`qtd${i}`);
-                    const subtotalSpan = document.getElementById(`subtotal${i}`);
-                    const descValorInput = document.getElementById(`descValor${i}`);
-                    const descTipoSelect = document.getElementById(`descTipo${i}`);
-                    const descAplicadoSpan = document.getElementById(`descAplicado${i}`);
+                if (calcTimeout) clearTimeout(calcTimeout);
+                calcTimeout = setTimeout(() => {
+                    let totalGeral = 0;
+                    for (let i = 1; i <= 4; i++) {
+                        const select = document.getElementById(`produto${i}`);
+                        const qtdInput = document.getElementById(`qtd${i}`);
+                        const subtotalSpan = document.getElementById(`subtotal${i}`);
+                        const descValorInput = document.getElementById(`descValor${i}`);
+                        const descTipoSelect = document.getElementById(`descTipo${i}`);
+                        const descAplicadoSpan = document.getElementById(`descAplicado${i}`);
 
-                    const qtd = parseInt(qtdInput.value) || 0;
-                    const option = select.options[select.selectedIndex];
-                    let subtotal = 0, descontoAplicado = 0, subtotalFinal = 0;
+                        const qtd = parseInt(qtdInput.value) || 0;
+                        const option = select.options[select.selectedIndex];
+                        let subtotal = 0, descontoAplicado = 0, subtotalFinal = 0;
 
-                    if (select.selectedIndex > 0 && option && qtd > 0) {
-                        const preco = parseFloat(option.dataset.preco || 0);
-                        subtotal = preco * qtd;
-                        const descValor = parseFloat(descValorInput.value) || 0;
-                        const descTipo = descTipoSelect.value;
-                        if (descValor > 0) {
-                            if (descTipo === '%') {
-                                descontoAplicado = (subtotal * descValor) / 100;
-                                if (descontoAplicado > subtotal) descontoAplicado = subtotal;
-                            } else {
-                                descontoAplicado = Math.min(descValor, subtotal);
+                        if (select.selectedIndex > 0 && option && qtd > 0) {
+                            const preco = parseFloat(option.dataset.preco || 0);
+                            subtotal = preco * qtd;
+                            const descValor = parseFloat(descValorInput.value) || 0;
+                            const descTipo = descTipoSelect.value;
+                            if (descValor > 0) {
+                                if (descTipo === '%') {
+                                    descontoAplicado = (subtotal * descValor) / 100;
+                                    if (descontoAplicado > subtotal) descontoAplicado = subtotal;
+                                } else {
+                                    descontoAplicado = Math.min(descValor, subtotal);
+                                }
                             }
+                            subtotalFinal = subtotal - descontoAplicado;
                         }
-                        subtotalFinal = subtotal - descontoAplicado;
+                        subtotalSpan.textContent = `R$ ${subtotalFinal.toFixed(2).replace('.', ',')}`;
+                        descAplicadoSpan.textContent = descontoAplicado > 0 ? `-${descTipoSelect.value === '%' ? descValorInput.value + '%' : 'R$ ' + descValorInput.value}` : '';
+                        totalGeral += subtotalFinal;
                     }
-                    subtotalSpan.textContent = `R$ ${subtotalFinal.toFixed(2).replace('.', ',')}`;
-                    descAplicadoSpan.textContent = descontoAplicado > 0 ? `-${descTipoSelect.value === '%' ? descValorInput.value + '%' : 'R$ ' + descValorInput.value}` : '';
-                    totalGeral += subtotalFinal;
-                }
-                document.getElementById('totalVenda').textContent = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
-                const valorPixInput = document.getElementById('valorPixVenda');
-                if (valorPixInput && !valorPixInput.value) valorPixInput.value = totalGeral.toFixed(2);
-                const valorPago = parseFloat(document.getElementById('valorPago').value) || 0;
-                const troco = valorPago - totalGeral;
-                const trocoSpan = document.getElementById('trocoOuPendente');
-                if (troco >= 0) {
-                    trocoSpan.textContent = `R$ ${troco.toFixed(2).replace('.', ',')}`;
-                    trocoSpan.style.color = '#38a169';
-                } else {
-                    trocoSpan.textContent = `R$ ${Math.abs(troco).toFixed(2).replace('.', ',')} (Pendente)`;
-                    trocoSpan.style.color = '#e53e3e';
-                }
+                    document.getElementById('totalVenda').textContent = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+                    const valorPixInput = document.getElementById('valorPixVenda');
+                    if (valorPixInput && !valorPixInput.value) valorPixInput.value = totalGeral.toFixed(2);
+                    const valorPago = parseFloat(document.getElementById('valorPago').value) || 0;
+                    const troco = valorPago - totalGeral;
+                    const trocoSpan = document.getElementById('trocoOuPendente');
+                    if (troco >= 0) {
+                        trocoSpan.textContent = `R$ ${troco.toFixed(2).replace('.', ',')}`;
+                        trocoSpan.style.color = '#38a169';
+                    } else {
+                        trocoSpan.textContent = `R$ ${Math.abs(troco).toFixed(2).replace('.', ',')} (Pendente)`;
+                        trocoSpan.style.color = '#e53e3e';
+                    }
+                }, 50);
             }
 
             document.querySelectorAll('.produto-select, .qtd-produto, .desc-valor, .desc-tipo').forEach(el => {
@@ -1441,7 +1729,7 @@
         const select = document.getElementById('clienteSelect');
         if (!select) return;
         try {
-            const result = await callAPI('listarClientes', null, false);
+            const result = await callAPI('listarClientes', null, true, 30000);
             let clientes = [];
             if (result.success && result.clientes) {
                 clientes = result.clientes.map(c => c.nome).filter(n => n && n !== 'Cliente não informado');
@@ -1460,15 +1748,15 @@
     }
 
     // ============================================================
-    // CLIENTES
+    // CLIENTES OTIMIZADO
     // ============================================================
     async function renderClientes() {
         const app = document.getElementById('app');
         if (!app) return;
-        mostrarLoading('clientes');
+        mostrarLoadingSkeleton('clientes');
 
         try {
-            const result = await callAPI('listarVendasPorCliente');
+            const result = await callAPI('listarVendasPorCliente', null, true, 30000);
             let clientes = [];
             if (result.success && result.clientes) {
                 clientes = Array.isArray(result.clientes) ? result.clientes : [];
@@ -1539,10 +1827,13 @@
                 </section>
             `;
 
-            document.getElementById('buscaCliente').addEventListener('input', (e) => {
-                const filtro = e.target.value;
-                carregarTabelaClientes(filtro);
-            });
+            // Debounce para busca
+            document.getElementById('buscaCliente').addEventListener('input', 
+                debounce((e) => {
+                    const filtro = e.target.value;
+                    carregarTabelaClientes(filtro);
+                }, 300)
+            );
 
             const expandido = StateManager.getClienteExpandido();
             if (expandido) {
@@ -1571,7 +1862,7 @@
 
     async function carregarTabelaClientes(filtro = '') {
         try {
-            const result = await callAPI('listarVendasPorCliente');
+            const result = await callAPI('listarVendasPorCliente', null, true, 30000);
             let clientes = [];
             if (result.success && result.clientes) {
                 clientes = Array.isArray(result.clientes) ? result.clientes : [];
@@ -1640,21 +1931,28 @@
     // ============================================================
     window.toggleDetalhesCliente = async function(nomeCliente) {
         const current = StateManager.getClienteExpandido();
-        StateManager.setClienteExpandido(current === nomeCliente ? null : nomeCliente);
-        await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
+        const novoEstado = current === nomeCliente ? null : nomeCliente;
+        StateManager.setClienteExpandido(novoEstado);
+        
+        // Atualiza apenas a linha expandida
+        if (novoEstado) {
+            await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
+        } else {
+            await carregarTabelaClientes(document.getElementById('buscaCliente')?.value || '');
+        }
     };
 
     // ============================================================
-    // CARREGAR DETALHES DO CLIENTE - SEM QUADRO BRANCO
+    // CARREGAR DETALHES DO CLIENTE
     // ============================================================
     async function carregarDetalhesCliente(nomeCliente, container) {
         if (!container) return;
 
         try {
             const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
-                callAPI('listarDetalhesCliente', { cliente: nomeCliente }),
-                callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }),
-                callAPI('listarVendasPorCliente')
+                callAPI('listarDetalhesCliente', { cliente: nomeCliente }, true, 30000),
+                callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }, true, 30000),
+                callAPI('listarVendasPorCliente', null, true, 30000)
             ]);
 
             let totalGasto = 0, totalPago = 0;
@@ -1820,62 +2118,62 @@
     };
 
     window.compartilharExtrato = async function(nomeCliente) {
-    try {
-        const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
-            callAPI('listarDetalhesCliente', { cliente: nomeCliente }, false),
-            callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }, false),
-            callAPI('listarVendasPorCliente', null, false)
-        ]);
-        
-        let totalGasto = 0, totalPago = 0;
-        if (resumoCliente.success && resumoCliente.clientes) {
-            const cliente = resumoCliente.clientes.find(c => c.nome.toLowerCase() === nomeCliente.toLowerCase());
-            if (cliente) {
-                totalGasto = parseFloat(cliente.totalGasto) || 0;
-                totalPago = parseFloat(cliente.totalPago) || 0;
+        try {
+            const [historicoCompras, historicoPagamentos, resumoCliente] = await Promise.all([
+                callAPI('listarDetalhesCliente', { cliente: nomeCliente }, false),
+                callAPI('listarPagamentosPorCliente', { cliente: nomeCliente }, false),
+                callAPI('listarVendasPorCliente', null, false)
+            ]);
+            
+            let totalGasto = 0, totalPago = 0;
+            if (resumoCliente.success && resumoCliente.clientes) {
+                const cliente = resumoCliente.clientes.find(c => c.nome.toLowerCase() === nomeCliente.toLowerCase());
+                if (cliente) {
+                    totalGasto = parseFloat(cliente.totalGasto) || 0;
+                    totalPago = parseFloat(cliente.totalPago) || 0;
+                }
             }
+            
+            const saldo = totalGasto - totalPago;
+            let texto = `EXTRATO DO CLIENTE\n\n`;
+            texto += `👤 Nome: ${nomeCliente}\n`;
+            texto += `💰 Total Gasto: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
+            texto += `💵 Total Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
+            texto += `📊 Saldo: R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} (${saldo > 0 ? 'A pagar' : saldo < 0 ? 'Crédito' : 'Quitado'})\n\n`;
+            texto += `🛒 COMPRAS:\n`;
+            
+            if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
+                historicoCompras.historico.forEach(h => {
+                    const data = h.data ? new Date(h.data) : new Date();
+                    const dataStr = data.toLocaleDateString('pt-BR');
+                    const nomeProduto = h.produto || 'Produto';
+                    const quantidade = h.quantidade || 1;
+                    const total = parseFloat(h.total) || 0;
+                    texto += `- ${dataStr}: ${nomeProduto} (${quantidade}x) = R$ ${total.toFixed(2).replace('.', ',')}\n`;
+                });
+            } else {
+                texto += `Nenhuma compra encontrada.\n`;
+            }
+            
+            texto += `\n💳 PAGAMENTOS:\n`;
+            if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
+                historicoPagamentos.pagamentos.forEach(p => {
+                    const data = p.data ? new Date(p.data) : new Date();
+                    const dataStr = data.toLocaleDateString('pt-BR');
+                    const valor = parseFloat(p.valor) || 0;
+                    const observacao = p.observacao || '-';
+                    texto += `- ${dataStr}: R$ ${valor.toFixed(2).replace('.', ',')} (${observacao})\n`;
+                });
+            } else {
+                texto += `Nenhum pagamento encontrado.\n`;
+            }
+            
+            const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+            window.open(url, '_blank');
+        } catch (error) {
+            mostrarToast('Erro ao gerar extrato: ' + error.message, 'error');
         }
-        
-        const saldo = totalGasto - totalPago;
-        let texto = `EXTRATO DO CLIENTE\n\n`;
-        texto += `👤 Nome: ${nomeCliente}\n`;
-        texto += `💰 Total Gasto: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
-        texto += `💵 Total Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
-        texto += `📊 Saldo: R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} (${saldo > 0 ? 'A pagar' : saldo < 0 ? 'Crédito' : 'Quitado'})\n\n`;
-        texto += `🛒 COMPRAS:\n`;
-        
-        if (historicoCompras.success && historicoCompras.historico && historicoCompras.historico.length > 0) {
-            historicoCompras.historico.forEach(h => {
-                const data = h.data ? new Date(h.data) : new Date();
-                const dataStr = data.toLocaleDateString('pt-BR');
-                const nomeProduto = h.produto || 'Produto';
-                const quantidade = h.quantidade || 1;
-                const total = parseFloat(h.total) || 0;
-                texto += `- ${dataStr}: ${nomeProduto} (${quantidade}x) = R$ ${total.toFixed(2).replace('.', ',')}\n`;
-            });
-        } else {
-            texto += `Nenhuma compra encontrada.\n`;
-        }
-        
-        texto += `\n💳 PAGAMENTOS:\n`;
-        if (historicoPagamentos.success && historicoPagamentos.pagamentos && historicoPagamentos.pagamentos.length > 0) {
-            historicoPagamentos.pagamentos.forEach(p => {
-                const data = p.data ? new Date(p.data) : new Date();
-                const dataStr = data.toLocaleDateString('pt-BR');
-                const valor = parseFloat(p.valor) || 0;
-                const observacao = p.observacao || '-';
-                texto += `- ${dataStr}: R$ ${valor.toFixed(2).replace('.', ',')} (${observacao})\n`;
-            });
-        } else {
-            texto += `Nenhum pagamento encontrado.\n`;
-        }
-        
-        const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
-        window.open(url, '_blank');
-    } catch (error) {
-        mostrarToast('Erro ao gerar extrato: ' + error.message, 'error');
-    }
-};
+    };
 
     // ============================================================
     // VENDEDORA & COBRANÇAS
@@ -1883,7 +2181,7 @@
     async function renderVendedora() {
         const app = document.getElementById('app');
         if (!app) return;
-        mostrarLoading('vendedora');
+        mostrarLoadingSkeleton('vendedora');
 
         app.innerHTML = `
             <section style="animation:fadeIn 0.4s ease;">
@@ -1945,7 +2243,7 @@
         if (!container) return;
 
         try {
-            const result = await callAPI('listarPromessasPagamento');
+            const result = await callAPI('listarPromessasPagamento', null, true, 30000);
             if (!result.success || !Array.isArray(result.promessas) || result.promessas.length === 0) {
                 container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
                 return;
@@ -2035,7 +2333,7 @@
         tituloDiv.textContent = `📊 Extrato ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
 
         try {
-            const result = await callAPI('listarVendas');
+            const result = await callAPI('listarVendas', null, true, 30000);
             if (!result.success || !result.vendas || result.vendas.length === 0) {
                 conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">📭</span><p>Nenhuma venda</p></div>`;
                 return;
@@ -2141,7 +2439,7 @@
         tituloDiv.textContent = `💰 Pagamentos - ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
 
         try {
-            const result = await callAPI('listarPagamentos');
+            const result = await callAPI('listarPagamentos', null, true, 30000);
             if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
                 conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">💰</span><p>Nenhum pagamento</p></div>`;
                 return;
@@ -2278,7 +2576,7 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
-        console.log('🚀 Iniciando Sistema de Vendas V12.0...');
+        console.log('🚀 Iniciando Sistema de Vendas V13.0 (Otimizado)...');
         adicionarEstilosCSS();
         bloquearZoom();
         inicializarNavegacao();
@@ -2289,11 +2587,13 @@
             return;
         }
         
+        // Inicializa com a home
         setTimeout(() => {
             renderHome();
         }, 100);
         
         console.log('✅ Sistema inicializado com sucesso!');
+        console.log(`📊 Cache size: ${Cache.getSize()}`);
     }
 
     // ============================================================
@@ -2311,7 +2611,7 @@
     window.cadastrarNovoCliente = window.cadastrarNovoCliente;
     window.abrirEdicaoProduto = window.abrirEdicaoProduto;
     window.confirmarExclusaoProduto = window.confirmarExclusaoProduto;
-    window.registrarPagamentoClienteInline = window.registrarPagamentoClienteInline;
+    window.registrarPagamentoInline = window.registrarPagamentoInline;
     window.gerarPixInline = window.gerarPixInline;
     window.compartilharExtrato = window.compartilharExtrato;
     window.gerarQrCodePix = window.gerarQrCodePix;
@@ -2320,7 +2620,6 @@
     window.fecharResultadoExtrato = window.fecharResultadoExtrato;
     window.compartilharExtratoVendedora = window.compartilharExtratoVendedora;
     window.compartilharExtratoPagamentos = window.compartilharExtratoPagamentos;
-    window.imprimirExtrato = window.imprimirExtrato;
     window.atualizarVendedora = window.atualizarVendedora;
     window.enviarCobranca = window.enviarCobranca;
     window.carregarPromessasHoje = carregarPromessasHoje;
