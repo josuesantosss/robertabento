@@ -177,7 +177,6 @@
                     font-weight: 600;
                     color: #4a5568;
                     font-size: 13px;
-                    flex: 0 0 110px;
                 }
                 .clientes-table tbody tr td:first-child {
                     font-weight: 600;
@@ -1586,4 +1585,4 @@
         init();
     }
 
-})(); 
+})();
