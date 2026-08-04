@@ -1,5 +1,5 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.3
+// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.4
 // ============================================================
 
 (function() {
@@ -29,7 +29,6 @@
     function atualizarVersaoHTML() {
         console.log('🔄 Atualizando versão no HTML...');
         
-        // Usa ID em vez de classe para garantir que encontre o elemento
         const versaoElement = document.getElementById('versao-sistema');
         if (versaoElement) {
             versaoElement.textContent = SISTEMA.getVersaoRodape();
@@ -38,7 +37,6 @@
             console.warn('⚠️ Elemento #versao-sistema não encontrado');
         }
         
-        // Atualiza o ano
         const anoElement = document.getElementById('ano-atual');
         if (anoElement) {
             anoElement.textContent = new Date().getFullYear();
@@ -65,8 +63,8 @@
             MAX_ITEMS: 50
         },
         TIMEOUT: {
-            READ: 15000,
-            WRITE: 30000
+            READ: 30000,  // Aumentado para 30 segundos
+            WRITE: 45000  // Aumentado para 45 segundos
         }
     };
 
@@ -171,7 +169,7 @@
     // ============================================================
     // FUNÇÃO DE RETRY PARA OPERAÇÕES CRÍTICAS
     // ============================================================
-    async function fetchWithRetry(fetchFn, maxRetries = 2) {
+    async function fetchWithRetry(fetchFn, maxRetries = 3) {
         let lastError;
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -185,7 +183,7 @@
                         if (attempt === maxRetries) {
                             return result;
                         }
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await new Promise(resolve => setTimeout(resolve, 2000));
                         continue;
                     }
                     return result;
@@ -197,7 +195,7 @@
                 console.warn(`⚠️ Erro na tentativa ${attempt}:`, error.message);
                 
                 if (attempt < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
         }
@@ -221,29 +219,33 @@
         const fetchFn = async () => {
             try {
                 console.log(`📤 Chamando API: ${action}`);
+                console.log(`📤 URL: ${url}`);
                 
                 let controller;
                 let timeout;
                 
-                if (!isWriteAction) {
-                    controller = new AbortController();
-                    timeout = setTimeout(() => controller.abort(), CONFIG.TIMEOUT.READ);
-                }
+                // Para ações de escrita, timeout maior
+                const timeoutMs = isWriteAction ? CONFIG.TIMEOUT.WRITE : CONFIG.TIMEOUT.READ;
+                
+                controller = new AbortController();
+                timeout = setTimeout(() => controller.abort(), timeoutMs);
                 
                 const fetchOptions = {
                     method: 'GET',
                     headers: {
-                        'Accept': 'application/json'
-                    }
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
+                    signal: controller.signal
                 };
                 
-                if (controller) {
-                    fetchOptions.signal = controller.signal;
-                }
-                
+                const startTime = Date.now();
                 const response = await fetch(url, fetchOptions);
+                const endTime = Date.now();
                 
-                if (timeout) clearTimeout(timeout);
+                clearTimeout(timeout);
+                
+                console.log(`⏱️ Tempo de resposta: ${endTime - startTime}ms`);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -255,7 +257,7 @@
                 return result;
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    console.error(`⏱️ Timeout na API (${action})`);
+                    console.error(`⏱️ Timeout na API (${action}) após ${CONFIG.TIMEOUT.READ}ms`);
                     return { success: false, error: 'Timeout na requisição' };
                 }
                 console.error(`❌ Erro na API (${action}):`, error);
@@ -264,7 +266,7 @@
         };
 
         if (isWriteAction) {
-            return await fetchWithRetry(fetchFn, 2);
+            return await fetchWithRetry(fetchFn, 3);
         }
 
         if (useCache && !data) {
@@ -532,6 +534,7 @@
         clienteExpandido: null,
         isLoading: false,
         pageCache: {},
+        isInitialized: false,
         
         setPage(page) { 
             if (this.currentPage !== page) {
@@ -547,7 +550,9 @@
         setLoading(loading) { this.isLoading = loading; },
         isLoading() { return this.isLoading; },
         getPageCache(page) { return this.pageCache[page]; },
-        setPageCache(page, data) { this.pageCache[page] = data; }
+        setPageCache(page, data) { this.pageCache[page] = data; },
+        setIsInitialized(value) { this.isInitialized = value; },
+        getIsInitialized() { return this.isInitialized; }
     };
 
     // ============================================================
@@ -578,7 +583,7 @@
                     Cache.clear();
                     mostrarLoadingSkeleton(page);
                     requestAnimationFrame(() => {
-                        setTimeout(() => pageMap[page](), 50);
+                        setTimeout(() => pageMap[page](), 100);
                     });
                 }
             });
@@ -844,35 +849,66 @@
     };
 
     // ============================================================
-    // HOME (DASHBOARD) OTIMIZADO
+    // HOME (DASHBOARD) OTIMIZADO COM LOADING
     // ============================================================
     async function renderHome() {
         const app = document.getElementById('app');
         if (!app) return;
 
         const { saudacao, horario } = obterSaudacao();
+        
+        // Mostra skeleton loading primeiro
         mostrarLoadingSkeleton('home');
 
+        // Adiciona indicador de carregamento
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'loading-indicator';
+        loadingIndicator.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 9999;
+            text-align: center;
+            display: none;
+        `;
+        loadingIndicator.innerHTML = `
+            <div style="font-size: 40px; margin-bottom: 10px;">⏳</div>
+            <div style="font-size: 16px; color: #667eea; font-weight: 600;">Carregando dados...</div>
+            <div style="font-size: 12px; color: #999; margin-top: 5px;">Aguarde, estamos preparando tudo para você</div>
+        `;
+        document.body.appendChild(loadingIndicator);
+
         try {
+            // Mostra loading
+            loadingIndicator.style.display = 'block';
+            
+            console.log('📊 Iniciando carregamento do dashboard...');
+            
+            // Carrega dados com timeout maior e retry
             const [produtosResult, vendasResult] = await Promise.all([
-                callAPI('listarProdutos', null, true, 30000),
-                callAPI('listarVendas', null, true, 30000)
+                callAPI('listarProdutos', null, true, 60000),
+                callAPI('listarVendas', null, true, 60000)
             ]);
 
-            let promessasResult = null;
-            setTimeout(async () => {
-                try {
-                    promessasResult = await callAPI('listarPromessasPagamento', null, true, 30000);
-                    if (promessasResult) {
-                        atualizarPromessasDashboard(promessasResult);
-                    }
-                } catch (e) {
-                    console.warn('⚠️ Erro ao carregar promessas:', e);
-                }
-            }, 100);
+            console.log('✅ Dados principais carregados');
 
+            // Carrega promessas em background
+            let promessasResult = null;
+            try {
+                promessasResult = await callAPI('listarPromessasPagamento', null, true, 60000);
+                console.log('✅ Promessas carregadas');
+            } catch (e) {
+                console.warn('⚠️ Erro ao carregar promessas:', e);
+            }
+
+            // Processa os dados
             let totalProdutos = 0, valorTotalEstoque = 0, produtosBaixoEstoque = 0, produtosEsgotados = 0;
-            if (produtosResult.success && produtosResult.produtos) {
+            if (produtosResult && produtosResult.success && produtosResult.produtos) {
                 totalProdutos = produtosResult.produtos.length;
                 produtosResult.produtos.forEach(produto => {
                     const preco = parseFloat(produto.preco) || 0;
@@ -887,7 +923,7 @@
             const hoje = new Date();
             const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-            if (vendasResult.success && vendasResult.vendas) {
+            if (vendasResult && vendasResult.success && vendasResult.vendas) {
                 vendasResult.vendas.forEach(venda => {
                     const dataVenda = new Date(venda.data);
                     const total = parseFloat(venda.total) || 0;
@@ -897,26 +933,230 @@
                 });
             }
 
-            // ... (restante do código renderHome permanece igual) ...
-            // O código é muito extenso, mas a parte importante já foi corrigida
+            // Oculta loading
+            loadingIndicator.style.display = 'none';
+
+            // Renderiza o dashboard
+            renderizarDashboard(app, {
+                saudacao,
+                horario,
+                totalProdutos,
+                valorTotalEstoque,
+                produtosBaixoEstoque,
+                produtosEsgotados,
+                totalVendasHoje,
+                totalVendasMes,
+                totalVendasGeral,
+                vendasResult,
+                hoje,
+                inicioMes,
+                promessasResult
+            });
 
         } catch (error) {
             console.error('❌ Erro no renderHome:', error);
+            loadingIndicator.style.display = 'none';
+            
             app.innerHTML = `
                 <section style="animation:fadeIn 0.4s ease;">
                     <h2>🏠 Dashboard</h2>
-                    <div style="text-align:center;padding:25px;color:#e53e3e;">
-                        <p style="font-size:36px;">😕</p>
-                        <p>❌ Erro: ${error.message}</p>
-                        <button onclick="window.renderHome()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;margin-top:6px;">🔄 Tentar novamente</button>
+                    <div style="text-align:center;padding:30px;background:#fff5f5;border-radius:12px;border:2px solid #e53e3e;">
+                        <p style="font-size:48px;">😕</p>
+                        <h3 style="color:#e53e3e;">Erro ao carregar dados</h3>
+                        <p style="color:#666;font-size:14px;">${error.message}</p>
+                        <button onclick="window.renderHome()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;margin-top:10px;font-size:14px;">🔄 Tentar novamente</button>
+                        <div style="margin-top:15px;font-size:12px;color:#999;">
+                            <p>💡 Dica: Verifique sua conexão com a internet</p>
+                            <p>⏱️ O servidor pode estar demorando para responder</p>
+                        </div>
                     </div>
                 </section>
             `;
         }
     }
 
+    function renderizarDashboard(app, dados) {
+        const {
+            saudacao, horario, totalProdutos, valorTotalEstoque,
+            produtosBaixoEstoque, produtosEsgotados, totalVendasHoje,
+            totalVendasMes, totalVendasGeral, vendasResult,
+            hoje, inicioMes, promessasResult
+        } = dados;
+
+        let graficoHTML = '';
+        if (vendasResult && vendasResult.success && vendasResult.vendas && vendasResult.vendas.length > 0) {
+            const vendasPorDia = {};
+            const ultimos7Dias = [];
+            for (let i = 6; i >= 0; i--) {
+                const data = new Date(hoje);
+                data.setDate(data.getDate() - i);
+                const dataStr = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                ultimos7Dias.push(dataStr);
+                vendasPorDia[dataStr] = 0;
+            }
+            vendasResult.vendas.forEach(v => {
+                const dataVenda = new Date(v.data);
+                const dataStr = dataVenda.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                if (vendasPorDia[dataStr] !== undefined) vendasPorDia[dataStr] += parseFloat(v.total) || 0;
+            });
+            const valores = ultimos7Dias.map(d => vendasPorDia[d]);
+            const maxValor = Math.max(...valores, 1);
+
+            graficoHTML = `
+                <div style="margin-top:20px; background:white; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0 0 20px 0;">📊 Vendas dos Últimos 7 Dias</h3>
+                    <div style="display:flex; align-items:flex-end; gap:8px; height:200px; padding:0 10px;">
+                        ${ultimos7Dias.map((dia, i) => {
+                            const altura = Math.max((valores[i] / maxValor) * 100, 1);
+                            return `
+                                <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;">
+                                    <span style="font-size:10px; margin-bottom:5px; color:#667eea; font-weight:bold;">
+                                        ${valores[i] > 0 ? 'R$ ' + valores[i].toFixed(0) : ''}
+                                    </span>
+                                    <div style="background:linear-gradient(180deg, #667eea, #764ba2); width:100%; height:${altura}%; border-radius:4px 4px 0 0; transition:all 0.3s ease; cursor:pointer;" 
+                                         title="${dia}: R$ ${valores[i].toFixed(2)}"
+                                         onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                    </div>
+                                    <span style="font-size:10px; margin-top:8px; color:#666;">${dia}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Determina status dos pagamentos
+        let promessasHoje = 0, promessasAtraso = 0;
+        if (promessasResult && promessasResult.success && promessasResult.promessas) {
+            const hojeStr = hoje.toDateString();
+            promessasResult.promessas.forEach(p => {
+                const saldo = parseFloat(p.saldo) || 0;
+                const status = String(p.status || 'pendente');
+                if (saldo > 0 && status !== 'pago') {
+                    let dataPagamento = new Date();
+                    if (p.dataPagamento) {
+                        dataPagamento = new Date(p.dataPagamento);
+                    }
+                    if (dataPagamento.toDateString() === hojeStr) {
+                        promessasHoje++;
+                    } else if (dataPagamento < hoje) {
+                        promessasAtraso++;
+                    }
+                }
+            });
+        }
+
+        const statusHojeHTML = promessasHoje > 0 ?
+            `<div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
+                <span style="font-size:32px;">⚠️</span>
+                <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos pendentes para hoje</p>
+                <p style="color:#e53e3e; margin:0;">${promessasHoje} cliente(s) com pagamento prometido</p>
+            </div>` :
+            `<div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
+                <span style="font-size:32px;">✅</span>
+                <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento pendente para hoje</p>
+            </div>`;
+
+        const statusAtrasoHTML = promessasAtraso > 0 ?
+            `<div style="background:#fff5f5; border:2px solid #e53e3e; border-radius:8px; padding:15px; text-align:center;">
+                <span style="font-size:32px;">🔴</span>
+                <p style="font-weight:bold; color:#e53e3e; margin:5px 0 0 0;">Há pagamentos em atraso</p>
+                <p style="color:#e53e3e; margin:0;">${promessasAtraso} cliente(s) com pagamento atrasado</p>
+            </div>` :
+            `<div style="background:#f0fff4; border:2px solid #48bb78; border-radius:8px; padding:15px; text-align:center;">
+                <span style="font-size:32px;">✅</span>
+                <p style="font-weight:bold; color:#38a169; margin:5px 0 0 0;">Nenhum pagamento em atraso</p>
+            </div>`;
+
+        app.innerHTML = `
+            <section style="animation:fadeIn 0.4s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h2>🏠 Dashboard</h2>
+                    <button onclick="window.atualizarDashboard()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:500;font-size:12px;">🔄 Atualizar</button>
+                </div>
+                <div class="saudacao-card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:18px 22px;border-radius:15px;margin-bottom:18px;box-shadow:0 4px 15px rgba(102,126,234,0.3);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                                <img src="img/face.png" alt="Face" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                            </div>
+                            <div>
+                                <p style="font-size:13px;margin:0;opacity:0.9;font-weight:300;">${saudacao},</p>
+                                <p style="font-size:26px;margin:2px 0 0 0;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,0.2);">Roberta! 👋</p>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.15);padding:10px 14px;border-radius:10px;">
+                                <span style="font-size:20px;">🕐</span>
+                                <div>
+                                    <p style="font-size:9px;margin:0;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">Agora</p>
+                                    <p style="font-size:22px;margin:0;font-weight:700;letter-spacing:1px;">${horario}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                    <div style="background:white;border-radius:10px;padding:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                        <h4 style="margin:0 0 10px 0;color:#e53e3e;font-size:13px;">📅 Pagamentos Pendentes Hoje</h4>
+                        ${statusHojeHTML}
+                    </div>
+                    <div style="background:white;border-radius:10px;padding:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                        <h4 style="margin:0 0 10px 0;color:#e53e3e;font-size:13px;">⚠️ Pagamentos em Atraso</h4>
+                        ${statusAtrasoHTML}
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                    <div class="card-dashboard" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:18px;border-radius:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:start;">
+                            <div><h3 style="margin:0 0 6px 0;font-size:11px;opacity:0.9;">📦 Total Produtos</h3><p style="font-size:28px;font-weight:bold;margin:0;">${totalProdutos}</p></div>
+                            <span style="font-size:24px;opacity:0.5;">📦</span>
+                        </div>
+                        <small style="opacity:0.8;font-size:11px;">Produtos cadastrados</small>
+                    </div>
+                    <div class="card-dashboard" style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:#fff;padding:18px;border-radius:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:start;">
+                            <div><h3 style="margin:0 0 6px 0;font-size:11px;opacity:0.9;">💰 Estoque Total</h3><p style="font-size:28px;font-weight:bold;margin:0;">R$ ${valorTotalEstoque.toFixed(2).replace('.', ',')}</p></div>
+                            <span style="font-size:24px;opacity:0.5;">💰</span>
+                        </div>
+                        <small style="opacity:0.8;font-size:11px;">Valor total em estoque</small>
+                    </div>
+                    <div class="card-dashboard" style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);color:#fff;padding:18px;border-radius:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:start;">
+                            <div><h3 style="margin:0 0 6px 0;font-size:11px;opacity:0.9;">💵 Vendas Hoje</h3><p style="font-size:28px;font-weight:bold;margin:0;">R$ ${totalVendasHoje.toFixed(2).replace('.', ',')}</p></div>
+                            <span style="font-size:24px;opacity:0.5;">💵</span>
+                        </div>
+                        <small style="opacity:0.8;font-size:11px;">${hoje.toLocaleDateString('pt-BR')}</small>
+                    </div>
+                    <div class="card-dashboard" style="background:linear-gradient(135deg,#43e97b 0%,#38f9d7 100%);color:#1a202c;padding:18px;border-radius:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:start;">
+                            <div><h3 style="margin:0 0 6px 0;font-size:11px;opacity:0.9;">📊 Vendas do Mês</h3><p style="font-size:28px;font-weight:bold;margin:0;">R$ ${totalVendasMes.toFixed(2).replace('.', ',')}</p></div>
+                            <span style="font-size:24px;opacity:0.5;">📊</span>
+                        </div>
+                        <small style="opacity:0.8;font-size:11px;">Desde ${inicioMes.toLocaleDateString('pt-BR')}</small>
+                    </div>
+                </div>
+                ${(produtosBaixoEstoque > 0 || produtosEsgotados > 0) ? `
+                    <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">
+                        ${produtosBaixoEstoque > 0 ? `<div style="padding:10px;background:#fff3cd;border:2px solid #ffc107;border-radius:6px;color:#856404;font-size:12px;"><strong>⚠️</strong> ${produtosBaixoEstoque} com estoque baixo</div>` : ''}
+                        ${produtosEsgotados > 0 ? `<div style="padding:10px;background:#f8d7da;border:2px solid #dc3545;border-radius:6px;color:#721c24;font-size:12px;"><strong>🔴</strong> ${produtosEsgotados} esgotados</div>` : ''}
+                    </div>
+                ` : ''}
+                ${graficoHTML}
+                <div style="margin-top:12px;padding:15px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin:0 0 10px 0;font-size:15px;">📈 Resumo Geral</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+                        <div><p style="color:#666;margin:0;font-size:11px;">Total em Vendas</p><p style="font-size:18px;font-weight:bold;color:#667eea;margin:2px 0;">R$ ${totalVendasGeral.toFixed(2).replace('.', ',')}</p></div>
+                        <div><p style="color:#666;margin:0;font-size:11px;">Ticket Médio</p><p style="font-size:18px;font-weight:bold;color:#667eea;margin:2px 0;">R$ ${vendasResult.vendas && vendasResult.vendas.length > 0 ? (totalVendasGeral / vendasResult.vendas.length).toFixed(2).replace('.', ',') : '0,00'}</p></div>
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
     // ============================================================
-    // INICIALIZAÇÃO - CORRIGIDA
+    // INICIALIZAÇÃO - CORRIGIDA COM LOADING
     // ============================================================
     function init() {
         console.log(`🚀 Iniciando ${SISTEMA.getVersaoCompleta()}...`);
@@ -938,7 +1178,7 @@
         bloquearZoom();
         inicializarNavegacao();
         
-        // ATUALIZA A VERSÃO NO HTML - AGORA COM RETRY
+        // Atualiza a versão no HTML
         setTimeout(() => {
             atualizarVersaoHTML();
         }, 100);
@@ -958,9 +1198,13 @@
             return;
         }
         
+        // Mostra loading inicial
+        mostrarLoadingSkeleton('home');
+        
+        // Carrega o dashboard com delay para garantir que tudo esteja pronto
         setTimeout(() => {
             renderHome();
-        }, 100);
+        }, 300);
         
         console.log(`✅ ${SISTEMA.getVersaoCompleta()} inicializado com sucesso!`);
         console.log(`📊 Cache size: ${Cache.getSize()}`);
