@@ -1,11 +1,11 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.2
+// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.3
 // ============================================================
 
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V13.2 (Timeout Corrigido)...');
+    console.log('🚀 Iniciando Sistema de Vendas V13.3 (Detalhes Cliente Corrigido)...');
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -1210,7 +1210,6 @@
         const msg = document.getElementById('msgCadastroRapido');
         const botaoSubmit = e.target.querySelector('button[type="submit"]');
 
-        // Validações
         if (!nome) { 
             msg.innerHTML = '<div style="color:#e53e3e;padding:8px;background:#fed7d7;border-radius:6px;">❌ Nome obrigatório</div>'; 
             return; 
@@ -1224,7 +1223,6 @@
             return; 
         }
 
-        // Desabilita o botão e mostra loading
         botaoSubmit.disabled = true;
         botaoSubmit.innerHTML = '<span class="loading-spinner" style="font-size:16px;">⏳</span> Cadastrando...';
         msg.innerHTML = '<div style="padding:8px;background:#e3f2fd;color:#0d47a1;border-radius:6px;">⏳ Enviando dados...</div>';
@@ -1241,15 +1239,10 @@
             if (result.success) {
                 msg.innerHTML = '<div style="padding:8px;background:#c6f6d5;color:#22543d;border-radius:6px;">✅ Produto cadastrado com sucesso!</div>';
                 mostrarToast(`✅ Produto "${nome}" cadastrado!`, 'success');
-                
-                // Limpa o formulário
                 document.getElementById('formCadastroRapido').reset();
-                
-                // Limpa o cache e recarrega a lista
                 Cache.clear();
                 await renderEstoque();
             } else {
-                // Verifica se é erro de timeout e tenta novamente
                 if (result.error && result.error.includes('Timeout')) {
                     msg.innerHTML = `
                         <div style="padding:8px;background:#fff3cd;color:#856404;border-radius:6px;">
@@ -1279,15 +1272,11 @@
             `;
             mostrarToast(`❌ Erro: ${error.message}`, 'error');
         } finally {
-            // Reabilita o botão
             botaoSubmit.disabled = false;
             botaoSubmit.innerHTML = '✅ Cadastrar';
         }
     }
 
-    // ============================================================
-    // FUNÇÃO PARA TENTAR CADASTRAR NOVAMENTE
-    // ============================================================
     window.tentarCadastrarNovamente = function() {
         const form = document.getElementById('formCadastroRapido');
         if (form) {
@@ -1406,9 +1395,6 @@
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     };
 
-    // ============================================================
-    // EXCLUSÃO DE PRODUTO CORRIGIDA
-    // ============================================================
     window.confirmarExclusaoProduto = function(id, nome) {
         confirmarAcao(
             `Deseja excluir o produto "${nome}"?`,
@@ -2089,7 +2075,7 @@
     };
 
     // ============================================================
-    // CARREGAR DETALHES DO CLIENTE
+    // CARREGAR DETALHES DO CLIENTE CORRIGIDO
     // ============================================================
     async function carregarDetalhesCliente(nomeCliente, container) {
         if (!container) return;
@@ -2118,17 +2104,37 @@
             if (historicoCompras.success && Array.isArray(historicoCompras.historico) && historicoCompras.historico.length > 0) {
                 comprasHtml = historicoCompras.historico.map(h => {
                     const data = h.data ? new Date(h.data) : new Date();
-                    return `<tr><td>${data.toLocaleDateString('pt-BR')}</td><td>${h.produto || '-'}</td><td>${h.quantidade || 1}</td><td>R$ ${(parseFloat(h.total) || 0).toFixed(2).replace('.', ',')}</td></tr>`;
+                    const dataStr = data.toLocaleDateString('pt-BR');
+                    const produto = h.produto || '-';
+                    const quantidade = h.quantidade || 1;
+                    const total = parseFloat(h.total) || 0;
+                    return `<tr>
+                        <td style="padding:6px 8px;text-align:left;">${dataStr}</td>
+                        <td style="padding:6px 8px;text-align:left;">${produto}</td>
+                        <td style="padding:6px 8px;text-align:center;">${quantidade}</td>
+                        <td style="padding:6px 8px;text-align:right;">R$ ${total.toFixed(2).replace('.', ',')}</td>
+                    </tr>`;
                 }).join('');
-            } else { comprasHtml = `<tr><td colspan="4" style="text-align:center;padding:15px;">Nenhuma compra</td></tr>`; }
+            } else { 
+                comprasHtml = `<tr><td colspan="4" style="text-align:center;padding:15px;">Nenhuma compra</td></tr>`; 
+            }
 
             let pagamentosHtml = '';
             if (historicoPagamentos.success && Array.isArray(historicoPagamentos.pagamentos) && historicoPagamentos.pagamentos.length > 0) {
                 pagamentosHtml = historicoPagamentos.pagamentos.map(p => {
                     const data = p.data ? new Date(p.data) : new Date();
-                    return `<tr><td>${data.toLocaleDateString('pt-BR')}</td><td>R$ ${(parseFloat(p.valor) || 0).toFixed(2).replace('.', ',')}</td><td>${p.observacao || '-'}</td></tr>`;
+                    const dataStr = data.toLocaleDateString('pt-BR');
+                    const valor = parseFloat(p.valor) || 0;
+                    const observacao = p.observacao || '-';
+                    return `<tr>
+                        <td style="padding:6px 8px;text-align:left;">${dataStr}</td>
+                        <td style="padding:6px 8px;text-align:right;">R$ ${valor.toFixed(2).replace('.', ',')}</td>
+                        <td style="padding:6px 8px;text-align:left;">${observacao}</td>
+                    </tr>`;
                 }).join('');
-            } else { pagamentosHtml = `<tr><td colspan="3" style="text-align:center;padding:15px;">Nenhum pagamento</td></tr>`; }
+            } else { 
+                pagamentosHtml = `<tr><td colspan="3" style="text-align:center;padding:15px;">Nenhum pagamento</td></tr>`; 
+            }
 
             const idSufixo = nomeCliente.replace(/[^a-zA-Z0-9]/g, '');
             const nomeSafe = nomeCliente.replace(/'/g, "\\'");
@@ -2137,41 +2143,51 @@
             container.innerHTML = `
                 <div style="background:transparent;padding:10px 0;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <h4 style="margin:0;font-size:16px;color:#2d3748;">${nomeCliente}</h4>
-                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" style="background:#e53e3e;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;">✕ Fechar</button>
+                        <h4 style="margin:0;font-size:16px;color:#2d3748;">📋 ${nomeCliente}</h4>
+                        <button onclick="window.toggleDetalhesCliente('${nomeSafe}')" 
+                                style="background:#e53e3e;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;">
+                            ✕ Fechar
+                        </button>
                     </div>
                     
                     <div class="detalhes-grid" style="display:grid;grid-template-columns:${isMobileDevice ? '1fr 1fr' : 'repeat(auto-fit,minmax(120px,1fr))'};gap:8px;margin-bottom:10px;">
                         <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
-                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Compras</p>
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">🛒 Compras</p>
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#667eea;">${historicoCompras.historico ? historicoCompras.historico.length : 0}</p>
                         </div>
                         <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
-                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Total Gasto</p>
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">💰 Total Gasto</p>
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#667eea;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</p>
                         </div>
                         <div style="background:#f7fafc;padding:10px;border-radius:6px;text-align:center;border:1px solid #edf2f7;">
-                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Total Pago</p>
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">💵 Total Pago</p>
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
                         </div>
                         <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:10px;border-radius:6px;text-align:center;border:1px solid ${corSaldo};">
-                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">Saldo</p>
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">📊 Saldo</p>
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
                             <small style="color:${corSaldo};font-size:10px;font-weight:500;">${statusSaldo}</small>
                         </div>
                     </div>
                     
                     <div style="margin-bottom:10px;">
-                        <button onclick="window.compartilharExtrato('${nomeSafe}')" style="background:#25D366;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;width:100%;">📱 Compartilhar Extrato</button>
+                        <button onclick="window.compartilharExtrato('${nomeSafe}')" 
+                                style="background:#25D366;color:#fff;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;width:100%;">
+                            📱 Compartilhar Extrato
+                        </button>
                     </div>
                     
                     <div style="margin-bottom:10px;display:flex;gap:6px;">
                         <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='block';document.getElementById('abaPagamentos-${idSufixo}').style.display='none';this.style.background='#667eea';this.style.color='#fff';document.getElementById('btnPagamentos-${idSufixo}').style.background='#e2e8f0';document.getElementById('btnPagamentos-${idSufixo}').style.color='#4a5568';" 
                                 id="btnCompras-${idSufixo}" 
-                                style="flex:1;background:#667eea;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">📦 Compras</button>
+                                style="flex:1;background:#667eea;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">
+                            📦 Compras
+                        </button>
                         <button onclick="document.getElementById('abaCompras-${idSufixo}').style.display='none';document.getElementById('abaPagamentos-${idSufixo}').style.display='block';this.style.background='#667eea';this.style.color='#fff';document.getElementById('btnCompras-${idSufixo}').style.background='#e2e8f0';document.getElementById('btnCompras-${idSufixo}').style.color='#4a5568';" 
                                 id="btnPagamentos-${idSufixo}" 
-                                style="flex:1;background:#e2e8f0;color:#4a5568;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">💳 Pagamentos</button>
+                                style="flex:1;background:#e2e8f0;color:#4a5568;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">
+                            💳 Pagamentos
+                        </button>
                     </div>
                     
                     <div id="abaCompras-${idSufixo}" class="tab-content" style="margin-bottom:10px;max-height:none;overflow-y:visible;">
@@ -2179,10 +2195,10 @@
                             <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
                                 <thead>
                                     <tr style="background:#edf2f7;">
-                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Data</th>
-                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Produto</th>
-                                        <th style="padding:6px 8px;text-align:center;font-weight:600;color:#4a5568;">Qtd</th>
-                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">Valor</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">📅 Data</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">📦 Produto</th>
+                                        <th style="padding:6px 8px;text-align:center;font-weight:600;color:#4a5568;">🔢 Qtd</th>
+                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">💰 Valor</th>
                                     </tr>
                                 </thead>
                                 <tbody>${comprasHtml}</tbody>
@@ -2195,9 +2211,9 @@
                             <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
                                 <thead>
                                     <tr style="background:#edf2f7;">
-                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Data</th>
-                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">Valor</th>
-                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">Observação</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">📅 Data</th>
+                                        <th style="padding:6px 8px;text-align:right;font-weight:600;color:#4a5568;">💰 Valor</th>
+                                        <th style="padding:6px 8px;text-align:left;font-weight:600;color:#4a5568;">📝 Observação</th>
                                     </tr>
                                 </thead>
                                 <tbody>${pagamentosHtml}</tbody>
@@ -2209,16 +2225,26 @@
                         <div style="background:#f7fafc;padding:10px;border-radius:6px;border:1px solid #e2e8f0;">
                             <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#4a5568;">💳 Registrar Pagamento</p>
                             <div style="display:flex;gap:6px;">
-                                <input type="number" id="valorPagamentoDetalhe-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
-                                <button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" style="background:#48bb78;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">💵 Pagar</button>
+                                <input type="number" id="valorPagamentoDetalhe-${idSufixo}" 
+                                       placeholder="Valor" min="0.01" step="0.01" 
+                                       style="flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:6px;font-size:13px;">
+                                <button onclick="window.registrarPagamentoInline('${nomeSafe}','${idSufixo}')" 
+                                        style="background:#48bb78;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">
+                                    💵 Pagar
+                                </button>
                             </div>
                             <div id="msgPagamentoInline-${idSufixo}" style="font-size:11px;margin-top:6px;"></div>
                         </div>
                         <div style="background:#f0f4ff;padding:10px;border-radius:6px;border:1px solid #667eea;">
                             <p style="margin:0 0 6px 0;font-size:11px;font-weight:600;color:#4a5568;">📱 Pagar com Pix</p>
                             <div style="display:flex;gap:6px;">
-                                <input type="number" id="valorPixInline-${idSufixo}" placeholder="Valor" min="0.01" step="0.01" style="flex:1;padding:8px;border:2px solid #667eea;border-radius:6px;font-size:13px;">
-                                <button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" style="background:#1a73e8;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">📱 Pix</button>
+                                <input type="number" id="valorPixInline-${idSufixo}" 
+                                       placeholder="Valor" min="0.01" step="0.01" 
+                                       style="flex:1;padding:8px;border:2px solid #667eea;border-radius:6px;font-size:13px;">
+                                <button onclick="window.gerarPixInline('${nomeSafe}','${idSufixo}')" 
+                                        style="background:#1a73e8;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">
+                                    📱 Pix
+                                </button>
                             </div>
                             <div id="msgPixInline-${idSufixo}" style="font-size:11px;margin-top:6px;"></div>
                         </div>
@@ -2226,7 +2252,8 @@
                 </div>
             `;
         } catch (error) {
-            container.innerHTML = `<div style="padding:12px;color:#e53e3e;text-align:center;">❌ Erro ao carregar detalhes</div>`;
+            console.error('❌ Erro ao carregar detalhes:', error);
+            container.innerHTML = `<div style="padding:12px;color:#e53e3e;text-align:center;">❌ Erro ao carregar detalhes: ${error.message}</div>`;
         }
     }
 
@@ -2722,7 +2749,7 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
-        console.log('🚀 Iniciando Sistema de Vendas V13.2 (Timeout Corrigido)...');
+        console.log('🚀 Iniciando Sistema de Vendas V13.3 (Detalhes Cliente Corrigido)...');
         adicionarEstilosCSS();
         bloquearZoom();
         inicializarNavegacao();
