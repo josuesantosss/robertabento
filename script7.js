@@ -5,7 +5,41 @@
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V13.3 (Detalhes Cliente Corrigido)...');
+    // ============================================================
+    // VERSÃO DO SISTEMA - CENTRALIZADA
+    // ============================================================
+    const SISTEMA = {
+        VERSAO: 'v13.3',        // ← Mude aqui para atualizar a versão
+        DATA: '2024',
+        NOME: 'Sistema de Vendas',
+        AUTOR: 'Roberta Bento',
+        getVersaoCompleta() {
+            return `${this.NOME} ${this.VERSAO}`;
+        },
+        getVersaoRodape() {
+            return `${this.NOME} ${this.VERSAO}`;
+        }
+    };
+
+    console.log(`🚀 Iniciando ${SISTEMA.getVersaoCompleta()}...`);
+
+    // ============================================================
+    // FUNÇÃO PARA ATUALIZAR VERSÃO NO HTML
+    // ============================================================
+    function atualizarVersaoHTML() {
+        document.querySelectorAll('.versao-sistema').forEach(el => {
+            el.textContent = SISTEMA.getVersaoRodape();
+        });
+        
+        document.querySelectorAll('.versao-numero').forEach(el => {
+            el.textContent = SISTEMA.VERSAO;
+        });
+        
+        const anoElement = document.getElementById('ano-atual');
+        if (anoElement) {
+            anoElement.textContent = new Date().getFullYear();
+        }
+    }
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -2749,10 +2783,13 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
-        console.log('🚀 Iniciando Sistema de Vendas V13.3 (Detalhes Cliente Corrigido)...');
+        console.log(`🚀 Iniciando ${SISTEMA.getVersaoCompleta()}...`);
         adicionarEstilosCSS();
         bloquearZoom();
         inicializarNavegacao();
+        
+        // ATUALIZA A VERSÃO NO HTML
+        atualizarVersaoHTML();
         
         const app = document.getElementById('app');
         if (!app) {
@@ -2764,7 +2801,7 @@
             renderHome();
         }, 100);
         
-        console.log('✅ Sistema inicializado com sucesso!');
+        console.log(`✅ ${SISTEMA.getVersaoCompleta()} inicializado com sucesso!`);
         console.log(`📊 Cache size: ${Cache.getSize()}`);
     }
 
