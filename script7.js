@@ -1,11 +1,11 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.1
+// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.2
 // ============================================================
 
 (function() {
     'use strict';
 
-    console.log('🚀 Iniciando Sistema de Vendas V13.1 (Otimizado)...');
+    console.log('🚀 Iniciando Sistema de Vendas V13.2 (Timeout Corrigido)...');
 
     // ============================================================
     // CONFIGURAÇÕES
@@ -20,8 +20,12 @@
         MARCAS: ['Natura', 'Mary Kay', 'Eudora', 'Boticário', 'Outra'],
         CATEGORIAS: ['Perfumaria', 'Maquiagem', 'Cuidados com a Pele', 'Cuidados com o Corpo', 'Cabelos', 'Infantil', 'Masculina', 'Kit', 'Outra'],
         CACHE: {
-            TTL: 2 * 60 * 1000, // 2 minutos
+            TTL: 2 * 60 * 1000,
             MAX_ITEMS: 50
+        },
+        TIMEOUT: {
+            READ: 15000,
+            WRITE: 30000
         }
     };
 
@@ -124,7 +128,44 @@
     }
 
     // ============================================================
-    // API CALL OTIMIZADA
+    // FUNÇÃO DE RETRY PARA OPERAÇÕES CRÍTICAS
+    // ============================================================
+    async function fetchWithRetry(fetchFn, maxRetries = 2) {
+        let lastError;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`🔄 Tentativa ${attempt}/${maxRetries}`);
+                const result = await fetchFn();
+                
+                if (result && result.success === false) {
+                    if (result.error && result.error.includes('Timeout')) {
+                        console.warn(`⚠️ Timeout na tentativa ${attempt}, tentando novamente...`);
+                        if (attempt === maxRetries) {
+                            return result;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        continue;
+                    }
+                    return result;
+                }
+                
+                return result;
+            } catch (error) {
+                lastError = error;
+                console.warn(`⚠️ Erro na tentativa ${attempt}:`, error.message);
+                
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        }
+        
+        return { success: false, error: lastError ? lastError.message : 'Falha após múltiplas tentativas' };
+    }
+
+    // ============================================================
+    // API CALL CORRIGIDA
     // ============================================================
     async function callAPI(action, data = null, useCache = true, ttl = CONFIG.CACHE.TTL) {
         let url = `${CONFIG.API_URL}?action=${action}`;
@@ -133,23 +174,41 @@
             url += `&${params.toString()}`;
         }
 
+        const isWriteAction = ['cadastrarProduto', 'atualizarProduto', 'excluirProduto', 
+                               'registrarVenda', 'registrarPagamento', 'registrarPromessaPagamento'].includes(action);
+
         const fetchFn = async () => {
             try {
                 console.log(`📤 Chamando API: ${action}`);
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 10000);
                 
-                const response = await fetch(url, { 
+                let controller;
+                let timeout;
+                
+                if (!isWriteAction) {
+                    controller = new AbortController();
+                    timeout = setTimeout(() => controller.abort(), CONFIG.TIMEOUT.READ);
+                }
+                
+                const fetchOptions = {
                     method: 'GET',
-                    signal: controller.signal,
                     headers: {
                         'Accept': 'application/json'
                     }
-                });
+                };
                 
-                clearTimeout(timeout);
+                if (controller) {
+                    fetchOptions.signal = controller.signal;
+                }
                 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const response = await fetch(url, fetchOptions);
+                
+                if (timeout) clearTimeout(timeout);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
                 const result = await response.json();
                 console.log(`📥 Dados recebidos (${action}):`, result);
                 return result;
@@ -162,6 +221,10 @@
                 return { success: false, error: error.message };
             }
         };
+
+        if (isWriteAction) {
+            return await fetchWithRetry(fetchFn, 2);
+        }
 
         if (useCache && !data) {
             return await Cache.get(action, fetchFn, ttl);
@@ -283,7 +346,6 @@
             .cliente-detalhe-row td{padding:0 !important}
             .cliente-detalhe-content{padding:0 !important;background:transparent;border-radius:0;animation:fadeIn 0.3s ease}
             
-            /* Skeleton Loading */
             .skeleton-container{animation:fadeIn 0.3s ease}
             .skeleton-header{height:40px;background:#e2e8f0;border-radius:8px;margin-bottom:20px;position:relative;overflow:hidden}
             .skeleton-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
@@ -1134,38 +1196,108 @@
         }
     }
 
+    // ============================================================
+    // CADASTRO DE PRODUTO CORRIGIDO
+    // ============================================================
     async function cadastrarProdutoRapido(e) {
         e.preventDefault();
+        
         const nome = document.getElementById('nomeRapido').value.trim();
         const preco = parseFloat(document.getElementById('precoRapido').value);
         const quantidade = parseInt(document.getElementById('qtdRapido').value);
         const marca = document.getElementById('marcaRapido').value;
         const categoria = document.getElementById('categoriaRapido').value;
         const msg = document.getElementById('msgCadastroRapido');
+        const botaoSubmit = e.target.querySelector('button[type="submit"]');
 
-        if (!nome) { msg.innerHTML = '<div style="color:#e53e3e;">Nome obrigatório</div>'; return; }
-        if (isNaN(preco) || preco < 0) { msg.innerHTML = '<div style="color:#e53e3e;">Preço inválido</div>'; return; }
-        if (isNaN(quantidade) || quantidade < 0) { msg.innerHTML = '<div style="color:#e53e3e;">Quantidade inválida</div>'; return; }
+        // Validações
+        if (!nome) { 
+            msg.innerHTML = '<div style="color:#e53e3e;padding:8px;background:#fed7d7;border-radius:6px;">❌ Nome obrigatório</div>'; 
+            return; 
+        }
+        if (isNaN(preco) || preco < 0) { 
+            msg.innerHTML = '<div style="color:#e53e3e;padding:8px;background:#fed7d7;border-radius:6px;">❌ Preço inválido</div>'; 
+            return; 
+        }
+        if (isNaN(quantidade) || quantidade < 0) { 
+            msg.innerHTML = '<div style="color:#e53e3e;padding:8px;background:#fed7d7;border-radius:6px;">❌ Quantidade inválida</div>'; 
+            return; 
+        }
 
-        const result = await callAPI('cadastrarProduto', {
-            nome, preco, quantidade,
-            marca: marca || '',
-            categoria: categoria || ''
-        }, false);
+        // Desabilita o botão e mostra loading
+        botaoSubmit.disabled = true;
+        botaoSubmit.innerHTML = '<span class="loading-spinner" style="font-size:16px;">⏳</span> Cadastrando...';
+        msg.innerHTML = '<div style="padding:8px;background:#e3f2fd;color:#0d47a1;border-radius:6px;">⏳ Enviando dados...</div>';
 
-        if (result.success) {
-            msg.innerHTML = '<div style="color:#38a169;">✅ Produto cadastrado!</div>';
-            mostrarToast(`Produto "${nome}" cadastrado!`, 'success');
-            document.getElementById('formCadastroRapido').reset();
-            Cache.clear();
-            renderEstoque();
-        } else {
-            msg.innerHTML = `<div style="color:#e53e3e;">${result.error}</div>`;
+        try {
+            const result = await callAPI('cadastrarProduto', {
+                nome, 
+                preco, 
+                quantidade,
+                marca: marca || '',
+                categoria: categoria || ''
+            }, false, 0);
+
+            if (result.success) {
+                msg.innerHTML = '<div style="padding:8px;background:#c6f6d5;color:#22543d;border-radius:6px;">✅ Produto cadastrado com sucesso!</div>';
+                mostrarToast(`✅ Produto "${nome}" cadastrado!`, 'success');
+                
+                // Limpa o formulário
+                document.getElementById('formCadastroRapido').reset();
+                
+                // Limpa o cache e recarrega a lista
+                Cache.clear();
+                await renderEstoque();
+            } else {
+                // Verifica se é erro de timeout e tenta novamente
+                if (result.error && result.error.includes('Timeout')) {
+                    msg.innerHTML = `
+                        <div style="padding:8px;background:#fff3cd;color:#856404;border-radius:6px;">
+                            ⏱️ O servidor está demorando para responder. 
+                            <button onclick="window.tentarCadastrarNovamente()" 
+                                    style="background:#667eea;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;margin-left:8px;">
+                                Tentar novamente
+                            </button>
+                        </div>
+                    `;
+                    mostrarToast('⏱️ Timeout - Tente novamente', 'warning');
+                } else {
+                    msg.innerHTML = `<div style="padding:8px;background:#fed7d7;color:#9b2c2c;border-radius:6px;">❌ ${result.error || 'Erro ao cadastrar'}</div>`;
+                    mostrarToast(`❌ Erro: ${result.error || 'Falha no cadastro'}`, 'error');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Erro no cadastro:', error);
+            msg.innerHTML = `
+                <div style="padding:8px;background:#fed7d7;color:#9b2c2c;border-radius:6px;">
+                    ❌ Erro: ${error.message}
+                    <button onclick="window.tentarCadastrarNovamente()" 
+                            style="background:#667eea;color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;margin-left:8px;">
+                        Tentar novamente
+                    </button>
+                </div>
+            `;
+            mostrarToast(`❌ Erro: ${error.message}`, 'error');
+        } finally {
+            // Reabilita o botão
+            botaoSubmit.disabled = false;
+            botaoSubmit.innerHTML = '✅ Cadastrar';
         }
     }
 
     // ============================================================
-    // EDIÇÃO DE PRODUTO
+    // FUNÇÃO PARA TENTAR CADASTRAR NOVAMENTE
+    // ============================================================
+    window.tentarCadastrarNovamente = function() {
+        const form = document.getElementById('formCadastroRapido');
+        if (form) {
+            const event = new Event('submit');
+            form.dispatchEvent(event);
+        }
+    };
+
+    // ============================================================
+    // EDIÇÃO DE PRODUTO CORRIGIDA
     // ============================================================
     window.abrirEdicaoProduto = function(id, nome, preco, quantidade, marca = '', categoria = '') {
         const overlay = document.createElement('div');
@@ -1216,24 +1348,52 @@
             const novaQuantidade = parseInt(overlay.querySelector('#editQuantidade').value);
             const novaMarca = overlay.querySelector('#editMarca').value;
             const novaCategoria = overlay.querySelector('#editCategoria').value;
+            const msgEdicao = overlay.querySelector('#msgEdicao');
+            const btnSalvar = overlay.querySelector('#btnSalvarEdicao');
+
             if (isNaN(novoPreco) || novoPreco < 0) {
-                overlay.querySelector('#msgEdicao').innerHTML = '<div style="color:#e53e3e;">Preço inválido</div>';
+                msgEdicao.innerHTML = '<div style="color:#e53e3e;">Preço inválido</div>';
                 return;
             }
             if (isNaN(novaQuantidade) || novaQuantidade < 0) {
-                overlay.querySelector('#msgEdicao').innerHTML = '<div style="color:#e53e3e;">Quantidade inválida</div>';
+                msgEdicao.innerHTML = '<div style="color:#e53e3e;">Quantidade inválida</div>';
                 return;
             }
-            const result = await callAPI('atualizarProduto', {
-                id, preco: novoPreco, quantidade: novaQuantidade,
-                marca: novaMarca || '', categoria: novaCategoria || ''
-            }, false);
-            if (result.success) {
-                mostrarToast(`Produto "${nome}" atualizado!`, 'success');
-                overlay.remove();
-                renderEstoque();
-            } else {
-                overlay.querySelector('#msgEdicao').innerHTML = `<div style="color:#e53e3e;">${result.error}</div>`;
+
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '⏳ Salvando...';
+            msgEdicao.innerHTML = '<div style="color:#667eea;">⏳ Processando...</div>';
+
+            try {
+                const result = await callAPI('atualizarProduto', {
+                    id, 
+                    preco: novoPreco, 
+                    quantidade: novaQuantidade,
+                    marca: novaMarca || '', 
+                    categoria: novaCategoria || ''
+                }, false, 0);
+
+                if (result.success) {
+                    mostrarToast(`✅ Produto "${nome}" atualizado!`, 'success');
+                    overlay.remove();
+                    Cache.clear();
+                    await renderEstoque();
+                } else {
+                    if (result.error && result.error.includes('Timeout')) {
+                        msgEdicao.innerHTML = `
+                            <div style="color:#856404;background:#fff3cd;padding:8px;border-radius:6px;">
+                                ⏱️ Timeout - Clique em Salvar novamente para tentar
+                            </div>
+                        `;
+                    } else {
+                        msgEdicao.innerHTML = `<div style="color:#e53e3e;">${result.error || 'Erro ao atualizar'}</div>`;
+                    }
+                }
+            } catch (error) {
+                msgEdicao.innerHTML = `<div style="color:#e53e3e;">❌ Erro: ${error.message}</div>`;
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.innerHTML = '💾 Salvar';
             }
         };
 
@@ -1246,17 +1406,29 @@
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     };
 
+    // ============================================================
+    // EXCLUSÃO DE PRODUTO CORRIGIDA
+    // ============================================================
     window.confirmarExclusaoProduto = function(id, nome) {
         confirmarAcao(
             `Deseja excluir o produto "${nome}"?`,
             async () => {
-                const result = await callAPI('excluirProduto', { id }, false);
-                if (result.success) {
-                    mostrarToast(`Produto "${nome}" excluído!`, 'success');
-                    Cache.clear();
-                    renderEstoque();
-                } else {
-                    mostrarToast(result.error || 'Erro ao excluir', 'error');
+                mostrarToast('⏳ Excluindo produto...', 'info');
+                try {
+                    const result = await callAPI('excluirProduto', { id }, false, 0);
+                    if (result.success) {
+                        mostrarToast(`✅ Produto "${nome}" excluído!`, 'success');
+                        Cache.clear();
+                        await renderEstoque();
+                    } else {
+                        if (result.error && result.error.includes('Timeout')) {
+                            mostrarToast('⏱️ Timeout - Tente novamente', 'warning');
+                        } else {
+                            mostrarToast(`❌ ${result.error || 'Erro ao excluir'}`, 'error');
+                        }
+                    }
+                } catch (error) {
+                    mostrarToast(`❌ Erro: ${error.message}`, 'error');
                 }
             },
             'Excluir',
@@ -2550,7 +2722,7 @@
     // INICIALIZAÇÃO
     // ============================================================
     function init() {
-        console.log('🚀 Iniciando Sistema de Vendas V13.1 (Otimizado com Botão + Info)...');
+        console.log('🚀 Iniciando Sistema de Vendas V13.2 (Timeout Corrigido)...');
         adicionarEstilosCSS();
         bloquearZoom();
         inicializarNavegacao();
@@ -2597,6 +2769,7 @@
     window.enviarCobranca = window.enviarCobranca;
     window.carregarPromessasHoje = carregarPromessasHoje;
     window.atualizarDashboard = window.atualizarDashboard;
+    window.tentarCadastrarNovamente = window.tentarCadastrarNovamente;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
@@ -2604,4 +2777,4 @@
         init();
     }
 
-})(); 
+})();
