@@ -361,15 +361,43 @@ tbody tr:last-child td {
   transform: translateY(-2px);
 }
 
-/* ============================================
+/* ============================================================
    FOOTER
-   ============================================ */
+   ============================================================ */
 footer {
-  background: #2c2c2c;
-  color: #999;
-  text-align: center;
-  padding: 20px;
-  margin-top: 30px;
+    background: #f7fafc;
+    border-top: 2px solid #e2e8f0;
+    padding: 15px 20px;
+    margin-top: 30px;
+    text-align: center;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    font-size: 13px;
+    color: #718096;
+}
+
+.footer-container .versao-sistema {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.footer-container #ano-atual {
+    font-weight: 600;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    footer {
+        padding: 12px 15px;
+        margin-top: 20px;
+    }
+    
+    .footer-container {
+        font-size: 11px;
+    }
 }
 
 /* ============================================
