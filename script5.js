@@ -2,14 +2,14 @@
 // SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.4
 // ============================================================
 
-(function() {
+(function() { 
     'use strict';
 
     // ============================================================
     // VERSÃO DO SISTEMA - CENTRALIZADA
     // ============================================================
     const SISTEMA = {
-        VERSAO: 'v13.5',        // ← Mude aqui para atualizar a versão
+        VERSAO: 'v13.6',        // ← Mude aqui para atualizar a versão
         DATA: '2024',
         NOME: 'Sistema de Vendas',
         AUTOR: 'Roberta Bento',
@@ -2231,7 +2231,7 @@
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
                         </div>
                         <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:10px;border-radius:6px;text-align:center;border:1px solid ${corSaldo};">
-                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">📊 Saldo</p>
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">📊 Saldo1</p>
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
                             <small style="color:${corSaldo};font-size:10px;font-weight:500;">${statusSaldo}</small>
                         </div>
