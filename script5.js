@@ -1,15 +1,15 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.4
+// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.5
 // ============================================================
 
-(function() { 
+(function() {
     'use strict';
 
     // ============================================================
     // VERSÃO DO SISTEMA - CENTRALIZADA
     // ============================================================
     const SISTEMA = {
-        VERSAO: 'v13.7',        // ← Mude aqui para atualizar a versão
+        VERSAO: 'v13.8',
         DATA: '2024',
         NOME: 'Sistema de Vendas',
         AUTOR: 'Roberta Bento',
@@ -1885,18 +1885,15 @@
         mostrarLoadingSkeleton('clientes');
 
         try {
-            // Usando listarVendasPorCliente que retorna os dados corretos
             const result = await callAPI('listarVendasPorCliente', null, true, 30000);
             
             let clientes = [];
             if (result.success && result.clientes) {
                 clientes = Array.isArray(result.clientes) ? result.clientes : [];
-                // Filtrar clientes válidos
                 clientes = clientes.filter(c => {
                     const nome = c.nome || '';
                     return nome && nome !== 'Cliente não informado' && nome !== '' && nome !== 'null' && nome !== 'undefined';
                 });
-                // Ordenar por nome
                 clientes.sort((a, b) => {
                     const nomeA = (a.nome || '').toLowerCase();
                     const nomeB = (b.nome || '').toLowerCase();
@@ -1909,7 +1906,6 @@
             let html = '';
             if (clientes.length > 0) {
                 clientes.forEach(cliente => {
-                    // Garantir que os valores sejam números
                     const totalGasto = parseFloat(cliente.totalGasto) || 0;
                     const totalPago = parseFloat(cliente.totalPago) || 0;
                     const saldo = totalGasto - totalPago;
@@ -1993,7 +1989,6 @@
                 </section>
             `;
 
-            // Evento de busca com debounce
             document.getElementById('buscaCliente').addEventListener('input', 
                 debounce((e) => {
                     const filtro = e.target.value;
@@ -2001,7 +1996,6 @@
                 }, 300)
             );
 
-            // Carregar detalhes se houver cliente expandido
             const expandido = StateManager.getClienteExpandido();
             if (expandido) {
                 const safeNome = expandido.replace(/[^a-zA-Z0-9]/g, '');
@@ -2069,7 +2063,7 @@
                             <td data-label="👤 Cliente" style="padding:8px;">
                                 <strong>${cliente.nome}</strong>
                             </td>
-                            <td data-label="💰 Total Gasto2" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
+                            <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                             <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
                             <td data-label="📊 Saldo" style="padding:8px;">
                                 ${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small>
@@ -2142,7 +2136,7 @@
     };
 
     // ============================================================
-    // CARREGAR DETALHES DO CLIENTE CORRIGIDO
+    // CARREGAR DETALHES DO CLIENTE - CORRIGIDO
     // ============================================================
     async function carregarDetalhesCliente(nomeCliente, container) {
         if (!container) return;
@@ -2167,6 +2161,7 @@
             const statusSaldo = saldo > 0.01 ? 'A pagar' : saldo < -0.01 ? 'Crédito' : 'Quitado';
             const corSaldo = saldo > 0.01 ? '#e53e3e' : saldo < -0.01 ? '#dd6b20' : '#38a169';
 
+            // CORREÇÃO: Estruturar corretamente os dados de compras
             let comprasHtml = '';
             if (historicoCompras.success && Array.isArray(historicoCompras.historico) && historicoCompras.historico.length > 0) {
                 comprasHtml = historicoCompras.historico.map(h => {
@@ -2175,17 +2170,19 @@
                     const produto = h.produto || '-';
                     const quantidade = h.quantidade || 1;
                     const total = parseFloat(h.total) || 0;
+                    
                     return `<tr>
-                        <td style="padding:6px 8px;text-align:left;">${dataStr}</td>
-                        <td style="padding:6px 8px;text-align:left;">${produto}</td>
-                        <td style="padding:6px 8px;text-align:center;">${quantidade}</td>
-                        <td style="padding:6px 8px;text-align:right;">R$ ${total.toFixed(2).replace('.', ',')}</td>
+                        <td style="padding:6px 8px;text-align:left;font-size:11px;">${dataStr}</td>
+                        <td style="padding:6px 8px;text-align:left;font-size:11px;">${produto}</td>
+                        <td style="padding:6px 8px;text-align:center;font-size:11px;">${quantidade}</td>
+                        <td style="padding:6px 8px;text-align:right;font-size:11px;font-weight:bold;color:#667eea;">R$ ${total.toFixed(2).replace('.', ',')}</td>
                     </tr>`;
                 }).join('');
             } else { 
-                comprasHtml = `<tr><td colspan="4" style="text-align:center;padding:15px;">Nenhuma compra</td></tr>`; 
+                comprasHtml = `<tr><td colspan="4" style="text-align:center;padding:15px;font-size:12px;color:#718096;">Nenhuma compra encontrada</td></tr>`; 
             }
 
+            // CORREÇÃO: Estruturar corretamente os dados de pagamentos
             let pagamentosHtml = '';
             if (historicoPagamentos.success && Array.isArray(historicoPagamentos.pagamentos) && historicoPagamentos.pagamentos.length > 0) {
                 pagamentosHtml = historicoPagamentos.pagamentos.map(p => {
@@ -2194,13 +2191,13 @@
                     const valor = parseFloat(p.valor) || 0;
                     const observacao = p.observacao || '-';
                     return `<tr>
-                        <td style="padding:6px 8px;text-align:left;">${dataStr}</td>
-                        <td style="padding:6px 8px;text-align:right;">R$ ${valor.toFixed(2).replace('.', ',')}</td>
-                        <td style="padding:6px 8px;text-align:left;">${observacao}</td>
+                        <td style="padding:6px 8px;text-align:left;font-size:11px;">${dataStr}</td>
+                        <td style="padding:6px 8px;text-align:right;font-size:11px;font-weight:bold;color:#48bb78;">R$ ${valor.toFixed(2).replace('.', ',')}</td>
+                        <td style="padding:6px 8px;text-align:left;font-size:11px;color:#4a5568;">${observacao}</td>
                     </tr>`;
                 }).join('');
             } else { 
-                pagamentosHtml = `<tr><td colspan="3" style="text-align:center;padding:15px;">Nenhum pagamento</td></tr>`; 
+                pagamentosHtml = `<tr><td colspan="3" style="text-align:center;padding:15px;font-size:12px;color:#718096;">Nenhum pagamento encontrado</td></tr>`; 
             }
 
             const idSufixo = nomeCliente.replace(/[^a-zA-Z0-9]/g, '');
@@ -2231,7 +2228,7 @@
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:#48bb78;">R$ ${totalPago.toFixed(2).replace('.', ',')}</p>
                         </div>
                         <div style="background:${saldo > 0.01 ? '#fff5f5' : saldo < -0.01 ? '#fffff0' : '#f0fff4'};padding:10px;border-radius:6px;text-align:center;border:1px solid ${corSaldo};">
-                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">📊 Saldo1</p>
+                            <p style="margin:0;font-size:10px;color:#718096;text-transform:uppercase;">📊 Saldo</p>
                             <p style="font-size:${isMobileDevice ? '18px' : '20px'};font-weight:bold;margin:4px 0 0;color:${corSaldo};">R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')}</p>
                             <small style="color:${corSaldo};font-size:10px;font-weight:500;">${statusSaldo}</small>
                         </div>
@@ -2257,6 +2254,7 @@
                         </button>
                     </div>
                     
+                    <!-- TABELA DE COMPRAS CORRIGIDA -->
                     <div id="abaCompras-${idSufixo}" class="tab-content" style="margin-bottom:10px;max-height:none;overflow-y:visible;">
                         <div style="overflow-x:auto;background:#f7fafc;border-radius:6px;border:1px solid #edf2f7;">
                             <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
@@ -2273,6 +2271,7 @@
                         </div>
                     </div>
                     
+                    <!-- TABELA DE PAGAMENTOS CORRIGIDA -->
                     <div id="abaPagamentos-${idSufixo}" class="tab-content" style="display:none;margin-bottom:10px;max-height:none;overflow-y:visible;">
                         <div style="overflow-x:auto;background:#f7fafc;border-radius:6px;border:1px solid #edf2f7;">
                             <table style="width:100%;border-collapse:collapse;font-size:${isMobileDevice ? '10px' : '11px'};">
@@ -2320,7 +2319,7 @@
             `;
         } catch (error) {
             console.error('❌ Erro ao carregar detalhes:', error);
-            container.innerHTML = `<div style="padding:12px;color:#e53e3e;text-align:center;">❌ Erro ao carregar detalhes: ${error.message}</div>`;
+            container.innerHTML = `<div style="padding:12px;color:#e53e3e;text-align:center;font-size:13px;">❌ Erro ao carregar detalhes: ${error.message}</div>`;
         }
     }
 
@@ -2821,7 +2820,6 @@
         bloquearZoom();
         inicializarNavegacao();
         
-        // ATUALIZA A VERSÃO NO HTML
         atualizarVersaoHTML();
         
         const app = document.getElementById('app');
