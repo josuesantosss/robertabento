@@ -2069,7 +2069,7 @@
                             <td data-label="👤 Cliente" style="padding:8px;">
                                 <strong>${cliente.nome}</strong>
                             </td>
-                            <td data-label="💰 Total Gasto" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
+                            <td data-label="💰 Total Gasto2" style="padding:8px;">R$ ${totalGasto.toFixed(2).replace('.', ',')}</td>
                             <td data-label="💵 Total Pago" style="padding:8px;">R$ ${totalPago.toFixed(2).replace('.', ',')}</td>
                             <td data-label="📊 Saldo" style="padding:8px;">
                                 ${statusSaldo} R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} <small>(${statusTexto})</small>
@@ -2377,7 +2377,7 @@
             const saldo = totalGasto - totalPago;
             let texto = `EXTRATO DO CLIENTE\n\n`;
             texto += `👤 Nome: ${nomeCliente}\n`;
-            texto += `💰 Total Gasto1: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
+            texto += `💰 Total Gasto: R$ ${totalGasto.toFixed(2).replace('.', ',')}\n`;
             texto += `💵 Total Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}\n`;
             texto += `📊 Saldo: R$ ${Math.abs(saldo).toFixed(2).replace('.', ',')} (${saldo > 0 ? 'A pagar' : saldo < 0 ? 'Crédito' : 'Quitado'})\n\n`;
             texto += `🛒 COMPRAS:\n`;
