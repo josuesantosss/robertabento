@@ -1533,29 +1533,26 @@
                 return;
             }
 
-            // Filtra por mês considerando o formato da data "29/07/2026 10:17:23"
+            // Filtra por mês considerando o formato ISO "2026-07-24T15:46:26.000Z"
             let pagamentosFiltrados = result.pagamentos;
             if (filtroMes !== 'todos') {
                 const [ano, mes] = filtroMes.split('-').map(Number);
                 pagamentosFiltrados = pagamentosFiltrados.filter(p => {
                     if (!p.data) return false;
-                    // Tenta parsear a data no formato "29/07/2026 10:17:23"
-                    const partes = p.data.trim().split(' ');
-                    if (partes.length < 1) return false;
-                    const dataPartes = partes[0].split('/');
-                    if (dataPartes.length !== 3) return false;
-                    const dia = parseInt(dataPartes[0]);
-                    const mesData = parseInt(dataPartes[1]);
-                    const anoData = parseInt(dataPartes[2]);
-                    if (isNaN(dia) || isNaN(mesData) || isNaN(anoData)) return false;
-                    return anoData === ano && mesData === mes;
+                    try {
+                        const dataObj = new Date(p.data);
+                        if (isNaN(dataObj.getTime())) return false;
+                        return dataObj.getFullYear() === ano && (dataObj.getMonth() + 1) === mes;
+                    } catch (e) {
+                        return false;
+                    }
                 });
             }
 
             // Ordena por data (mais recente primeiro)
             pagamentosFiltrados.sort((a, b) => {
-                const dataA = parseDataPagamento(a.data);
-                const dataB = parseDataPagamento(b.data);
+                const dataA = new Date(a.data);
+                const dataB = new Date(b.data);
                 return dataB - dataA;
             });
 
@@ -1575,7 +1572,8 @@
             pagamentosFiltrados.forEach(p => {
                 const valor = parseFloat(p.valor) || 0;
                 totalPagamentos += valor;
-                const dataFormatada = p.data || '-';
+                const dataObj = new Date(p.data);
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR') + ' ' + dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const cliente = p.cliente || 'Cliente não informado';
                 const observacao = p.observacao || '-';
                 html += `
@@ -1604,44 +1602,24 @@
                 </div>
             `;
 
+            // Formata o texto do filtro para exibição
+            let filtroTexto = 'Todos os períodos';
+            if (filtroMes !== 'todos') {
+                const [ano, mesNum] = filtroMes.split('-').map(Number);
+                const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                filtroTexto = `${meses[mesNum - 1]} ${ano}`;
+            }
+
             resumoContainer.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:12px; color:white; flex-wrap:wrap; gap:10px;">
                     <span style="font-weight:500;">📊 Total de Pagamentos: <strong>${pagamentosFiltrados.length}</strong></span>
                     <span style="font-weight:500;">💰 Valor Total: <strong>R$ ${totalPagamentos.toFixed(2).replace('.', ',')}</strong></span>
-                    <span style="font-size:12px; opacity:0.8;">${filtroMes === 'todos' ? 'Todos os períodos' : 'Filtrado por mês'}</span>
+                    <span style="font-size:12px; opacity:0.8;">${filtroTexto}</span>
                 </div>
             `;
 
         } catch (error) {
             container.innerHTML = `<div style="text-align:center; padding:20px; color:#e53e3e;"><p>❌ Erro: ${error.message}</p></div>`;
-        }
-    }
-
-    // ============================================================
-    // FUNÇÃO AUXILIAR PARA PARSEAR DATA NO FORMATO "29/07/2026 10:17:23"
-    // ============================================================
-    function parseDataPagamento(dataStr) {
-        if (!dataStr) return new Date(0);
-        try {
-            const partes = dataStr.trim().split(' ');
-            if (partes.length < 1) return new Date(0);
-            const dataPartes = partes[0].split('/');
-            if (dataPartes.length !== 3) return new Date(0);
-            const dia = parseInt(dataPartes[0]);
-            const mes = parseInt(dataPartes[1]) - 1;
-            const ano = parseInt(dataPartes[2]);
-            let hora = 0, minuto = 0, segundo = 0;
-            if (partes.length > 1) {
-                const horaPartes = partes[1].split(':');
-                if (horaPartes.length >= 3) {
-                    hora = parseInt(horaPartes[0]) || 0;
-                    minuto = parseInt(horaPartes[1]) || 0;
-                    segundo = parseInt(horaPartes[2]) || 0;
-                }
-            }
-            return new Date(ano, mes, dia, hora, minuto, segundo);
-        } catch (e) {
-            return new Date(0);
         }
     }
 
