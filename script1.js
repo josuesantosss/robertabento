@@ -1,5 +1,5 @@
 // ============================================================
-// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V14.0
+// SISTEMA DE VENDAS - VERSÃO OTIMIZADA V14.2
 // ============================================================
 
 (function() {
@@ -525,7 +525,7 @@
         clienteExpandido: null,
         isLoading: false,
         pageCache: {},
-        filtroMes: 'todos', // Adicionado para o filtro de meses
+        filtroMes: 'todos',
         
         setPage(page) { 
             if (this.currentPage !== page) {
@@ -2385,592 +2385,13 @@
         }
     };
 
-// ============================================================
-// VENDEDORA & COBRANÇAS - VERSÃO UNIFICADA
-// ============================================================
-async function renderVendedora() {
-    const app = document.getElementById('app');
-    if (!app) return;
-    mostrarLoadingSkeleton('vendedora');
-
-    // Gera opções de meses para o dropdown
-    const mesesOptions = gerarOpcoesMeses();
-
-    app.innerHTML = `
-        <section style="animation:fadeIn 0.4s ease;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-                <h2>👩‍💼 Área da Vendedora</h2>
-                <button onclick="window.renderVendedora()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;">🔄 Atualizar</button>
-            </div>
-            <div style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:12px;color:#fff;">
-                    <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
-                        <img src="img/face.png" alt="Face" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
-                    </div>
-                    <div>
-                        <p style="margin:0;font-size:12px;opacity:0.9;">Bem-vinda,</p>
-                        <h3 style="margin:0;font-size:20px;">Roberta Bento</h3>
-                        <p style="margin:2px 0 0;font-size:11px;opacity:0.8;">Gerencie vendas e cobranças</p>
-                    </div>
-                </div>
-
-                <!-- PAGAMENTOS PENDENTES -->
-                <div style="margin-bottom:20px;">
-                    <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📅 Pagamentos Pendentes</h4>
-                    <div id="promessasHojeContainer"><div style="text-align:center;padding:15px;">⏳ Carregando...</div></div>
-                </div>
-
-                <!-- EXTRATOS DE VENDAS -->
-                <div style="margin-bottom:15px;">
-                    <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📊 Extratos</h4>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-                        <button onclick="window.gerarExtrato('semanal')" class="btn-extrato" style="background:#667eea;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📅 Semanal</button>
-                        <button onclick="window.gerarExtrato('mensal')" class="btn-extrato" style="background:#4facfe;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📆 Mensal</button>
-                        <button onclick="window.gerarExtrato('semestral')" class="btn-extrato" style="background:#f093fb;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📊 Semestral</button>
-                        <button onclick="window.gerarExtrato('anual')" class="btn-extrato" style="background:#43e97b;color:#1a202c;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📈 Anual</button>
-                    </div>
-                </div>
-
-                <!-- PAGAMENTOS RECEBIDOS + FILTRO POR MÊS -->
-                <div style="margin-top:20px;border-top:2px solid #e2e8f0;padding-top:15px;">
-                    <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">💰 Pagamentos Recebidos</h4>
-                    
-                    <!-- Filtro por mês -->
-                    <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
-                        <label style="font-weight:500; color:#4a5568; font-size:13px;">📅 Filtrar por Mês:</label>
-                        <select id="filtroMesPagamentos" style="padding:8px 14px; border:2px solid #e2e8f0; border-radius:8px; background:white; font-size:13px; min-width:160px;">
-                            ${mesesOptions}
-                        </select>
-                        <button onclick="window.aplicarFiltroMesPagamentos()" style="background:#667eea; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:500; font-size:12px;">
-                            🔍 Filtrar
-                        </button>
-                        <button onclick="document.getElementById('filtroMesPagamentos').value='todos'; window.aplicarFiltroMesPagamentos();" style="background:#e2e8f0; color:#4a5568; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-size:12px;">
-                            ✕ Limpar
-                        </button>
-                    </div>
-
-                    <!-- Botões de extrato de pagamentos -->
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:15px;">
-                        <button onclick="window.gerarExtratoPagamentos('semanal')" class="btn-extrato" style="background:#38a169;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">💳 Semana</button>
-                        <button onclick="window.gerarExtratoPagamentos('mensal')" class="btn-extrato" style="background:#2b6cb0;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📆 Mês</button>
-                        <button onclick="window.gerarExtratoPagamentos('anual')" class="btn-extrato" style="background:#d69e2e;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📈 Ano</button>
-                    </div>
-
-                    <!-- Tabela de pagamentos com filtro -->
-                    <div id="tabelaPagamentos">
-                        <div style="text-align:center; padding:20px;">
-                            <div class="loading-spinner" style="font-size:24px;">⏳</div>
-                            <p style="color:#667eea;">Carregando pagamentos...</p>
-                        </div>
-                    </div>
-                    <div id="resumoPagamentos" style="margin-top:15px;"></div>
-                </div>
-
-                <!-- Área para exibir resultados de extrato -->
-                <div id="resultadoExtrato" style="display:none;margin-top:15px;padding:15px;background:#f7fafc;border-radius:8px;border:2px solid #e2e8f0;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <h4 id="tituloExtrato" style="margin:0;color:#2d3748;font-size:15px;">📊 Extrato</h4>
-                        <button onclick="window.fecharResultadoExtrato()" style="background:#e2e8f0;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;">✕</button>
-                    </div>
-                    <div id="conteudoExtrato" style="font-size:13px;color:#4a5568;"></div>
-                </div>
-            </div>
-        </section>
-    `;
-
-    // Carrega os dados iniciais
-    await carregarPromessasHoje();
-    await carregarPagamentos('todos');
-}
-
-// ============================================================
-// PROMESSAS DE PAGAMENTO
-// ============================================================
-async function carregarPromessasHoje() {
-    const container = document.getElementById('promessasHojeContainer');
-    if (!container) return;
-
-    try {
-        const result = await callAPI('listarPromessasPagamento', null, true, 30000);
-        if (!result.success || !Array.isArray(result.promessas) || result.promessas.length === 0) {
-            container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
-            return;
-        }
-
-        const hoje = new Date();
-        const hojeStr = hoje.toDateString();
-        const promessasPendentes = result.promessas.filter(p => {
-            const saldo = parseFloat(p.saldo) || 0;
-            const status = String(p.status || 'pendente');
-            return saldo > 0 && status !== 'pago';
-        });
-
-        if (promessasPendentes.length === 0) {
-            container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
-            return;
-        }
-
-        let html = `
-            <div style="background:#fff;border-radius:6px;border:2px solid #48bb78;overflow:hidden;">
-                <div style="background:#48bb78;color:#fff;padding:6px 10px;font-weight:600;font-size:12px;display:flex;justify-content:space-between;">
-                    <span>Cliente</span><span>Valor</span><span>Vencimento</span><span>Ação</span>
-                </div>
-                <div>
-        `;
-
-        promessasPendentes.forEach(p => {
-            const cliente = String(p.cliente || '');
-            const whatsapp = String(p.whatsapp || '');
-            const valor = parseFloat(p.saldo) || 0;
-            const dataPag = new Date(p.dataPagamento);
-            const dataStr = dataPag.toLocaleDateString('pt-BR');
-            const clienteSafe = cliente.replace(/'/g, "\\'");
-            const whatsappSafe = whatsapp.replace(/'/g, "\\'");
-
-            let badge = '', cor = 'transparent';
-            if (dataPag.toDateString() === hojeStr) {
-                badge = '<span class="badge-hoje">Hoje</span>';
-                cor = '#f0fff4';
-            } else if (dataPag < hoje) {
-                const dias = Math.floor((hoje - dataPag) / (1000*60*60*24));
-                badge = `<span class="badge-atraso">${dias}d atraso</span>`;
-                cor = '#fff5f5';
-            } else {
-                badge = '<span class="badge-futuro">Futuro</span>';
-                cor = '#fffff0';
-            }
-
-            html += `
-                <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid #edf2f7;background:${cor};font-size:12px;">
-                    <div><strong>${cliente}</strong>${whatsapp ? `<span style="font-size:10px;color:#25D366;display:block;">📱 ${whatsapp}</span>` : ''}</div>
-                    <div style="text-align:center;font-weight:bold;color:#48bb78;">R$ ${valor.toFixed(2).replace('.', ',')}</div>
-                    <div style="text-align:center;">${badge}<div style="font-size:10px;color:#666;">${dataStr}</div></div>
-                    <div style="text-align:center;">
-                        <button onclick="window.enviarCobranca('${clienteSafe}', ${valor}, '${whatsappSafe}')" 
-                                class="btn-cobrar" 
-                                style="background:#25D366;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:500;width:100%;">💬 Cobrar</button>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += `</div></div><div style="margin-top:6px;text-align:center;font-size:11px;color:#666;">Total: ${promessasPendentes.length} pendente(s)</div>`;
-        container.innerHTML = html;
-
-    } catch (error) {
-        console.error('❌ Erro ao carregar promessas:', error);
-        container.innerHTML = `<div style="background:#fed7d7;padding:12px;border-radius:6px;text-align:center;color:#9b2c2c;font-size:13px;">❌ Erro: ${error.message}</div>`;
-    }
-}
-
-// ============================================================
-// GERAR OPÇÕES DE MESES PARA O DROPDOWN
-// ============================================================
-function gerarOpcoesMeses() {
-    const meses = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    const anoAtual = new Date().getFullYear();
-    let options = '<option value="todos">📊 Todos os meses</option>';
-    for (let i = 0; i < 24; i++) {
-        const data = new Date(anoAtual, new Date().getMonth() - i, 1);
-        const mes = data.getMonth();
-        const ano = data.getFullYear();
-        const value = `${ano}-${String(mes + 1).padStart(2, '0')}`;
-        const label = `${meses[mes]} ${ano}`;
-        options += `<option value="${value}">${label}</option>`;
-    }
-    return options;
-}
-
-// ============================================================
-// CARREGAR PAGAMENTOS COM FILTRO POR MÊS
-// ============================================================
-async function carregarPagamentos(filtroMes = 'todos') {
-    const container = document.getElementById('tabelaPagamentos');
-    const resumoContainer = document.getElementById('resumoPagamentos');
-    if (!container) return;
-
-    container.innerHTML = `<div style="text-align:center; padding:20px;"><div class="loading-spinner" style="font-size:24px;">⏳</div><p style="color:#667eea;">Carregando pagamentos...</p></div>`;
-    resumoContainer.innerHTML = '';
-
-    try {
-        const result = await callAPI('listarPagamentos', null, false);
-        if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
-            container.innerHTML = `
-                <div style="text-align:center; padding:40px;">
-                    <p style="font-size:48px;">📭</p>
-                    <p style="color:#666;">Nenhum pagamento encontrado</p>
-                </div>
-            `;
-            resumoContainer.innerHTML = `<div style="padding:15px; background:#f7fafc; border-radius:8px; text-align:center; color:#666;">Total: R$ 0,00</div>`;
-            return;
-        }
-
-        let pagamentosFiltrados = result.pagamentos;
-        if (filtroMes !== 'todos') {
-            const [ano, mes] = filtroMes.split('-').map(Number);
-            pagamentosFiltrados = pagamentosFiltrados.filter(p => {
-                if (!p.data) return false;
-                try {
-                    const dataObj = new Date(p.data);
-                    if (isNaN(dataObj.getTime())) return false;
-                    return dataObj.getFullYear() === ano && (dataObj.getMonth() + 1) === mes;
-                } catch (e) {
-                    return false;
-                }
-            });
-        }
-
-        pagamentosFiltrados.sort((a, b) => {
-            const dataA = new Date(a.data);
-            const dataB = new Date(b.data);
-            return dataB - dataA;
-        });
-
-        if (pagamentosFiltrados.length === 0) {
-            container.innerHTML = `
-                <div style="text-align:center; padding:40px;">
-                    <p style="font-size:48px;">🔍</p>
-                    <p style="color:#666;">Nenhum pagamento encontrado para este período</p>
-                </div>
-            `;
-            resumoContainer.innerHTML = `<div style="padding:15px; background:#f7fafc; border-radius:8px; text-align:center; color:#666;">Total: R$ 0,00</div>`;
-            return;
-        }
-
-        let html = '';
-        let totalPagamentos = 0;
-        pagamentosFiltrados.forEach(p => {
-            const valor = parseFloat(p.valor) || 0;
-            totalPagamentos += valor;
-            const dataObj = new Date(p.data);
-            const dataFormatada = dataObj.toLocaleDateString('pt-BR') + ' ' + dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            const cliente = p.cliente || 'Cliente não informado';
-            const observacao = p.observacao || '-';
-            html += `
-                <tr>
-                    <td style="padding:10px 12px;">${dataFormatada}</td>
-                    <td style="padding:10px 12px;"><strong>${cliente}</strong></td>
-                    <td style="padding:10px 12px;">R$ ${valor.toFixed(2).replace('.', ',')}</td>
-                    <td style="padding:10px 12px;">${observacao}</td>
-                </tr>
-            `;
-        });
-
-        container.innerHTML = `
-            <div style="overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                    <thead>
-                        <tr style="background:#3957ed;">
-                            <th style="padding:10px 12px; text-align:left; color:white;">📅 Data</th>
-                            <th style="padding:10px 12px; text-align:left; color:white;">👤 Cliente</th>
-                            <th style="padding:10px 12px; text-align:left; color:white;">💰 Valor</th>
-                            <th style="padding:10px 12px; text-align:left; color:white;">📝 Observação</th>
-                        </tr>
-                    </thead>
-                    <tbody>${html}</tbody>
-                </table>
-            </div>
-        `;
-
-        let filtroTexto = 'Todos os períodos';
-        if (filtroMes !== 'todos') {
-            const [ano, mesNum] = filtroMes.split('-').map(Number);
-            const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-            filtroTexto = `${meses[mesNum - 1]} ${ano}`;
-        }
-
-        resumoContainer.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:10px; color:white; flex-wrap:wrap; gap:8px;">
-                <span style="font-weight:500;">📊 Total: <strong>${pagamentosFiltrados.length}</strong> pagamento(s)</span>
-                <span style="font-weight:500;">💰 Valor Total: <strong>R$ ${totalPagamentos.toFixed(2).replace('.', ',')}</strong></span>
-                <span style="font-size:11px; opacity:0.8;">${filtroTexto}</span>
-            </div>
-        `;
-
-    } catch (error) {
-        container.innerHTML = `<div style="text-align:center; padding:20px; color:#e53e3e;"><p>❌ Erro: ${error.message}</p></div>`;
-    }
-}
-
-// ============================================================
-// APLICAR FILTRO DE MÊS (chamado pelo botão)
-// ============================================================
-window.aplicarFiltroMesPagamentos = function() {
-    const select = document.getElementById('filtroMesPagamentos');
-    if (!select) return;
-    const mesSelecionado = select.value;
-    StateManager.setFiltroMes(mesSelecionado);
-    carregarPagamentos(mesSelecionado);
-    mostrarToast(`Filtro aplicado: ${mesSelecionado === 'todos' ? 'Todos os meses' : select.options[select.selectedIndex].text}`, 'info');
-};
-
-// ============================================================
-// EXTRATOS
-// ============================================================
-window.gerarExtrato = async function(periodo) {
-    const resultadoDiv = document.getElementById('resultadoExtrato');
-    const conteudoDiv = document.getElementById('conteudoExtrato');
-    const tituloDiv = document.getElementById('tituloExtrato');
-
-    if (!resultadoDiv || !conteudoDiv) {
-        mostrarToast('Erro: Elemento não encontrado', 'error');
-        return;
-    }
-
-    resultadoDiv.style.display = 'block';
-    conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
-    tituloDiv.textContent = `📊 Extrato ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
-
-    try {
-        const result = await callAPI('listarVendas', null, true, 30000);
-        if (!result.success || !result.vendas || result.vendas.length === 0) {
-            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">📭</span><p>Nenhuma venda</p></div>`;
-            return;
-        }
-
-        const agora = new Date();
-        let dataInicio = new Date();
-        switch(periodo) {
-            case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
-            case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
-            case 'semestral': dataInicio.setMonth(agora.getMonth() - 6); break;
-            case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
-            default: dataInicio.setDate(agora.getDate() - 7);
-        }
-
-        const vendasFiltradas = result.vendas.filter(v => new Date(v.data) >= dataInicio && new Date(v.data) <= agora);
-        if (vendasFiltradas.length === 0) {
-            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhuma venda no período</p></div>`;
-            return;
-        }
-
-        let totalVendas = 0, totalItens = 0, totalClientes = new Set();
-        const produtos = {};
-        vendasFiltradas.forEach(v => {
-            const valor = parseFloat(v.total) || 0;
-            const quantidade = parseInt(v.quantidade) || 0;
-            totalVendas += valor; totalItens += quantidade;
-            if (v.cliente) totalClientes.add(v.cliente);
-            const nome = v.produto || 'Produto';
-            if (!produtos[nome]) produtos[nome] = { quantidade: 0, total: 0 };
-            produtos[nome].quantidade += quantidade;
-            produtos[nome].total += valor;
-        });
-
-        const top5 = Object.entries(produtos).sort((a,b) => b[1].quantidade - a[1].quantidade).slice(0,5);
-
-        let html = `
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Total</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#667eea;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
-                </div>
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Vendas</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${vendasFiltradas.length}</p>
-                </div>
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Itens</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${totalItens}</p>
-                </div>
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#43e97b;">${totalClientes.size}</p>
-                </div>
-            </div>
-            ${top5.length > 0 ? `
-                <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
-                    <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">🏆 Top 5 Produtos</p>
-                    ${top5.map(([nome, dados], i) => `
-                        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
-                            <span>${i+1}. ${nome}</span>
-                            <span>${dados.quantidade} unid.</span>
-                            <span style="font-weight:bold;color:#4facfe;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            ` : ''}
-            <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
-                📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
-            </div>
-        `;
-
-        conteudoDiv.innerHTML = html;
-
-        const btnContainer = document.createElement('div');
-        btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
-        
-        const btnWhatsApp = document.createElement('button');
-        btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
-        btnWhatsApp.innerHTML = '📱 Compartilhar';
-        btnWhatsApp.onclick = () => window.compartilharExtratoVendedora(vendasFiltradas, totalVendas, totalItens, periodo);
-        btnContainer.appendChild(btnWhatsApp);
-
-        conteudoDiv.appendChild(btnContainer);
-
-    } catch (error) {
-        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
-    }
-};
-
-window.gerarExtratoPagamentos = async function(periodo) {
-    const resultadoDiv = document.getElementById('resultadoExtrato');
-    const conteudoDiv = document.getElementById('conteudoExtrato');
-    const tituloDiv = document.getElementById('tituloExtrato');
-
-    if (!resultadoDiv || !conteudoDiv) {
-        mostrarToast('Erro: Elemento não encontrado', 'error');
-        return;
-    }
-
-    resultadoDiv.style.display = 'block';
-    conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
-    tituloDiv.textContent = `💰 Pagamentos - ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
-
-    try {
-        const result = await callAPI('listarPagamentos', null, true, 30000);
-        if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
-            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">💰</span><p>Nenhum pagamento</p></div>`;
-            return;
-        }
-
-        const agora = new Date();
-        let dataInicio = new Date();
-        switch(periodo) {
-            case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
-            case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
-            case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
-            default: dataInicio.setDate(agora.getDate() - 7);
-        }
-
-        const pagamentosFiltrados = result.pagamentos.filter(p => new Date(p.data) >= dataInicio && new Date(p.data) <= agora);
-        if (pagamentosFiltrados.length === 0) {
-            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhum pagamento no período</p></div>`;
-            return;
-        }
-
-        let totalGeral = 0;
-        const porCliente = {};
-        pagamentosFiltrados.forEach(p => {
-            const valor = parseFloat(p.valor) || 0;
-            totalGeral += valor;
-            const cliente = p.cliente || 'Cliente';
-            if (!porCliente[cliente]) porCliente[cliente] = 0;
-            porCliente[cliente] += valor;
-        });
-
-        const clientesOrdenados = Object.entries(porCliente).sort((a,b) => b[1] - a[1]);
-
-        let html = `
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Total</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#38a169;">R$ ${totalGeral.toFixed(2).replace('.', ',')}</p>
-                </div>
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Pagamentos</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${pagamentosFiltrados.length}</p>
-                </div>
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${Object.keys(porCliente).length}</p>
-                </div>
-                <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                    <p style="margin:0;font-size:10px;color:#718096;">Médio</p>
-                    <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#d69e2e;">R$ ${(totalGeral/pagamentosFiltrados.length).toFixed(2).replace('.', ',')}</p>
-                </div>
-            </div>
-            <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
-                <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">👤 Por Cliente</p>
-                ${clientesOrdenados.map(([cliente, valor], i) => `
-                    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
-                        <span>${i+1}. ${cliente}</span>
-                        <span style="font-weight:bold;color:#38a169;">R$ ${valor.toFixed(2).replace('.', ',')}</span>
-                    </div>
-                `).join('')}
-            </div>
-            <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
-                📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
-            </div>
-        `;
-
-        conteudoDiv.innerHTML = html;
-
-        const btnContainer = document.createElement('div');
-        btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
-        
-        const btnWhatsApp = document.createElement('button');
-        btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
-        btnWhatsApp.innerHTML = '📱 Compartilhar';
-        btnWhatsApp.onclick = () => window.compartilharExtratoPagamentos(pagamentosFiltrados, totalGeral, periodo);
-        btnContainer.appendChild(btnWhatsApp);
-
-        conteudoDiv.appendChild(btnContainer);
-
-    } catch (error) {
-        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
-    }
-};
-
-window.compartilharExtratoVendedora = function(vendas, total, totalItens, periodo) {
-    const periodos = { semanal: 'Semana', mensal: 'Mês', semestral: 'Semestre', anual: 'Ano' };
-    let texto = `📊 EXTRATO - ${periodos[periodo] || 'Período'}\n\n`;
-    texto += `💰 Total Vendas: R$ ${total.toFixed(2).replace('.', ',')}\n`;
-    texto += `📦 Total Itens: ${totalItens}\n`;
-    texto += `📊 Nº Vendas: ${vendas.length}\n`;
-    texto += `📊 Ticket Médio: R$ ${(total/vendas.length).toFixed(2).replace('.', ',')}\n\n`;
-    const porDia = {};
-    vendas.forEach(v => {
-        const data = new Date(v.data);
-        const dataStr = data.toLocaleDateString('pt-BR');
-        if (!porDia[dataStr]) porDia[dataStr] = 0;
-        porDia[dataStr] += parseFloat(v.total) || 0;
-    });
-    Object.keys(porDia).sort().forEach(dia => {
-        texto += `- ${dia}: R$ ${porDia[dia].toFixed(2).replace('.', ',')}\n`;
-    });
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-};
-
-window.compartilharExtratoPagamentos = function(pagamentos, total, periodo) {
-    const periodos = { semanal: 'Semana', mensal: 'Mês', anual: 'Ano' };
-    let texto = `💳 PAGAMENTOS - ${periodos[periodo] || 'Período'}\n\n`;
-    texto += `💰 Total Recebido: R$ ${total.toFixed(2).replace('.', ',')}\n`;
-    texto += `📊 Nº Pagamentos: ${pagamentos.length}\n\n👤 POR CLIENTE:\n`;
-    const porCliente = {};
-    pagamentos.forEach(p => {
-        const cliente = p.cliente || 'Cliente';
-        const valor = parseFloat(p.valor) || 0;
-        if (!porCliente[cliente]) porCliente[cliente] = 0;
-        porCliente[cliente] += valor;
-    });
-    Object.entries(porCliente).sort((a,b) => b[1] - a[1]).forEach(([cliente, valor]) => {
-        texto += `- ${cliente}: R$ ${valor.toFixed(2).replace('.', ',')}\n`;
-    });
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
-};
-
-window.fecharResultadoExtrato = function() {
-    const resultado = document.getElementById('resultadoExtrato');
-    if (resultado) resultado.style.display = 'none';
-};
-
-window.atualizarVendedora = function() {
-    mostrarToast('Atualizando...', 'info');
-    Cache.clear();
-    renderVendedora();
-};
-    
-    
     // ============================================================
-    // VENDEDORA – com filtro por mês nos pagamentos
+    // VENDEDORA & COBRANÇAS - VERSÃO UNIFICADA
     // ============================================================
     async function renderVendedora() {
         const app = document.getElementById('app');
         if (!app) return;
+        mostrarLoadingSkeleton('vendedora');
 
         // Gera opções de meses para o dropdown
         const mesesOptions = gerarOpcoesMeses();
@@ -2992,33 +2413,154 @@ window.atualizarVendedora = function() {
                             <p style="margin:2px 0 0;font-size:11px;opacity:0.8;">Gerencie vendas e cobranças</p>
                         </div>
                     </div>
-                    
-                    <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
-                        <label style="font-weight:500; color:#4a5568;">📅 Filtrar por Mês:</label>
-                        <select id="filtroMesPagamentos" style="padding:10px 16px; border:2px solid #e2e8f0; border-radius:8px; background:white; font-size:14px; min-width:180px;">
-                            ${mesesOptions}
-                        </select>
-                        <button onclick="window.aplicarFiltroMesPagamentos()" style="background:#667eea; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:500;">
-                            🔍 Filtrar
-                        </button>
-                        <button onclick="document.getElementById('filtroMesPagamentos').value='todos'; window.aplicarFiltroMesPagamentos();" style="background:#e2e8f0; color:#4a5568; border:none; padding:10px 16px; border-radius:6px; cursor:pointer;">
-                            ✕ Limpar Filtro
-                        </button>
+
+                    <!-- PAGAMENTOS PENDENTES -->
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📅 Pagamentos Pendentes</h4>
+                        <div id="promessasHojeContainer"><div style="text-align:center;padding:15px;">⏳ Carregando...</div></div>
                     </div>
-                    
-                    <div id="tabelaPagamentos">
-                        <div style="text-align:center; padding:20px;">
-                            <div class="loading-spinner" style="font-size:24px;">⏳</div>
-                            <p style="color:#667eea;">Carregando pagamentos...</p>
+
+                    <!-- EXTRATOS DE VENDAS -->
+                    <div style="margin-bottom:15px;">
+                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📊 Extratos</h4>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+                            <button onclick="window.gerarExtrato('semanal')" class="btn-extrato" style="background:#667eea;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📅 Semanal</button>
+                            <button onclick="window.gerarExtrato('mensal')" class="btn-extrato" style="background:#4facfe;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📆 Mensal</button>
+                            <button onclick="window.gerarExtrato('semestral')" class="btn-extrato" style="background:#f093fb;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📊 Semestral</button>
+                            <button onclick="window.gerarExtrato('anual')" class="btn-extrato" style="background:#43e97b;color:#1a202c;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📈 Anual</button>
                         </div>
                     </div>
-                    <div id="resumoPagamentos" style="margin-top:20px;"></div>
+
+                    <!-- PAGAMENTOS RECEBIDOS + FILTRO POR MÊS -->
+                    <div style="margin-top:20px;border-top:2px solid #e2e8f0;padding-top:15px;">
+                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">💰 Pagamentos Recebidos</h4>
+                        
+                        <!-- Filtro por mês -->
+                        <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
+                            <label style="font-weight:500; color:#4a5568; font-size:13px;">📅 Filtrar por Mês:</label>
+                            <select id="filtroMesPagamentos" style="padding:8px 14px; border:2px solid #e2e8f0; border-radius:8px; background:white; font-size:13px; min-width:160px;">
+                                ${mesesOptions}
+                            </select>
+                            <button onclick="window.aplicarFiltroMesPagamentos()" style="background:#667eea; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:500; font-size:12px;">
+                                🔍 Filtrar
+                            </button>
+                            <button onclick="document.getElementById('filtroMesPagamentos').value='todos'; window.aplicarFiltroMesPagamentos();" style="background:#e2e8f0; color:#4a5568; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-size:12px;">
+                                ✕ Limpar
+                            </button>
+                        </div>
+
+                        <!-- Botões de extrato de pagamentos -->
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:15px;">
+                            <button onclick="window.gerarExtratoPagamentos('semanal')" class="btn-extrato" style="background:#38a169;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">💳 Semana</button>
+                            <button onclick="window.gerarExtratoPagamentos('mensal')" class="btn-extrato" style="background:#2b6cb0;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📆 Mês</button>
+                            <button onclick="window.gerarExtratoPagamentos('anual')" class="btn-extrato" style="background:#d69e2e;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📈 Ano</button>
+                        </div>
+
+                        <!-- Tabela de pagamentos com filtro -->
+                        <div id="tabelaPagamentos">
+                            <div style="text-align:center; padding:20px;">
+                                <div class="loading-spinner" style="font-size:24px;">⏳</div>
+                                <p style="color:#667eea;">Carregando pagamentos...</p>
+                            </div>
+                        </div>
+                        <div id="resumoPagamentos" style="margin-top:15px;"></div>
+                    </div>
+
+                    <!-- Área para exibir resultados de extrato -->
+                    <div id="resultadoExtrato" style="display:none;margin-top:15px;padding:15px;background:#f7fafc;border-radius:8px;border:2px solid #e2e8f0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <h4 id="tituloExtrato" style="margin:0;color:#2d3748;font-size:15px;">📊 Extrato</h4>
+                            <button onclick="window.fecharResultadoExtrato()" style="background:#e2e8f0;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;">✕</button>
+                        </div>
+                        <div id="conteudoExtrato" style="font-size:13px;color:#4a5568;"></div>
+                    </div>
                 </div>
             </section>
         `;
 
-        // Aplica o filtro inicial (todos)
+        // Carrega os dados iniciais
+        await carregarPromessasHoje();
         await carregarPagamentos('todos');
+    }
+
+    // ============================================================
+    // PROMESSAS DE PAGAMENTO
+    // ============================================================
+    async function carregarPromessasHoje() {
+        const container = document.getElementById('promessasHojeContainer');
+        if (!container) return;
+
+        try {
+            const result = await callAPI('listarPromessasPagamento', null, true, 30000);
+            if (!result.success || !Array.isArray(result.promessas) || result.promessas.length === 0) {
+                container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
+                return;
+            }
+
+            const hoje = new Date();
+            const hojeStr = hoje.toDateString();
+            const promessasPendentes = result.promessas.filter(p => {
+                const saldo = parseFloat(p.saldo) || 0;
+                const status = String(p.status || 'pendente');
+                return saldo > 0 && status !== 'pago';
+            });
+
+            if (promessasPendentes.length === 0) {
+                container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
+                return;
+            }
+
+            let html = `
+                <div style="background:#fff;border-radius:6px;border:2px solid #48bb78;overflow:hidden;">
+                    <div style="background:#48bb78;color:#fff;padding:6px 10px;font-weight:600;font-size:12px;display:flex;justify-content:space-between;">
+                        <span>Cliente</span><span>Valor</span><span>Vencimento</span><span>Ação</span>
+                    </div>
+                    <div>
+            `;
+
+            promessasPendentes.forEach(p => {
+                const cliente = String(p.cliente || '');
+                const whatsapp = String(p.whatsapp || '');
+                const valor = parseFloat(p.saldo) || 0;
+                const dataPag = new Date(p.dataPagamento);
+                const dataStr = dataPag.toLocaleDateString('pt-BR');
+                const clienteSafe = cliente.replace(/'/g, "\\'");
+                const whatsappSafe = whatsapp.replace(/'/g, "\\'");
+
+                let badge = '', cor = 'transparent';
+                if (dataPag.toDateString() === hojeStr) {
+                    badge = '<span class="badge-hoje">Hoje</span>';
+                    cor = '#f0fff4';
+                } else if (dataPag < hoje) {
+                    const dias = Math.floor((hoje - dataPag) / (1000*60*60*24));
+                    badge = `<span class="badge-atraso">${dias}d atraso</span>`;
+                    cor = '#fff5f5';
+                } else {
+                    badge = '<span class="badge-futuro">Futuro</span>';
+                    cor = '#fffff0';
+                }
+
+                html += `
+                    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid #edf2f7;background:${cor};font-size:12px;">
+                        <div><strong>${cliente}</strong>${whatsapp ? `<span style="font-size:10px;color:#25D366;display:block;">📱 ${whatsapp}</span>` : ''}</div>
+                        <div style="text-align:center;font-weight:bold;color:#48bb78;">R$ ${valor.toFixed(2).replace('.', ',')}</div>
+                        <div style="text-align:center;">${badge}<div style="font-size:10px;color:#666;">${dataStr}</div></div>
+                        <div style="text-align:center;">
+                            <button onclick="window.enviarCobranca('${clienteSafe}', ${valor}, '${whatsappSafe}')" 
+                                    class="btn-cobrar" 
+                                    style="background:#25D366;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:500;width:100%;">💬 Cobrar</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div><div style="margin-top:6px;text-align:center;font-size:11px;color:#666;">Total: ${promessasPendentes.length} pendente(s)</div>`;
+            container.innerHTML = html;
+
+        } catch (error) {
+            console.error('❌ Erro ao carregar promessas:', error);
+            container.innerHTML = `<div style="background:#fed7d7;padding:12px;border-radius:6px;text-align:center;color:#9b2c2c;font-size:13px;">❌ Erro: ${error.message}</div>`;
+        }
     }
 
     // ============================================================
@@ -3030,7 +2572,6 @@ window.atualizarVendedora = function() {
             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
         ];
         const anoAtual = new Date().getFullYear();
-        // Gera opções para os últimos 24 meses
         let options = '<option value="todos">📊 Todos os meses</option>';
         for (let i = 0; i < 24; i++) {
             const data = new Date(anoAtual, new Date().getMonth() - i, 1);
@@ -3063,10 +2604,10 @@ window.atualizarVendedora = function() {
                         <p style="color:#666;">Nenhum pagamento encontrado</p>
                     </div>
                 `;
+                resumoContainer.innerHTML = `<div style="padding:15px; background:#f7fafc; border-radius:8px; text-align:center; color:#666;">Total: R$ 0,00</div>`;
                 return;
             }
 
-            // Filtra por mês considerando o formato ISO
             let pagamentosFiltrados = result.pagamentos;
             if (filtroMes !== 'todos') {
                 const [ano, mes] = filtroMes.split('-').map(Number);
@@ -3082,7 +2623,6 @@ window.atualizarVendedora = function() {
                 });
             }
 
-            // Ordena por data (mais recente primeiro)
             pagamentosFiltrados.sort((a, b) => {
                 const dataA = new Date(a.data);
                 const dataB = new Date(b.data);
@@ -3111,23 +2651,23 @@ window.atualizarVendedora = function() {
                 const observacao = p.observacao || '-';
                 html += `
                     <tr>
-                        <td>${dataFormatada}</td>
-                        <td><strong>${cliente}</strong></td>
-                        <td>R$ ${valor.toFixed(2).replace('.', ',')}</td>
-                        <td>${observacao}</td>
+                        <td style="padding:10px 12px;">${dataFormatada}</td>
+                        <td style="padding:10px 12px;"><strong>${cliente}</strong></td>
+                        <td style="padding:10px 12px;">R$ ${valor.toFixed(2).replace('.', ',')}</td>
+                        <td style="padding:10px 12px;">${observacao}</td>
                     </tr>
                 `;
             });
 
             container.innerHTML = `
                 <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse;">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
                         <thead>
-                            <tr style="background:#3957ed; border-bottom:2px solid #e2e8f0;">
-                                <th style="padding:12px; text-align:left; color:white;">📅 Data</th>
-                                <th style="padding:12px; text-align:left; color:white;">👤 Cliente</th>
-                                <th style="padding:12px; text-align:left; color:white;">💰 Valor</th>
-                                <th style="padding:12px; text-align:left; color:white;">📝 Observação</th>
+                            <tr style="background:#3957ed;">
+                                <th style="padding:10px 12px; text-align:left; color:white;">📅 Data</th>
+                                <th style="padding:10px 12px; text-align:left; color:white;">👤 Cliente</th>
+                                <th style="padding:10px 12px; text-align:left; color:white;">💰 Valor</th>
+                                <th style="padding:10px 12px; text-align:left; color:white;">📝 Observação</th>
                             </tr>
                         </thead>
                         <tbody>${html}</tbody>
@@ -3135,7 +2675,6 @@ window.atualizarVendedora = function() {
                 </div>
             `;
 
-            // Formata o texto do filtro para exibição
             let filtroTexto = 'Todos os períodos';
             if (filtroMes !== 'todos') {
                 const [ano, mesNum] = filtroMes.split('-').map(Number);
@@ -3144,10 +2683,10 @@ window.atualizarVendedora = function() {
             }
 
             resumoContainer.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:12px; color:white; flex-wrap:wrap; gap:10px;">
-                    <span style="font-weight:500;">📊 Total de Pagamentos: <strong>${pagamentosFiltrados.length}</strong></span>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:10px; color:white; flex-wrap:wrap; gap:8px;">
+                    <span style="font-weight:500;">📊 Total: <strong>${pagamentosFiltrados.length}</strong> pagamento(s)</span>
                     <span style="font-weight:500;">💰 Valor Total: <strong>R$ ${totalPagamentos.toFixed(2).replace('.', ',')}</strong></span>
-                    <span style="font-size:12px; opacity:0.8;">${filtroTexto}</span>
+                    <span style="font-size:11px; opacity:0.8;">${filtroTexto}</span>
                 </div>
             `;
 
@@ -3166,6 +2705,263 @@ window.atualizarVendedora = function() {
         StateManager.setFiltroMes(mesSelecionado);
         carregarPagamentos(mesSelecionado);
         mostrarToast(`Filtro aplicado: ${mesSelecionado === 'todos' ? 'Todos os meses' : select.options[select.selectedIndex].text}`, 'info');
+    };
+
+    // ============================================================
+    // EXTRATOS
+    // ============================================================
+    window.gerarExtrato = async function(periodo) {
+        const resultadoDiv = document.getElementById('resultadoExtrato');
+        const conteudoDiv = document.getElementById('conteudoExtrato');
+        const tituloDiv = document.getElementById('tituloExtrato');
+
+        if (!resultadoDiv || !conteudoDiv) {
+            mostrarToast('Erro: Elemento não encontrado', 'error');
+            return;
+        }
+
+        resultadoDiv.style.display = 'block';
+        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
+        tituloDiv.textContent = `📊 Extrato ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
+
+        try {
+            const result = await callAPI('listarVendas', null, true, 30000);
+            if (!result.success || !result.vendas || result.vendas.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">📭</span><p>Nenhuma venda</p></div>`;
+                return;
+            }
+
+            const agora = new Date();
+            let dataInicio = new Date();
+            switch(periodo) {
+                case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
+                case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
+                case 'semestral': dataInicio.setMonth(agora.getMonth() - 6); break;
+                case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
+                default: dataInicio.setDate(agora.getDate() - 7);
+            }
+
+            const vendasFiltradas = result.vendas.filter(v => new Date(v.data) >= dataInicio && new Date(v.data) <= agora);
+            if (vendasFiltradas.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhuma venda no período</p></div>`;
+                return;
+            }
+
+            let totalVendas = 0, totalItens = 0, totalClientes = new Set();
+            const produtos = {};
+            vendasFiltradas.forEach(v => {
+                const valor = parseFloat(v.total) || 0;
+                const quantidade = parseInt(v.quantidade) || 0;
+                totalVendas += valor; totalItens += quantidade;
+                if (v.cliente) totalClientes.add(v.cliente);
+                const nome = v.produto || 'Produto';
+                if (!produtos[nome]) produtos[nome] = { quantidade: 0, total: 0 };
+                produtos[nome].quantidade += quantidade;
+                produtos[nome].total += valor;
+            });
+
+            const top5 = Object.entries(produtos).sort((a,b) => b[1].quantidade - a[1].quantidade).slice(0,5);
+
+            let html = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Total</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#667eea;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Vendas</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${vendasFiltradas.length}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Itens</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${totalItens}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#43e97b;">${totalClientes.size}</p>
+                    </div>
+                </div>
+                ${top5.length > 0 ? `
+                    <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
+                        <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">🏆 Top 5 Produtos</p>
+                        ${top5.map(([nome, dados], i) => `
+                            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
+                                <span>${i+1}. ${nome}</span>
+                                <span>${dados.quantidade} unid.</span>
+                                <span style="font-weight:bold;color:#4facfe;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
+                    📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
+                </div>
+            `;
+
+            conteudoDiv.innerHTML = html;
+
+            const btnContainer = document.createElement('div');
+            btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
+            
+            const btnWhatsApp = document.createElement('button');
+            btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
+            btnWhatsApp.innerHTML = '📱 Compartilhar';
+            btnWhatsApp.onclick = () => window.compartilharExtratoVendedora(vendasFiltradas, totalVendas, totalItens, periodo);
+            btnContainer.appendChild(btnWhatsApp);
+
+            conteudoDiv.appendChild(btnContainer);
+
+        } catch (error) {
+            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
+        }
+    };
+
+    window.gerarExtratoPagamentos = async function(periodo) {
+        const resultadoDiv = document.getElementById('resultadoExtrato');
+        const conteudoDiv = document.getElementById('conteudoExtrato');
+        const tituloDiv = document.getElementById('tituloExtrato');
+
+        if (!resultadoDiv || !conteudoDiv) {
+            mostrarToast('Erro: Elemento não encontrado', 'error');
+            return;
+        }
+
+        resultadoDiv.style.display = 'block';
+        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
+        tituloDiv.textContent = `💰 Pagamentos - ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
+
+        try {
+            const result = await callAPI('listarPagamentos', null, true, 30000);
+            if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">💰</span><p>Nenhum pagamento</p></div>`;
+                return;
+            }
+
+            const agora = new Date();
+            let dataInicio = new Date();
+            switch(periodo) {
+                case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
+                case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
+                case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
+                default: dataInicio.setDate(agora.getDate() - 7);
+            }
+
+            const pagamentosFiltrados = result.pagamentos.filter(p => new Date(p.data) >= dataInicio && new Date(p.data) <= agora);
+            if (pagamentosFiltrados.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhum pagamento no período</p></div>`;
+                return;
+            }
+
+            let totalGeral = 0;
+            const porCliente = {};
+            pagamentosFiltrados.forEach(p => {
+                const valor = parseFloat(p.valor) || 0;
+                totalGeral += valor;
+                const cliente = p.cliente || 'Cliente';
+                if (!porCliente[cliente]) porCliente[cliente] = 0;
+                porCliente[cliente] += valor;
+            });
+
+            const clientesOrdenados = Object.entries(porCliente).sort((a,b) => b[1] - a[1]);
+
+            let html = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Total</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#38a169;">R$ ${totalGeral.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Pagamentos</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${pagamentosFiltrados.length}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${Object.keys(porCliente).length}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Médio</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#d69e2e;">R$ ${(totalGeral/pagamentosFiltrados.length).toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+                <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
+                    <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">👤 Por Cliente</p>
+                    ${clientesOrdenados.map(([cliente, valor], i) => `
+                        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
+                            <span>${i+1}. ${cliente}</span>
+                            <span style="font-weight:bold;color:#38a169;">R$ ${valor.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
+                    📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
+                </div>
+            `;
+
+            conteudoDiv.innerHTML = html;
+
+            const btnContainer = document.createElement('div');
+            btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
+            
+            const btnWhatsApp = document.createElement('button');
+            btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
+            btnWhatsApp.innerHTML = '📱 Compartilhar';
+            btnWhatsApp.onclick = () => window.compartilharExtratoPagamentos(pagamentosFiltrados, totalGeral, periodo);
+            btnContainer.appendChild(btnWhatsApp);
+
+            conteudoDiv.appendChild(btnContainer);
+
+        } catch (error) {
+            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
+        }
+    };
+
+    window.compartilharExtratoVendedora = function(vendas, total, totalItens, periodo) {
+        const periodos = { semanal: 'Semana', mensal: 'Mês', semestral: 'Semestre', anual: 'Ano' };
+        let texto = `📊 EXTRATO - ${periodos[periodo] || 'Período'}\n\n`;
+        texto += `💰 Total Vendas: R$ ${total.toFixed(2).replace('.', ',')}\n`;
+        texto += `📦 Total Itens: ${totalItens}\n`;
+        texto += `📊 Nº Vendas: ${vendas.length}\n`;
+        texto += `📊 Ticket Médio: R$ ${(total/vendas.length).toFixed(2).replace('.', ',')}\n\n`;
+        const porDia = {};
+        vendas.forEach(v => {
+            const data = new Date(v.data);
+            const dataStr = data.toLocaleDateString('pt-BR');
+            if (!porDia[dataStr]) porDia[dataStr] = 0;
+            porDia[dataStr] += parseFloat(v.total) || 0;
+        });
+        Object.keys(porDia).sort().forEach(dia => {
+            texto += `- ${dia}: R$ ${porDia[dia].toFixed(2).replace('.', ',')}\n`;
+        });
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    };
+
+    window.compartilharExtratoPagamentos = function(pagamentos, total, periodo) {
+        const periodos = { semanal: 'Semana', mensal: 'Mês', anual: 'Ano' };
+        let texto = `💳 PAGAMENTOS - ${periodos[periodo] || 'Período'}\n\n`;
+        texto += `💰 Total Recebido: R$ ${total.toFixed(2).replace('.', ',')}\n`;
+        texto += `📊 Nº Pagamentos: ${pagamentos.length}\n\n👤 POR CLIENTE:\n`;
+        const porCliente = {};
+        pagamentos.forEach(p => {
+            const cliente = p.cliente || 'Cliente';
+            const valor = parseFloat(p.valor) || 0;
+            if (!porCliente[cliente]) porCliente[cliente] = 0;
+            porCliente[cliente] += valor;
+        });
+        Object.entries(porCliente).sort((a,b) => b[1] - a[1]).forEach(([cliente, valor]) => {
+            texto += `- ${cliente}: R$ ${valor.toFixed(2).replace('.', ',')}\n`;
+        });
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    };
+
+    window.fecharResultadoExtrato = function() {
+        const resultado = document.getElementById('resultadoExtrato');
+        if (resultado) resultado.style.display = 'none';
+    };
+
+    window.atualizarVendedora = function() {
+        mostrarToast('Atualizando...', 'info');
+        Cache.clear();
+        renderVendedora();
     };
 
     // ============================================================
