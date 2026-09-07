@@ -1,12 +1,16 @@
+// ============================================================
 // SISTEMA DE VENDAS - VERSÃO OTIMIZADA V13.3
+// ============================================================
 
 (function() {
     'use strict';
 
+    // ============================================================
     // VERSÃO DO SISTEMA - CENTRALIZADA
+    // ============================================================
     const SISTEMA = {
-        VERSAO: 'v13.3',        // ← Mude aqui para atualizar a versão
-        DATA: '2024',
+        VERSAO: 'v14.0',        // ← Mude aqui para atualizar a versão
+        DATA: '2026',
         NOME: 'Sistema de Vendas',
         AUTOR: 'Roberta Bento',
         getVersaoCompleta() {
@@ -2382,7 +2386,7 @@
     };
 
     // ============================================================
-    // VENDEDORA – com filtro por mês nos pagamentos (UNICA VERSÃO)
+    // VENDEDORA – com filtro por mês nos pagamentos
     // ============================================================
     async function renderVendedora() {
         const app = document.getElementById('app');
