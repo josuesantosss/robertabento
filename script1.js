@@ -9,7 +9,7 @@
     // VERSÃO DO SISTEMA - CENTRALIZADA
     // ============================================================
     const SISTEMA = {
-        VERSAO: 'v14.2',        // ← Mude aqui para atualizar a versão
+        VERSAO: 'v14.3',        // ← Mude aqui para atualizar a versão
         DATA: '2026',
         NOME: 'Sistema de Vendas',
         AUTOR: 'Roberta Bento',
