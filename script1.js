@@ -9,7 +9,7 @@
     // VERSÃO DO SISTEMA - CENTRALIZADA
     // ============================================================
     const SISTEMA = {
-        VERSAO: 'v14.0',        // ← Mude aqui para atualizar a versão
+        VERSAO: 'v14.1',        // ← Mude aqui para atualizar a versão
         DATA: '2026',
         NOME: 'Sistema de Vendas',
         AUTOR: 'Roberta Bento',
@@ -2385,6 +2385,404 @@
         }
     };
 
+        // ============================================================
+    // VENDEDORA & COBRANÇAS
+    // ============================================================
+    async function renderVendedora() {
+        const app = document.getElementById('app');
+        if (!app) return;
+        mostrarLoadingSkeleton('vendedora');
+
+        app.innerHTML = `
+            <section style="animation:fadeIn 0.4s ease;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                    <h2>👩‍💼 Área da Vendedora</h2>
+                    <button onclick="window.renderVendedora()" class="btn-primary" style="background:#667eea;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;">🔄 Atualizar</button>
+                </div>
+                <div style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;padding:15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:12px;color:#fff;">
+                        <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                            <img src="img/face.png" alt="Face" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                        </div>
+                        <div>
+                            <p style="margin:0;font-size:12px;opacity:0.9;">Bem-vinda,</p>
+                            <h3 style="margin:0;font-size:20px;">Roberta Bento</h3>
+                            <p style="margin:2px 0 0;font-size:11px;opacity:0.8;">Gerencie vendas e cobranças</p>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📅 Pagamentos Pendentes</h4>
+                        <div id="promessasHojeContainer"><div style="text-align:center;padding:15px;">⏳ Carregando...</div></div>
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">📊 Extratos</h4>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+                            <button onclick="window.gerarExtrato('semanal')" class="btn-extrato" style="background:#667eea;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📅 Semanal</button>
+                            <button onclick="window.gerarExtrato('mensal')" class="btn-extrato" style="background:#4facfe;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📆 Mensal</button>
+                            <button onclick="window.gerarExtrato('semestral')" class="btn-extrato" style="background:#f093fb;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📊 Semestral</button>
+                            <button onclick="window.gerarExtrato('anual')" class="btn-extrato" style="background:#43e97b;color:#1a202c;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📈 Anual</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px;border-top:2px solid #e2e8f0;padding-top:15px;">
+                        <h4 style="color:#2d3748;margin-bottom:8px;font-size:15px;">💰 Pagamentos Recebidos</h4>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+                            <button onclick="window.gerarExtratoPagamentos('semanal')" class="btn-extrato" style="background:#38a169;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">💳 Semana</button>
+                            <button onclick="window.gerarExtratoPagamentos('mensal')" class="btn-extrato" style="background:#2b6cb0;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📆 Mês</button>
+                            <button onclick="window.gerarExtratoPagamentos('anual')" class="btn-extrato" style="background:#d69e2e;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:600;font-size:13px;">📈 Ano</button>
+                        </div>
+                    </div>
+                    <div id="resultadoExtrato" style="display:none;margin-top:15px;padding:15px;background:#f7fafc;border-radius:8px;border:2px solid #e2e8f0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <h4 id="tituloExtrato" style="margin:0;color:#2d3748;font-size:15px;">📊 Extrato</h4>
+                            <button onclick="window.fecharResultadoExtrato()" style="background:#e2e8f0;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;">✕</button>
+                        </div>
+                        <div id="conteudoExtrato" style="font-size:13px;color:#4a5568;"></div>
+                    </div>
+                </div>
+            </section>
+        `;
+
+        await carregarPromessasHoje();
+    }
+
+    // ============================================================
+    // PROMESSAS DE PAGAMENTO
+    // ============================================================
+    async function carregarPromessasHoje() {
+        const container = document.getElementById('promessasHojeContainer');
+        if (!container) return;
+
+        try {
+            const result = await callAPI('listarPromessasPagamento', null, true, 30000);
+            if (!result.success || !Array.isArray(result.promessas) || result.promessas.length === 0) {
+                container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
+                return;
+            }
+
+            const hoje = new Date();
+            const hojeStr = hoje.toDateString();
+            const promessasPendentes = result.promessas.filter(p => {
+                const saldo = parseFloat(p.saldo) || 0;
+                const status = String(p.status || 'pendente');
+                return saldo > 0 && status !== 'pago';
+            });
+
+            if (promessasPendentes.length === 0) {
+                container.innerHTML = `<div style="background:#f0f4ff;padding:15px;border-radius:6px;text-align:center;color:#718096;font-size:13px;">✅ Nenhum pagamento pendente</div>`;
+                return;
+            }
+
+            let html = `
+                <div style="background:#fff;border-radius:6px;border:2px solid #48bb78;overflow:hidden;">
+                    <div style="background:#48bb78;color:#fff;padding:6px 10px;font-weight:600;font-size:12px;display:flex;justify-content:space-between;">
+                        <span>Cliente</span><span>Valor</span><span>Vencimento</span><span>Ação</span>
+                    </div>
+                    <div>
+            `;
+
+            promessasPendentes.forEach(p => {
+                const cliente = String(p.cliente || '');
+                const whatsapp = String(p.whatsapp || '');
+                const valor = parseFloat(p.saldo) || 0;
+                const dataPag = new Date(p.dataPagamento);
+                const dataStr = dataPag.toLocaleDateString('pt-BR');
+                const clienteSafe = cliente.replace(/'/g, "\\'");
+                const whatsappSafe = whatsapp.replace(/'/g, "\\'");
+
+                let badge = '', cor = 'transparent';
+                if (dataPag.toDateString() === hojeStr) {
+                    badge = '<span class="badge-hoje">Hoje</span>';
+                    cor = '#f0fff4';
+                } else if (dataPag < hoje) {
+                    const dias = Math.floor((hoje - dataPag) / (1000*60*60*24));
+                    badge = `<span class="badge-atraso">${dias}d atraso</span>`;
+                    cor = '#fff5f5';
+                } else {
+                    badge = '<span class="badge-futuro">Futuro</span>';
+                    cor = '#fffff0';
+                }
+
+                html += `
+                    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid #edf2f7;background:${cor};font-size:12px;">
+                        <div><strong>${cliente}</strong>${whatsapp ? `<span style="font-size:10px;color:#25D366;display:block;">📱 ${whatsapp}</span>` : ''}</div>
+                        <div style="text-align:center;font-weight:bold;color:#48bb78;">R$ ${valor.toFixed(2).replace('.', ',')}</div>
+                        <div style="text-align:center;">${badge}<div style="font-size:10px;color:#666;">${dataStr}</div></div>
+                        <div style="text-align:center;">
+                            <button onclick="window.enviarCobranca('${clienteSafe}', ${valor}, '${whatsappSafe}')" 
+                                    class="btn-cobrar" 
+                                    style="background:#25D366;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:500;width:100%;">💬 Cobrar</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div><div style="margin-top:6px;text-align:center;font-size:11px;color:#666;">Total: ${promessasPendentes.length} pendente(s)</div>`;
+            container.innerHTML = html;
+
+        } catch (error) {
+            console.error('❌ Erro ao carregar promessas:', error);
+            container.innerHTML = `<div style="background:#fed7d7;padding:12px;border-radius:6px;text-align:center;color:#9b2c2c;font-size:13px;">❌ Erro: ${error.message}</div>`;
+        }
+    }
+
+    // ============================================================
+    // EXTRATOS
+    // ============================================================
+    window.gerarExtrato = async function(periodo) {
+        const resultadoDiv = document.getElementById('resultadoExtrato');
+        const conteudoDiv = document.getElementById('conteudoExtrato');
+        const tituloDiv = document.getElementById('tituloExtrato');
+
+        if (!resultadoDiv || !conteudoDiv) {
+            mostrarToast('Erro: Elemento não encontrado', 'error');
+            return;
+        }
+
+        resultadoDiv.style.display = 'block';
+        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
+        tituloDiv.textContent = `📊 Extrato ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
+
+        try {
+            const result = await callAPI('listarVendas', null, true, 30000);
+            if (!result.success || !result.vendas || result.vendas.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">📭</span><p>Nenhuma venda</p></div>`;
+                return;
+            }
+
+            const agora = new Date();
+            let dataInicio = new Date();
+            switch(periodo) {
+                case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
+                case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
+                case 'semestral': dataInicio.setMonth(agora.getMonth() - 6); break;
+                case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
+                default: dataInicio.setDate(agora.getDate() - 7);
+            }
+
+            const vendasFiltradas = result.vendas.filter(v => new Date(v.data) >= dataInicio && new Date(v.data) <= agora);
+            if (vendasFiltradas.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhuma venda no período</p></div>`;
+                return;
+            }
+
+            let totalVendas = 0, totalItens = 0, totalClientes = new Set();
+            const produtos = {};
+            vendasFiltradas.forEach(v => {
+                const valor = parseFloat(v.total) || 0;
+                const quantidade = parseInt(v.quantidade) || 0;
+                totalVendas += valor; totalItens += quantidade;
+                if (v.cliente) totalClientes.add(v.cliente);
+                const nome = v.produto || 'Produto';
+                if (!produtos[nome]) produtos[nome] = { quantidade: 0, total: 0 };
+                produtos[nome].quantidade += quantidade;
+                produtos[nome].total += valor;
+            });
+
+            const top5 = Object.entries(produtos).sort((a,b) => b[1].quantidade - a[1].quantidade).slice(0,5);
+
+            let html = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Total</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#667eea;">R$ ${totalVendas.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Vendas</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${vendasFiltradas.length}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Itens</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${totalItens}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#43e97b;">${totalClientes.size}</p>
+                    </div>
+                </div>
+                ${top5.length > 0 ? `
+                    <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
+                        <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">🏆 Top 5 Produtos</p>
+                        ${top5.map(([nome, dados], i) => `
+                            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
+                                <span>${i+1}. ${nome}</span>
+                                <span>${dados.quantidade} unid.</span>
+                                <span style="font-weight:bold;color:#4facfe;">R$ ${dados.total.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
+                    📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
+                </div>
+            `;
+
+            conteudoDiv.innerHTML = html;
+
+            const btnContainer = document.createElement('div');
+            btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
+            
+            const btnWhatsApp = document.createElement('button');
+            btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
+            btnWhatsApp.innerHTML = '📱 Compartilhar';
+            btnWhatsApp.onclick = () => window.compartilharExtratoVendedora(vendasFiltradas, totalVendas, totalItens, periodo);
+            btnContainer.appendChild(btnWhatsApp);
+
+            conteudoDiv.appendChild(btnContainer);
+
+        } catch (error) {
+            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
+        }
+    };
+
+    window.gerarExtratoPagamentos = async function(periodo) {
+        const resultadoDiv = document.getElementById('resultadoExtrato');
+        const conteudoDiv = document.getElementById('conteudoExtrato');
+        const tituloDiv = document.getElementById('tituloExtrato');
+
+        if (!resultadoDiv || !conteudoDiv) {
+            mostrarToast('Erro: Elemento não encontrado', 'error');
+            return;
+        }
+
+        resultadoDiv.style.display = 'block';
+        conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;"><span class="loading-spinner" style="font-size:20px;">⏳</span><p style="color:#667eea;font-size:13px;">Carregando...</p></div>`;
+        tituloDiv.textContent = `💰 Pagamentos - ${periodo.charAt(0).toUpperCase() + periodo.slice(1)}`;
+
+        try {
+            const result = await callAPI('listarPagamentos', null, true, 30000);
+            if (!result.success || !result.pagamentos || result.pagamentos.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">💰</span><p>Nenhum pagamento</p></div>`;
+                return;
+            }
+
+            const agora = new Date();
+            let dataInicio = new Date();
+            switch(periodo) {
+                case 'semanal': dataInicio.setDate(agora.getDate() - 7); break;
+                case 'mensal': dataInicio.setMonth(agora.getMonth() - 1); break;
+                case 'anual': dataInicio.setFullYear(agora.getFullYear() - 1); break;
+                default: dataInicio.setDate(agora.getDate() - 7);
+            }
+
+            const pagamentosFiltrados = result.pagamentos.filter(p => new Date(p.data) >= dataInicio && new Date(p.data) <= agora);
+            if (pagamentosFiltrados.length === 0) {
+                conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#718096;"><span style="font-size:40px;">🔍</span><p>Nenhum pagamento no período</p></div>`;
+                return;
+            }
+
+            let totalGeral = 0;
+            const porCliente = {};
+            pagamentosFiltrados.forEach(p => {
+                const valor = parseFloat(p.valor) || 0;
+                totalGeral += valor;
+                const cliente = p.cliente || 'Cliente';
+                if (!porCliente[cliente]) porCliente[cliente] = 0;
+                porCliente[cliente] += valor;
+            });
+
+            const clientesOrdenados = Object.entries(porCliente).sort((a,b) => b[1] - a[1]);
+
+            let html = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Total</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#38a169;">R$ ${totalGeral.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Pagamentos</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#4facfe;">${pagamentosFiltrados.length}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Clientes</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#f093fb;">${Object.keys(porCliente).length}</p>
+                    </div>
+                    <div style="background:#fff;padding:10px;border-radius:6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="margin:0;font-size:10px;color:#718096;">Médio</p>
+                        <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#d69e2e;">R$ ${(totalGeral/pagamentosFiltrados.length).toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+                <div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:10px;">
+                    <p style="margin:0 0 8px 0;font-weight:600;font-size:12px;">👤 Por Cliente</p>
+                    ${clientesOrdenados.map(([cliente, valor], i) => `
+                        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #edf2f7;font-size:12px;">
+                            <span>${i+1}. ${cliente}</span>
+                            <span style="font-weight:bold;color:#38a169;">R$ ${valor.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="font-size:10px;color:#a0aec0;text-align:center;padding:8px;background:#fff;border-radius:6px;">
+                    📅 ${dataInicio.toLocaleDateString('pt-BR')} a ${agora.toLocaleDateString('pt-BR')}
+                </div>
+            `;
+
+            conteudoDiv.innerHTML = html;
+
+            const btnContainer = document.createElement('div');
+            btnContainer.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;';
+            
+            const btnWhatsApp = document.createElement('button');
+            btnWhatsApp.style.cssText = `flex:1;min-width:150px;background:#25D366;color:#fff;border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;`;
+            btnWhatsApp.innerHTML = '📱 Compartilhar';
+            btnWhatsApp.onclick = () => window.compartilharExtratoPagamentos(pagamentosFiltrados, totalGeral, periodo);
+            btnContainer.appendChild(btnWhatsApp);
+
+            conteudoDiv.appendChild(btnContainer);
+
+        } catch (error) {
+            conteudoDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#e53e3e;">❌ Erro: ${error.message}</div>`;
+        }
+    };
+
+    window.compartilharExtratoVendedora = function(vendas, total, totalItens, periodo) {
+        const periodos = { semanal: 'Semana', mensal: 'Mês', semestral: 'Semestre', anual: 'Ano' };
+        let texto = `📊 EXTRATO - ${periodos[periodo] || 'Período'}\n\n`;
+        texto += `💰 Total Vendas: R$ ${total.toFixed(2).replace('.', ',')}\n`;
+        texto += `📦 Total Itens: ${totalItens}\n`;
+        texto += `📊 Nº Vendas: ${vendas.length}\n`;
+        texto += `📊 Ticket Médio: R$ ${(total/vendas.length).toFixed(2).replace('.', ',')}\n\n`;
+        const porDia = {};
+        vendas.forEach(v => {
+            const data = new Date(v.data);
+            const dataStr = data.toLocaleDateString('pt-BR');
+            if (!porDia[dataStr]) porDia[dataStr] = 0;
+            porDia[dataStr] += parseFloat(v.total) || 0;
+        });
+        Object.keys(porDia).sort().forEach(dia => {
+            texto += `- ${dia}: R$ ${porDia[dia].toFixed(2).replace('.', ',')}\n`;
+        });
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    };
+
+    window.compartilharExtratoPagamentos = function(pagamentos, total, periodo) {
+        const periodos = { semanal: 'Semana', mensal: 'Mês', anual: 'Ano' };
+        let texto = `💳 PAGAMENTOS - ${periodos[periodo] || 'Período'}\n\n`;
+        texto += `💰 Total Recebido: R$ ${total.toFixed(2).replace('.', ',')}\n`;
+        texto += `📊 Nº Pagamentos: ${pagamentos.length}\n\n👤 POR CLIENTE:\n`;
+        const porCliente = {};
+        pagamentos.forEach(p => {
+            const cliente = p.cliente || 'Cliente';
+            const valor = parseFloat(p.valor) || 0;
+            if (!porCliente[cliente]) porCliente[cliente] = 0;
+            porCliente[cliente] += valor;
+        });
+        Object.entries(porCliente).sort((a,b) => b[1] - a[1]).forEach(([cliente, valor]) => {
+            texto += `- ${cliente}: R$ ${valor.toFixed(2).replace('.', ',')}\n`;
+        });
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    };
+
+    window.fecharResultadoExtrato = function() {
+        const resultado = document.getElementById('resultadoExtrato');
+        if (resultado) resultado.style.display = 'none';
+    };
+
+    window.atualizarVendedora = function() {
+        mostrarToast('Atualizando...', 'info');
+        Cache.clear();
+        renderVendedora();
+    };
+    
+    
     // ============================================================
     // VENDEDORA – com filtro por mês nos pagamentos
     // ============================================================
